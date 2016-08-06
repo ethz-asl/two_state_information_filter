@@ -18,18 +18,18 @@ class TransformationExample: public Transformation{
     posOut_ = outputDefinition->addElementDefinition<Eigen::Matrix<double,5,1>>("pos");
   };
   virtual ~TransformationExample(){};
-  void eval(const std::vector<const State*>& in, State* out){
+  void eval(const State* in, State* out){
     Eigen::Matrix<double,5,1> v;
     v << 1,2,3,4,5;
-    posOut_->get(out) = (posIn_->get(in[0])+v)*(timeOffset_->get(in[0])+2.0);
+    posOut_->get(out) = (posIn_->get(in)+v)*(timeOffset_->get(in)+2.0);
   }
-  void jac(const std::vector<const State*>& in, MXD& out){
+  void jac(const State* in, MXD& out){
     Eigen::Matrix<double,5,1> v;
     v << 1,2,3,4,5;
     out.setZero();
     out.block(posOut_->getIndex(),posIn_->getIndex(),posOut_->getDim(),posIn_->getDim()).setIdentity();
-    out.block(posOut_->getIndex(),posIn_->getIndex(),posOut_->getDim(),posIn_->getDim()) *= (timeOffset_->get(in[0])+2.0);
-    out.block(posOut_->getIndex(),timeOffset_->getIndex(),posOut_->getDim(),timeOffset_->getDim()) = posIn_->get(in[0])+v;
+    out.block(posOut_->getIndex(),posIn_->getIndex(),posOut_->getDim(),posIn_->getDim()) *= (timeOffset_->get(in)+2.0);
+    out.block(posOut_->getIndex(),timeOffset_->getIndex(),posOut_->getDim(),timeOffset_->getDim()) = posIn_->get(in)+v;
   }
  private:
   ElementDefinition<double>* timeOffset_;
@@ -70,14 +70,12 @@ TEST_F(NewStateTest, constructor) {
   std::cout << v.transpose() << std::endl;
 
   // Transformation
-  std::vector<const State*> states(1,nullptr);
-  states[0] = s1a;
   State* s2 = def2.newState();
   MXD J(def2.getDim(),def1.getDim());
-  t.jac(states,J);
+  t.jac(s1a,J);
   std::cout << J << std::endl;
   MXD JFD(def2.getDim(),def1.getDim());
-  t.jacFD(states,JFD,1e-8);
+  t.jacFD(s1a,JFD,1e-8);
   std::cout << JFD << std::endl;
 
   delete s1a;

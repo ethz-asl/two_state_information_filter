@@ -30,12 +30,4 @@ inline M3D Lmat (const V3D& a) {
   return kindr::getJacobianOfExponentialMap(a);
 }
 
-namespace GIF{
-  enum FilteringMode{
-    ModeEKF,
-    ModeUKF,
-    ModeIEKF
-  };
-}
-
 #endif /* GIF_COMMON_HPP_ */
