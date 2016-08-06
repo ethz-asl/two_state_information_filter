@@ -22,12 +22,13 @@ class Transformation: public Model{
   virtual void _eval(const std::vector<const State*>& in, State* out){
     eval(in[0],out);
   }
-  virtual void _jac(const std::vector<const State*>& in, MXD& out){
+  virtual void _jac(const std::vector<const State*>& in, MXD& out, int c){
+    assert(c==0);
     jac(in[0],out);
   }
   void jacFD(const State* in, MXD& out, const double& delta){
     const std::vector<const State*> inVec({in});
-    _jacFD(inVec,out,delta,0);
+    _jacFD(inVec,out,0,delta);
   }
   void transformState(const State* in, State* out){
     eval(in, out);

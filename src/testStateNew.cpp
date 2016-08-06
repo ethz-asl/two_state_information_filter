@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <array>
 
+#include "../include/generalized_information_filter/PairwiseResidual.hpp"
 #include "generalized_information_filter/common.hpp"
 #include "generalized_information_filter/State.hpp"
 #include "generalized_information_filter/Transformation.hpp"

@@ -25,8 +25,8 @@ class Model{
   Model(StateDefinition* outputDefinition, std::initializer_list<StateDefinition*> inputList): outputDefinition_(outputDefinition), inputDefinition_(inputList){};
   virtual ~Model(){};
   virtual void _eval(const std::vector<const State*>& in, State* out) = 0;
-  virtual void _jac(const std::vector<const State*>& in, MXD& out) = 0;
-  void _jacFD(const std::vector<const State*>& in, MXD& J, const double& delta, const int& c = 0){
+  virtual void _jac(const std::vector<const State*>& in, MXD& out, int c) = 0;
+  void _jacFD(const std::vector<const State*>& in, MXD& J, int c, const double& delta){
     J.setZero();
     State* stateDis = inputDefinition_[c]->newState();
     *stateDis = *in[c];
