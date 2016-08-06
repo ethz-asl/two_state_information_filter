@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include <assert.h>
+#include <array>
 
 #include "generalized_information_filter/common.hpp"
 #include "generalized_information_filter/State.hpp"
@@ -7,79 +8,81 @@
 
 using namespace GIF;
 
-class State1: public State{
- public:
-  State1(): State(){
-    timeOffset_ = addElement<double>();
-    pos_ = addElement<Eigen::Matrix<double,5,1>>();
-    fea_ = addElement<std::array<Eigen::Matrix<double,3,1>,3>>();
-  }
-  State* clone() const{
-    State1* s = new State1();
-    *dynamic_cast<State*>(s) = *dynamic_cast<const State*>(this);
-    return s;
-  }
-  Element<double>* timeOffset_;
-  Element<Eigen::Matrix<double,5,1>>* pos_;
-  Element<std::array<Eigen::Matrix<double,3,1>,3>>* fea_;
-};
-
 class TransformationExample: public Transformation{
  public:
-  TransformationExample(){};
+  TransformationExample(StateDefinition* inputDefinition, StateDefinition* outputDefinition):
+    Transformation(inputDefinition,outputDefinition){
+    timeOffset_ = inputDefinition->addElementDefinition<double>("timeOffset");
+    posIn_ = inputDefinition->addElementDefinition<Eigen::Matrix<double,5,1>>("pos");
+    fea_ = inputDefinition->addElementDefinition<std::array<Eigen::Matrix<double,3,1>,3>>("fea");
+    posOut_ = outputDefinition->addElementDefinition<Eigen::Matrix<double,5,1>>("pos");
+  };
   virtual ~TransformationExample(){};
-  void eval(const State** in, State* out){
-    const State1* inCast = dynamic_cast<const State1*>(*in);
-    State1* outCast = dynamic_cast<State1*>(out);
-    outCast->pos_->x_ = inCast->pos_->x_;
+  void eval(const std::vector<const State*>& in, State* out){
+    Eigen::Matrix<double,5,1> v;
+    v << 1,2,3,4,5;
+    posOut_->get(out) = (posIn_->get(in[0])+v)*(timeOffset_->get(in[0])+2.0);
   }
-  void jac(const State** in, MXD& out){
-    const State1* inCast = dynamic_cast<const State1*>(*in);
+  void jac(const std::vector<const State*>& in, MXD& out){
+    Eigen::Matrix<double,5,1> v;
+    v << 1,2,3,4,5;
     out.setZero();
-    out.block(inCast->pos_->i_,inCast->pos_->i_,inCast->pos_->d_,inCast->pos_->d_).setIdentity();
+    out.block(posOut_->getIndex(),posIn_->getIndex(),posOut_->getDim(),posIn_->getDim()).setIdentity();
+    out.block(posOut_->getIndex(),posIn_->getIndex(),posOut_->getDim(),posIn_->getDim()) *= (timeOffset_->get(in[0])+2.0);
+    out.block(posOut_->getIndex(),timeOffset_->getIndex(),posOut_->getDim(),timeOffset_->getDim()) = posIn_->get(in[0])+v;
   }
+ private:
+  ElementDefinition<double>* timeOffset_;
+  ElementDefinition<Eigen::Matrix<double,5,1>>* posIn_;
+  ElementDefinition<std::array<Eigen::Matrix<double,3,1>,3>>* fea_;
+  ElementDefinition<Eigen::Matrix<double,5,1>>* posOut_;
 };
 
 // The fixture for testing class ScalarState
 class NewStateTest : public virtual ::testing::Test {
  protected:
   NewStateTest():covMat_(1,1) {
-//    unsigned int s = 1;
-//    testElement1_.setRandom(s);
-//    testElement2_.setRandom(s);
   }
   virtual ~NewStateTest() {
   }
-//  GIF::ScalarElement testElement1_;
-//  GIF::ScalarElement testElement2_;
-//  GIF::ScalarElement::mtDifVec difVec_;
   MXD covMat_;
 };
 
 // Test constructors
 TEST_F(NewStateTest, constructor) {
-  State1 s, s2;
-  s.print();
-  Eigen::VectorXd v(s.d_);
+  StateDefinition def1;
+  StateDefinition def2;
+  TransformationExample t(&def1,&def2);
+  State* s1a = def1.newState();
+  State* s1b = def1.newState();
+  def1.init(s1a);
+  def1.print(s1a);
+
+  // Boxplus and boxminus
+  Eigen::VectorXd v(def1.getDim());
   v.setZero();
-  for(int i = 0; i < s.d_; i++){
+  for(int i = 0; i < def1.getDim(); i++){
     v(i) = i;
   }
-  s.boxplus(v,s2);
-  s2.print();
-  s.boxminus(s2,v);
+  def1.boxplus(s1a,v,s1b);
+  def1.print(s1b);
+  def1.boxminus(s1a,s1b,v);
   std::cout << v.transpose() << std::endl;
 
-
-  TransformationExample t;
-  const State* states[1];
-  states[0] = &s;
-  MXD J(s.d_,s.d_);
+  // Transformation
+  std::vector<const State*> states(1,nullptr);
+  states[0] = s1a;
+  State* s2 = def2.newState();
+  MXD J(def2.getDim(),def1.getDim());
   t.jac(states,J);
   std::cout << J << std::endl;
-  MXD JFD(s.d_,s.d_);
-  t.jacFD(states,&s2,JFD,1e-8);
+  MXD JFD(def2.getDim(),def1.getDim());
+  t.jacFD(states,JFD,1e-8);
   std::cout << JFD << std::endl;
+
+  delete s1a;
+  delete s1b;
+//  delete s2;
 }
 
 int main(int argc, char **argv) {

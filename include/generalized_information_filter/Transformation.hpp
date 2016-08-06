@@ -15,17 +15,17 @@ namespace GIF{
 
 class Transformation: public Model{
  public:
-  Transformation(){};
+  Transformation(StateDefinition* inputDefinition, StateDefinition* outputDefinition): Model(outputDefinition,{inputDefinition}){};
   virtual ~Transformation(){};
-  void transformState(const State** in, State* out){
+  void transformState(const std::vector<const State*>& in, State* out){
     eval(in, out);
   }
-  void transformCovMat(const State** in,const MXD& inputCov, MXD& outputCov){
+  void transformCovMat(const std::vector<const State*>& in,const MXD& inputCov, MXD& outputCov){
     jac(in,J_);
     outputCov = J_*inputCov*J_.transpose();
     postProcess(in,outputCov);
   }
-  virtual void postProcess(const State** in, MXD& cov){};
+  virtual void postProcess(const std::vector<const State*>& in, MXD& cov){};
 
  private:
   MXD J_;

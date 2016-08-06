@@ -13,72 +13,35 @@
 
 namespace GIF{
 
+class StateDefinition;
+
 class State{
  public:
-  State(){
-    d_ = 0;
-  }
-  State(const State& other){
-    d_ = other.d_;;
-    for(auto e : other.elements_){
-      elements_.push_back(e->clone());
-    }
-  }
-  virtual ~State(){
+  State(StateDefinition* def): def_(def){};
+  ~State(){
     for(auto e : elements_){
       delete e;
     }
   };
-  virtual State* clone() const = 0;
   State& operator=(const State& other){
-    assert(this->d_==other.d_);
     for(int i=0;i<elements_.size();i++){
       *elements_[i] = *other.elements_[i];
     }
     return *this;
   }
-  template<typename T>
-  Element<T>* addElement(){
-    Element<T>* e = new Element<T>();
-    e->init();
-    e->i_ = d_;
-    d_ += e->d_;
+  void addElement(ElementBase* e){
     elements_.push_back(e);
-    return e;
   }
-  ElementBase& getElement(int ID){
-    return *elements_[ID];
+  ElementBase* getElement(int i){
+    return elements_[i];
   }
-  const ElementBase& getElement(int ID) const{
-    return *elements_[ID];
+  const ElementBase* getElement(int i) const{
+    return elements_[i];
   }
-  void print() const{
-    for(auto e : elements_){
-      e->print();
-    }
-  }
-  void init() const{
-    for(auto e : elements_){
-      e->init();
-    }
-  }
-  void boxplus(const VXD& vec, State& out) const{
-    int c=0;
-    for(int i=0;i < elements_.size();i++){
-      elements_[i]->boxplus(vec.block(c,0,elements_[i]->d_,1),out.elements_[i]);
-      c+=elements_[i]->d_;
-    }
-  }
-  void boxminus(const State& ref, VXD& vec) const{
-    int c=0;
-    for(int i=0;i < elements_.size();i++){
-      elements_[i]->boxminus(ref.elements_[i],vec.block(c,0,elements_[i]->d_,1));
-      c+=elements_[i]->d_;
-    }
-  }
-  int d_;
- private:
+
+ protected:
   std::vector<ElementBase*> elements_;
+  StateDefinition* def_;
 };
 
 }

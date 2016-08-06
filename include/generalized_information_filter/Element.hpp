@@ -13,75 +13,22 @@
 namespace GIF{
 
 template<typename ElementType>
-class PrintTraits{
- public:
-  static void print(const ElementType& x){}
-};
-
-template<typename ElementType>
-class InitTraits{
- public:
-  static void init(ElementType& x){}
-};
-
-template<typename ElementType>
-class DimTraits{
- public:
-  static constexpr int d_ = 0;
-};
-
-template<typename ElementType>
-class BoxplusTraits{
- public:
-  static void boxplus(const ElementType& in, const Eigen::Ref<const Eigen::VectorXd>& vec, ElementType& out){}
-};
-
-template<typename ElementType>
-class BoxminusTraits{
- public:
-  static void boxminus(const ElementType& in, const ElementType& ref, Eigen::Ref<Eigen::VectorXd> vec){}
-};
+class ElementDefinition;
 
 class ElementBase{
  public:
-  ElementBase(int d): d_(d){
-    i_ = -1;
-  };
+  ElementBase(){};
   virtual ~ElementBase(){};
-  virtual void print() const = 0;
-  virtual void init() = 0;
-  virtual void boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec, ElementBase* out) = 0;
-  virtual void boxminus(const ElementBase* ref, Eigen::Ref<Eigen::VectorXd> vec) = 0;
-  virtual ElementBase* clone() = 0;
   virtual ElementBase& operator=(const ElementBase& other) = 0;
-  int i_;
-  int d_; // TODO: constant
 };
 
 template<typename ElementType>
 class Element: public ElementBase{
  public:
   ElementType x_;
-  Element(): ElementBase(DimTraits<ElementType>::d_){};
-  void print() const{
-    PrintTraits<ElementType>::print(x_);
-  }
-  void init(){
-    InitTraits<ElementType>::init(x_);
-  }
-  void boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec, ElementBase* out){
-    BoxplusTraits<ElementType>::boxplus(this->x_,vec,dynamic_cast<Element<ElementType>*>(out)->x_);
-  }
-  void boxminus(const ElementBase* ref, Eigen::Ref<Eigen::VectorXd> vec){
-    BoxminusTraits<ElementType>::boxminus(this->x_,dynamic_cast<const Element<ElementType>*>(ref)->x_,vec);
-  }
-  ElementBase* clone(){
-    Element<ElementType>* e = new Element<ElementType>();
-    *e = *this;
-    return e;
-  }
+  Element(ElementDefinition<ElementType>* def): def_(def){};
+  virtual ~Element(){};
   Element<ElementType>& operator=(const Element<ElementType>& other){
-    i_ = other.i_;
     x_ = other.x_;
     return *this;
   }
@@ -89,119 +36,8 @@ class Element: public ElementBase{
     *this = dynamic_cast<const Element<ElementType>&>(other);
     return *this;
   }
-};
-
-// ==================== Traits Implementation ====================
-template<>
-class PrintTraits<double>{
- public:
-  static void print(const double& x){
-    std::cout << x << std::endl;
-  }
-};
-template<int N>
-class PrintTraits<Eigen::Matrix<double,N,1>>{
- public:
-  static void print(const Eigen::Matrix<double,N,1>& x){
-    std::cout << x.transpose() << std::endl;
-  }
-};
-template<typename T, size_t N>
-class PrintTraits<std::array<T,N>>{
- public:
-  static void print(const std::array<T,N>& x){
-    for(const T& i : x){
-      PrintTraits<T>::print(i);
-    }
-  }
-};
-
-template<>
-class InitTraits<double>{
- public:
-  static void init(double& x){
-    x = 0;
-  }
-};
-template<int N>
-class InitTraits<Eigen::Matrix<double,N,1>>{
- public:
-  static void init(Eigen::Matrix<double,N,1>& x){
-    x.setZero();
-  }
-};
-template<typename T, size_t N>
-class InitTraits<std::array<T,N>>{
- public:
-  static void init(std::array<T,N>& x){
-    for(T& i : x){
-      InitTraits<T>::init(i);
-    }
-  }
-};
-
-template<>
-class DimTraits<double>{
- public:
-  static constexpr int d_ = 1;
-};
-template<int N>
-class DimTraits<Eigen::Matrix<double,N,1>>{
- public:
-  static constexpr int d_ = N;
-};
-template<typename T, size_t N>
-class DimTraits<std::array<T,N>>{
- public:
-  static constexpr int d_ = N*DimTraits<T>::d_;
-};
-
-template<>
-class BoxplusTraits<double>{
- public:
-  static void boxplus(const double& in, const Eigen::Ref<const Eigen::VectorXd>& vec, double& out){
-    out = in+vec(0);
-  }
-};
-template<int N>
-class BoxplusTraits<Eigen::Matrix<double,N,1>>{
- public:
-  static void boxplus(const Eigen::Matrix<double,N,1>& in, const Eigen::Ref<const Eigen::VectorXd>& vec, Eigen::Matrix<double,N,1>& out){
-    out = in+vec;
-  }
-};
-template<typename T, size_t N>
-class BoxplusTraits<std::array<T,N>>{
- public:
-  static void boxplus(const std::array<T,N>& in, const Eigen::Ref<const Eigen::VectorXd>& vec, std::array<T,N>& out){
-    for(int i=0;i<N;i++){
-      BoxplusTraits<T>::boxplus(in[i],vec.block<DimTraits<T>::d_,1>(i*DimTraits<T>::d_,0),out[i]);
-    }
-  }
-};
-
-template<>
-class BoxminusTraits<double>{
- public:
-  static void boxminus(const double& in, const double& ref, Eigen::Ref<Eigen::VectorXd> vec){
-    vec(0) = in-ref;
-  }
-};
-template<int N>
-class BoxminusTraits<Eigen::Matrix<double,N,1>>{
- public:
-  static void boxminus(const Eigen::Matrix<double,N,1>& in, const Eigen::Matrix<double,N,1>& ref, Eigen::Ref<Eigen::VectorXd> vec){
-    vec = in-ref;
-  }
-};
-template<typename T, size_t N>
-class BoxminusTraits<std::array<T,N>>{
- public:
-  static void boxminus(const std::array<T,N>& in, const std::array<T,N>& ref, Eigen::Ref<Eigen::VectorXd> vec){
-    for(int i=0;i<N;i++){
-      BoxminusTraits<T>::boxminus(in[i],ref[i],vec.block<DimTraits<T>::d_,1>(i*DimTraits<T>::d_,0));
-    }
-  }
+ protected:
+  ElementDefinition<ElementType>* def_;
 };
 
 }
