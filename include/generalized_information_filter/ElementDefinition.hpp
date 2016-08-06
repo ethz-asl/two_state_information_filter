@@ -5,8 +5,8 @@
  *      Author: Bloeschm
  */
 
-#ifndef ELEMENTDEFINITION_HPP_
-#define ELEMENTDEFINITION_HPP_
+#ifndef GIF_ELEMENTDEFINITION_HPP_
+#define GIF_ELEMENTDEFINITION_HPP_
 
 #include "generalized_information_filter/common.hpp"
 #include "generalized_information_filter/State.hpp"
@@ -214,4 +214,4 @@ class BoxminusTraits<std::array<T,N>>{
 
 }
 
-#endif /* ELEMENTDEFINITION_HPP_ */
+#endif /* GIF_ELEMENTDEFINITION_HPP_ */

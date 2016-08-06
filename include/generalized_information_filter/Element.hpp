@@ -5,8 +5,8 @@
  *      Author: Bloeschm
  */
 
-#ifndef ELEMENT_HPP_
-#define ELEMENT_HPP_
+#ifndef GIF_ELEMENT_HPP_
+#define GIF_ELEMENT_HPP_
 
 #include "generalized_information_filter/common.hpp"
 
@@ -42,4 +42,4 @@ class Element: public ElementBase{
 
 }
 
-#endif /* ELEMENT_HPP_ */
+#endif /* GIF_ELEMENT_HPP_ */
