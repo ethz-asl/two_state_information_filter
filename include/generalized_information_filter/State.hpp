@@ -17,7 +17,7 @@ class StateDefinition;
 
 class State{
  public:
-  State(StateDefinition* def): def_(def){};
+  State(const StateDefinition* def): def_(def){};
   ~State(){
     for(auto e : elements_){
       delete e;
@@ -41,7 +41,7 @@ class State{
 
  protected:
   std::vector<ElementBase*> elements_;
-  StateDefinition* def_;
+  const StateDefinition* def_;
 };
 
 }

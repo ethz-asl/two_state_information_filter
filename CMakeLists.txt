@@ -20,6 +20,9 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/gtest/" AND (NOT DEFINED CATKIN_DEVEL_PRE
 	add_executable(testStateNew src/testStateNew.cpp)
 	target_link_libraries(testStateNew gtest_main gtest pthread )
 	add_test(testStateNew testStateNew)
+	add_executable(testFilter src/testFilter.cpp)
+	target_link_libraries(testFilter gtest_main gtest pthread )
+	add_test(testFilter testFilter)
 endif()
 
 # Generate FindGIF.cmake file

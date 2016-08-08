@@ -26,7 +26,7 @@ class StateDefinition{
       delete d;
     }
   };
-  State* newState(){
+  State* newState() const{
     State* newState = new State(this);
     for(auto d : elementDefinitions_){
       newState->addElement(d->newElement());
@@ -43,7 +43,7 @@ class StateDefinition{
     }
     return dynamic_cast<ElementDefinition<T>*>(namesMap_.at(name));
   }
-  int getDim(){
+  int getDim() const{
     return d_;
   }
   void print(const State* s) const{

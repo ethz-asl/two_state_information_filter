@@ -15,8 +15,7 @@ namespace GIF{
 
 class PairwiseResidual: public Model{
  public:
-  PairwiseResidual(StateDefinition* stateDefinition, StateDefinition* noiseDefinition, StateDefinition* residualDefinition):
-    Model(residualDefinition,{stateDefinition, stateDefinition, noiseDefinition}){
+  PairwiseResidual(): noiseDefinition_(new StateDefinition()), residualDefinition_(new StateDefinition()), measDefinition_(new StateDefinition()){
     meas_ = nullptr;
   };
   virtual ~PairwiseResidual(){};
@@ -59,8 +58,25 @@ class PairwiseResidual: public Model{
   void setMeas(const State* meas){
     meas_ = meas;
   }
+  void initStateDefinitions(std::shared_ptr<StateDefinition> stateDefinition){
+    stateDefinition_ = stateDefinition;
+    Model::initStateDefinitions(residualDefinition_,{stateDefinition_, stateDefinition_, noiseDefinition_});
+  }
+  std::shared_ptr<const StateDefinition> noiseDefinition(){
+    return noiseDefinition_;
+  }
+  std::shared_ptr<const StateDefinition> residualDefinition(){
+    return residualDefinition_;
+  }
+  std::shared_ptr<const StateDefinition> measDefinition(){
+    return measDefinition_;
+  }
 
- private:
+ protected:
+  std::shared_ptr<StateDefinition> stateDefinition_;
+  std::shared_ptr<StateDefinition> noiseDefinition_;
+  std::shared_ptr<StateDefinition> residualDefinition_;
+  std::shared_ptr<StateDefinition> measDefinition_;
   const State* meas_;
 };
 

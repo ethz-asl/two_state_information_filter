@@ -15,7 +15,7 @@ namespace GIF{
 
 class Transformation: public Model{
  public:
-  Transformation(StateDefinition* inputDefinition, StateDefinition* outputDefinition): Model(outputDefinition,{inputDefinition}){};
+  Transformation(): inputDefinition_(new StateDefinition()), outputDefinition_(new StateDefinition()), J_(0,0){};
   virtual ~Transformation(){};
   virtual void eval(const State* in, State* out) = 0;
   virtual void jac(const State* in, MXD& out) = 0;
@@ -39,8 +39,19 @@ class Transformation: public Model{
     postProcess(in,outputCov);
   }
   virtual void postProcess(const State* in, MXD& cov){};
+  void initStateDefinitions(){
+    Model::initStateDefinitions(outputDefinition_,{inputDefinition_});
+  }
+  std::shared_ptr<const StateDefinition> inputDefinition(){
+    return inputDefinition_;
+  }
+  std::shared_ptr<const StateDefinition> outputDefinition(){
+    return outputDefinition_;
+  }
 
- private:
+ protected:
+  std::shared_ptr<StateDefinition> inputDefinition_;
+  std::shared_ptr<StateDefinition> outputDefinition_;
   MXD J_;
 };
 

@@ -1,8 +1,5 @@
 #include "gtest/gtest.h"
-#include <assert.h>
-#include <array>
 
-#include "../include/generalized_information_filter/PairwiseResidual.hpp"
 #include "generalized_information_filter/common.hpp"
 #include "generalized_information_filter/State.hpp"
 #include "generalized_information_filter/Transformation.hpp"
@@ -11,13 +8,7 @@ using namespace GIF;
 
 class TransformationExample: public Transformation{
  public:
-  TransformationExample(StateDefinition* inputDefinition, StateDefinition* outputDefinition):
-    Transformation(inputDefinition,outputDefinition){
-    timeOffset_ = inputDefinition->addElementDefinition<double>("timeOffset");
-    posIn_ = inputDefinition->addElementDefinition<Eigen::Matrix<double,5,1>>("pos");
-    fea_ = inputDefinition->addElementDefinition<std::array<Eigen::Matrix<double,3,1>,3>>("fea");
-    posOut_ = outputDefinition->addElementDefinition<Eigen::Matrix<double,5,1>>("pos");
-  };
+  TransformationExample(): timeOffset_(nullptr), posIn_(nullptr), fea_(nullptr), posOut_(nullptr){};
   virtual ~TransformationExample(){};
   void eval(const State* in, State* out){
     Eigen::Matrix<double,5,1> v;
@@ -37,6 +28,13 @@ class TransformationExample: public Transformation{
   ElementDefinition<Eigen::Matrix<double,5,1>>* posIn_;
   ElementDefinition<std::array<Eigen::Matrix<double,3,1>,3>>* fea_;
   ElementDefinition<Eigen::Matrix<double,5,1>>* posOut_;
+
+  virtual void buildStateDefinitions(){
+    timeOffset_ = inputDefinition_->addElementDefinition<double>("timeOffset");
+    posIn_ = inputDefinition_->addElementDefinition<Eigen::Matrix<double,5,1>>("pos");
+    fea_ = inputDefinition_->addElementDefinition<std::array<Eigen::Matrix<double,3,1>,3>>("fea");
+    posOut_ = outputDefinition_->addElementDefinition<Eigen::Matrix<double,5,1>>("pos");
+  }
 };
 
 // The fixture for testing class ScalarState
@@ -51,31 +49,30 @@ class NewStateTest : public virtual ::testing::Test {
 
 // Test constructors
 TEST_F(NewStateTest, constructor) {
-  StateDefinition def1;
-  StateDefinition def2;
-  TransformationExample t(&def1,&def2);
-  State* s1a = def1.newState();
-  State* s1b = def1.newState();
-  def1.init(s1a);
-  def1.print(s1a);
+  TransformationExample t;
+  t.initStateDefinitions();
+  State* s1a = t.inputDefinition()->newState();
+  State* s1b = t.inputDefinition()->newState();
+  t.inputDefinition()->init(s1a);
+  t.inputDefinition()->print(s1a);
 
   // Boxplus and boxminus
-  Eigen::VectorXd v(def1.getDim());
+  Eigen::VectorXd v(t.inputDefinition()->getDim());
   v.setZero();
-  for(int i = 0; i < def1.getDim(); i++){
+  for(int i = 0; i < t.inputDefinition()->getDim(); i++){
     v(i) = i;
   }
-  def1.boxplus(s1a,v,s1b);
-  def1.print(s1b);
-  def1.boxminus(s1a,s1b,v);
+  t.inputDefinition()->boxplus(s1a,v,s1b);
+  t.inputDefinition()->print(s1b);
+  t.inputDefinition()->boxminus(s1a,s1b,v);
   std::cout << v.transpose() << std::endl;
 
   // Transformation
-  State* s2 = def2.newState();
-  MXD J(def2.getDim(),def1.getDim());
+  State* s2 = t.outputDefinition()->newState();
+  MXD J(t.outputDefinition()->getDim(),t.inputDefinition()->getDim());
   t.jac(s1a,J);
   std::cout << J << std::endl;
-  MXD JFD(def2.getDim(),def1.getDim());
+  MXD JFD(t.outputDefinition()->getDim(),t.inputDefinition()->getDim());
   t.jacFD(s1a,JFD,1e-8);
   std::cout << JFD << std::endl;
 

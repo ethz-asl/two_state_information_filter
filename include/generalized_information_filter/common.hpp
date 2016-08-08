@@ -11,6 +11,7 @@
 #include <Eigen/Dense>
 #include "kindr/Core"
 #include <iostream>
+#include <memory>
 
 typedef kindr::RotationQuaternionPD QPD;
 typedef kindr::RotationMatrixPD MPD;
