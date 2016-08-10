@@ -58,18 +58,13 @@ class FilterTest : public virtual ::testing::Test {
 
 // Test constructors
 TEST_F(FilterTest, constructor) {
+  std::cout << "================================" << std::endl;
+  TrafoTest t({"pos"},{"pos", "att"});
 
 
-  TrafoTest t({"pos", "att"},{"pos"});
-
+  std::cout << "================================" << std::endl;
   Filterr f;
-  f.addTrafo(t);
-  State* in = f.inDefinition_.newState();
-  State* out = f.outDefinition_.newState();
-  f.inDefinition_.print(in);
-  f.eval(in,out);
-
-  ResTest res;
+  ResTest res({"pos"},{"pos","att","pos","pos"});
   f.addRes(res);
   State* pre = f.stateDefinition_.newState();
   State* post = f.stateDefinition_.newState();
