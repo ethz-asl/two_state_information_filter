@@ -22,15 +22,7 @@ class TrafoBase{
   TrafoBase(){};
   virtual ~TrafoBase(){};
   virtual void evalBase(const std::vector<ElementBase*>& elementBasesOut, const std::vector<const ElementBase*>& elementBasesIn) = 0;
-//  virtual void jacBase(const std::vector<ElementBase*>& elementBasesOut, const std::vector<const ElementBase*>& elementBasesIn, MXD* J, int i = -1) = 0;
 };
-
-//template<typename ElementType>
-//struct DataAndIndex{
-//  DataAndIndex(const ElementType* x, int i): x_(x), i_(i){};
-//  const ElementType* x_;
-//  int i_;
-//};
 
 template<typename... Ts> class Pack{
  public:
@@ -86,6 +78,7 @@ class Trafo: public TrafoBase{
  public:
   static constexpr int n_ = OutPack::n_;
   static constexpr int m_ = TH_pack_size<InPacks...>::n_;
+  static constexpr int N_ = sizeof...(InPacks);
   typedef Trafo<Derived,OutPack,InPacks...> mtTrafo;
   Trafo(std::array<std::string,n_> namesOut, std::array<std::string,m_> namesIn): namesOut_(namesOut){
     _initNamesIn(namesIn);
@@ -124,6 +117,21 @@ class Trafo: public TrafoBase{
   template<typename... Ps, typename std::enable_if<(sizeof...(Ps)==m_+n_)>::type* = nullptr>
   void _eval(const std::vector<ElementBase*>& elementBasesOut, const std::vector<const ElementBase*>& elementBasesIn, Ps&... elements){
     static_cast<Derived&>(*this).eval(elements...);
+  }
+
+  template<int n, typename... Ps, typename std::enable_if<(sizeof...(Ps)<m_)>::type* = nullptr>
+  void _jac(MXD* J, const std::vector<const ElementBase*>& elementBasesIn, Ps&... elements){
+    static constexpr int outerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::getOuter();
+    static constexpr int innerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::getInner();
+    typedef typename std::tuple_element<outerIndex,std::tuple<InPacks...>>::type::mtTuple mtTuple;
+    typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
+    std::cout << "In: " << std::get<outerIndex>(namesIn_).at(innerIndex) << std::endl;
+    _jac(J,elementBasesIn, elements..., dynamic_cast<const Element<mtElementType>*>(elementBasesIn.at(sizeof...(Ps)))->x_);
+  }
+  template<int n, typename... Ps, typename std::enable_if<(sizeof...(Ps)==m_)>::type* = nullptr>
+  void _jac(MXD* J, const std::vector<const ElementBase*>& elementBasesIn, Ps&... elements){
+    static_assert(n<N_,"No such Jacobian!");
+    static_cast<Derived&>(*this).template eval<n>(J,elements...);
   }
 
   std::array<std::string,n_> namesOut_;
