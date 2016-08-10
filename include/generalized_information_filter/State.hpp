@@ -38,6 +38,12 @@ class State{
   const ElementBase* getElement(int i) const{
     return elements_[i];
   }
+  std::vector<ElementBase*> getElements(){
+    return std::vector<ElementBase*>(elements_.begin(),elements_.end());
+  }
+  std::vector<const ElementBase*> getElements() const{
+    return std::vector<const ElementBase*>(elements_.begin(),elements_.end());
+  }
 
  protected:
   std::vector<ElementBase*> elements_;
