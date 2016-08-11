@@ -13,41 +13,62 @@
 
 namespace GIF{
 
-class StateDefinition;
-
-class State{
+class State{ // TODO: shared_ptr
  public:
-  State(const StateDefinition* def): def_(def){};
+  State(){
+    d_ = 0;
+  };
   ~State(){
     for(auto e : elements_){
-      delete e;
+      delete e.first;
     }
   };
   State& operator=(const State& other){
     for(int i=0;i<elements_.size();i++){
-      *elements_[i] = *other.elements_[i];
+      *elements_[i].first = *other.elements_[i].first;
     }
     return *this;
   }
   void addElement(ElementBase* e){
-    elements_.push_back(e);
+    elements_.push_back(std::pair<ElementBase*,int>(e,d_));
+    d_ += e->getDim();
   }
   ElementBase* getElement(int i){
-    return elements_[i];
+    return elements_[i].first;
   }
   const ElementBase* getElement(int i) const{
-    return elements_[i];
+    return elements_[i].first;
   }
-  std::vector<ElementBase*> getElements(){
-    return std::vector<ElementBase*>(elements_.begin(),elements_.end());
+  const int& getIndex(int i) const{
+    return elements_[i].second;
   }
-  std::vector<const ElementBase*> getElements() const{
-    return std::vector<const ElementBase*>(elements_.begin(),elements_.end());
+  int getDim() const{
+    return d_;
+  }
+  void print() const{
+    for(auto e : elements_){
+      e.first->print();
+    }
+  }
+  void init(){
+    for(auto e : elements_){
+      e.first->init();
+    }
+  }
+  void boxplus(const VXD& vec, State* out) const{
+    for(int i=0;i<elements_.size();i++){
+      getElement(i)->boxplus(vec.block(getIndex(i),0,getElement(i)->getDim(),1),out->getElement(i));
+    }
+  }
+  void boxminus(const State* ref, VXD& vec) const{
+    for(int i=0;i<elements_.size();i++){
+      getElement(i)->boxminus(ref->getElement(i),vec.block(getIndex(i),0,getElement(i)->getDim(),1));
+    }
   }
 
  protected:
-  std::vector<ElementBase*> elements_;
-  const StateDefinition* def_;
+  std::vector<std::pair<ElementBase*,int>> elements_;
+  int d_;
 };
 
 }

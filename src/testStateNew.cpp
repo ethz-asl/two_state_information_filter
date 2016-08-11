@@ -46,18 +46,18 @@ TEST_F(NewStateTest, constructor) {
   TransformationExample t;
   State* s1a = t.inputDefinition()->newState();
   State* s1b = t.inputDefinition()->newState();
-  t.inputDefinition()->init(s1a);
-  t.inputDefinition()->print(s1a);
+  s1a->init();
+  s1a->print();
 
   // Boxplus and boxminus
-  Eigen::VectorXd v(t.inputDefinition()->getDim());
+  Eigen::VectorXd v(s1a->getDim());
   v.setZero();
-  for(int i = 0; i < t.inputDefinition()->getDim(); i++){
+  for(int i = 0; i < s1a->getDim(); i++){
     v(i) = i;
   }
-  t.inputDefinition()->boxplus(s1a,v,s1b);
-  t.inputDefinition()->print(s1b);
-  t.inputDefinition()->boxminus(s1a,s1b,v);
+  s1a->boxplus(v,s1b);
+  s1b->print();
+  s1a->boxminus(s1b,v);
   std::cout << v.transpose() << std::endl;
 //
 //  // Transformation
