@@ -17,13 +17,13 @@ template<typename PackOut, typename PackIn>
 class Transformation;
 
 template<typename... Out, typename... In>
-class Transformation<Pack<Out...>,Pack<In...>>: public Model<Transformation<Pack<Out...>,Pack<In...>>, Pack<Out...>, Pack<In...>>{
+class Transformation<ElementPack<Out...>,ElementPack<In...>>: public Model<Transformation<ElementPack<Out...>,ElementPack<In...>>, ElementPack<Out...>, ElementPack<In...>>{
  public:
-  using mtBase = Model<Transformation<Pack<Out...>,Pack<In...>>, Pack<Out...>, Pack<In...>>;
-  typedef Transformation<Pack<Out...>,Pack<In...>> mtTransformation;
+  using mtBase = Model<Transformation<ElementPack<Out...>,ElementPack<In...>>, ElementPack<Out...>, ElementPack<In...>>;
+  typedef Transformation<ElementPack<Out...>,ElementPack<In...>> mtTransformation;
   Transformation(): outputDefinition_(new StateDefinition()), inputDefinition_(new StateDefinition()), J_(0,0){
-    Pack<Out...>::addElementToDefinition(outputDefinition_);
-    Pack<In...>::addElementToDefinition(inputDefinition_);
+    ElementPack<Out...>::addElementToDefinition(outputDefinition_);
+    ElementPack<In...>::addElementToDefinition(inputDefinition_);
   };
   virtual ~Transformation(){};
   virtual void eval(Out&... outs, const In&... ins) = 0;

@@ -18,7 +18,7 @@
 namespace GIF{
 
 template<typename... Ts>
-class Pack{
+class ElementPack{
  public:
   static constexpr int n_ = sizeof...(Ts);
   typedef std::tuple<Ts...> mtTuple;
@@ -34,7 +34,7 @@ class Pack{
   template<int i = 0, typename std::enable_if<(i<sizeof...(Ts))>::type* = nullptr>
   static void addElementToDefinition(std::shared_ptr<StateDefinition> def){
     typedef typename std::tuple_element<i,mtTuple>::type mtElementType;
-    def->addElementDefinition<mtElementType>(std::to_string(i));
+    def->addElementDefinition<mtElementType>("def" + std::to_string(i));
     addElementToDefinition<i+1>(def);
   }
   template<int i = 0, typename std::enable_if<(i==sizeof...(Ts))>::type* = nullptr>
@@ -44,18 +44,18 @@ class Pack{
 template<typename... InPacks>
 struct TH_pack_size;
 template<typename... Ts, typename... InPacks>
-struct TH_pack_size<Pack<Ts...>,InPacks...>{
+struct TH_pack_size<ElementPack<Ts...>,InPacks...>{
   static constexpr int n_ = TH_pack_size<InPacks...>::n_+sizeof...(Ts);
 };
 template<typename... Ts>
-struct TH_pack_size<Pack<Ts...>>{
+struct TH_pack_size<ElementPack<Ts...>>{
   static constexpr int n_ = sizeof...(Ts);
 };
 
 template<int i, typename... Packs>
 struct TH_pack_index;
 template<int i, typename... Ts, typename... Packs>
-struct TH_pack_index<i,Pack<Ts...>,Packs...>{
+struct TH_pack_index<i,ElementPack<Ts...>,Packs...>{
   template<int j=i, typename std::enable_if<(j>=sizeof...(Ts))>::type* = nullptr>
   static constexpr int getOuter(){return TH_pack_index<i-sizeof...(Ts),Packs...>::getOuter()+1;}
   template<int j=i, typename std::enable_if<(j<sizeof...(Ts))>::type* = nullptr>
@@ -66,7 +66,7 @@ struct TH_pack_index<i,Pack<Ts...>,Packs...>{
   static constexpr int getInner(){return i;}
 };
 template<int i, typename... Ts>
-struct TH_pack_index<i,Pack<Ts...>>{
+struct TH_pack_index<i,ElementPack<Ts...>>{
   template<typename std::enable_if<(i<sizeof...(Ts))>::type* = nullptr>
   static constexpr int getOuter(){return 0;};
   template<typename std::enable_if<(i<sizeof...(Ts))>::type* = nullptr>

@@ -6,7 +6,7 @@
 
 using namespace GIF;
 
-class TransformationExample: public Transformation<Pack<V3D>,Pack<double, std::array<V3D,4>>>{
+class TransformationExample: public Transformation<ElementPack<V3D>,ElementPack<double, std::array<V3D,4>>>{
  public:
   TransformationExample(){};
   virtual ~TransformationExample(){};
