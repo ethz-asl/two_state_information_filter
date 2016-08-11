@@ -8,7 +8,7 @@ using namespace GIF;
 
 class TransformationExample: public Transformation<Pack<V3D>,Pack<double, std::array<V3D,4>>>{
  public:
-  TransformationExample(): mtTransformation({"pos"},{"time","pos"}){};
+  TransformationExample(){};
   virtual ~TransformationExample(){};
   void eval(V3D& posOut,const double& timeIn,const std::array<V3D,4>& posIn){
     posOut = (timeIn+1.0)*posIn[2];

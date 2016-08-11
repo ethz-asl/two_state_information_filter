@@ -30,6 +30,15 @@ class Pack{
   }
   template<int i = 0, typename std::enable_if<(i==sizeof...(Ts))>::type* = nullptr>
   static void addElementToDefinition(const std::array<std::string,n_>& names, std::shared_ptr<StateDefinition> def){}
+
+  template<int i = 0, typename std::enable_if<(i<sizeof...(Ts))>::type* = nullptr>
+  static void addElementToDefinition(std::shared_ptr<StateDefinition> def){
+    typedef typename std::tuple_element<i,mtTuple>::type mtElementType;
+    def->addElementDefinition<mtElementType>(std::to_string(i));
+    addElementToDefinition<i+1>(def);
+  }
+  template<int i = 0, typename std::enable_if<(i==sizeof...(Ts))>::type* = nullptr>
+  static void addElementToDefinition(std::shared_ptr<StateDefinition> def){}
 };
 
 template<typename... InPacks>
@@ -78,19 +87,7 @@ class Model: public ModelBase{
   static constexpr int m_ = TH_pack_size<InPacks...>::n_;
   static constexpr int N_ = sizeof...(InPacks);
   typedef Model<Derived,OutPack,InPacks...> mtBase;
-  Model(std::array<std::string,n_> namesOut, std::array<std::string,m_> namesIn): namesOut_(namesOut){
-    _initNamesIn(namesIn);
-  };
-
-  template<int i=0, typename std::enable_if<(i<m_)>::type* = nullptr>
-  void _initNamesIn(std::array<std::string,m_> namesIn){
-    static constexpr int outerIndex = TH_pack_index<i,InPacks...>::getOuter();
-    static constexpr int innerIndex = TH_pack_index<i,InPacks...>::getInner();
-    std::get<outerIndex>(namesIn_).at(innerIndex) = namesIn.at(i);
-    _initNamesIn<i+1>(namesIn);
-  }
-  template<int i=0, typename std::enable_if<(i==m_)>::type* = nullptr>
-  void _initNamesIn(std::array<std::string,m_> namesIn){}
+  Model(){}
 
   void evalBase(const std::vector<ElementBase*>& elementBasesOut, const std::vector<const ElementBase*>& elementBasesIn){
     _eval(elementBasesOut,elementBasesIn);
@@ -100,7 +97,6 @@ class Model: public ModelBase{
     static constexpr int innerIndex = sizeof...(Ps);
     typedef typename OutPack::mtTuple mtTuple;
     typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
-    std::cout << "Out: " << namesOut_.at(innerIndex) << std::endl;
     _eval(elementBasesOut,elementBasesIn, elements..., dynamic_cast<Element<mtElementType>*>(elementBasesOut.at(sizeof...(Ps)))->x_);
   }
   template<typename... Ps, typename std::enable_if<(sizeof...(Ps)>=n_ & sizeof...(Ps)<n_+m_)>::type* = nullptr>
@@ -109,7 +105,6 @@ class Model: public ModelBase{
     static constexpr int innerIndex = TH_pack_index<sizeof...(Ps)-n_,InPacks...>::getInner();
     typedef typename std::tuple_element<outerIndex,std::tuple<InPacks...>>::type::mtTuple mtTuple;
     typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
-    std::cout << "In: " << std::get<outerIndex>(namesIn_).at(innerIndex) << std::endl;
     _eval(elementBasesOut,elementBasesIn, elements..., dynamic_cast<const Element<mtElementType>*>(elementBasesIn.at(sizeof...(Ps)-n_))->x_);
   }
   template<typename... Ps, typename std::enable_if<(sizeof...(Ps)==m_+n_)>::type* = nullptr>
@@ -123,7 +118,6 @@ class Model: public ModelBase{
     static constexpr int innerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::getInner();
     typedef typename std::tuple_element<outerIndex,std::tuple<InPacks...>>::type::mtTuple mtTuple;
     typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
-    std::cout << "In: " << std::get<outerIndex>(namesIn_).at(innerIndex) << std::endl;
     _jac(J,elementsIn, elements..., dynamic_cast<const Element<mtElementType>*>(elementsIn.at(sizeof...(Ps)).first)->x_);
   }
   template<int n, typename... Ps, typename std::enable_if<(sizeof...(Ps)==m_)>::type* = nullptr>
@@ -131,21 +125,7 @@ class Model: public ModelBase{
     static_assert(n<N_,"No such Jacobian!");
     static_cast<Derived&>(*this).template eval<n>(J,elements...);
   }
-
-  std::array<std::string,n_> namesOut_;
-  std::tuple<std::array<std::string,InPacks::n_>...> namesIn_;
 };
-
-//class ResTest: public Model<ResTest,Pack<V3D>,Pack<V3D, QPD>,Pack<V3D>,Pack<V3D>> {
-// public:
-//  ResTest(std::array<std::string,n_> namesOut, std::array<std::string,m_> namesIn): mtBase(namesOut,namesIn){};
-//  void eval(V3D& posRes, const V3D& posIn, const QPD& attIn, const V3D& posOut, const V3D& posNoi){
-//    std::cout << posIn.transpose() << std::endl;
-//    std::cout << attIn << std::endl;
-//  }
-////  void jac(const DataAndIndex<V3D>& posIn, const DataAndIndex<QPD>& attIn, const DataAndIndex<V3D>& posOut, const DataAndIndex<V3D>& posNoi, const DataAndIndex<V3D>& posRes, MXD* J, int i = -1){
-////  }
-//};
 
 }
 

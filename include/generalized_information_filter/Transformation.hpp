@@ -21,11 +21,9 @@ class Transformation<Pack<Out...>,Pack<In...>>: public Model<Transformation<Pack
  public:
   using mtBase = Model<Transformation<Pack<Out...>,Pack<In...>>, Pack<Out...>, Pack<In...>>;
   typedef Transformation<Pack<Out...>,Pack<In...>> mtTransformation;
-  Transformation(std::array<std::string,mtBase::n_> namesOut, std::array<std::string,mtBase::m_> namesIn):
-      mtBase(namesOut,namesIn),
-      outputDefinition_(new StateDefinition()), inputDefinition_(new StateDefinition()), J_(0,0){
-    Pack<Out...>::addElementToDefinition(this->namesOut_,outputDefinition_);
-    Pack<In...>::addElementToDefinition(std::get<0>(this->namesIn_),inputDefinition_);
+  Transformation(): outputDefinition_(new StateDefinition()), inputDefinition_(new StateDefinition()), J_(0,0){
+    Pack<Out...>::addElementToDefinition(outputDefinition_);
+    Pack<In...>::addElementToDefinition(inputDefinition_);
   };
   virtual ~Transformation(){};
   virtual void eval(Out&... outs, const In&... ins) = 0;
