@@ -26,8 +26,15 @@ class Transformation<ElementPack<Out...>,ElementPack<In...>>: public Model<Trans
     ElementPack<In...>::addElementToDefinition(inputDefinition_);
   };
   virtual ~Transformation(){};
-  virtual void eval(Out&... outs, const In&... ins) = 0;
-  virtual void jac(MXD* J, const In&... ins) = 0;
+  virtual void evalTransform(Out&... outs, const In&... ins) = 0;
+  virtual void jacTransform(MXD& J, const In&... ins) = 0;
+  void eval(Out&... outs, const In&... ins){
+    evalTransform(outs...,ins...);
+  }
+  template<int j, typename std::enable_if<(j==0)>::type* = nullptr>
+  void jac(MXD& J, const In&... ins){
+    jacTransform(J,ins...);
+  }
   void transformState(Out&... outs, const In&... ins){
     eval(outs..., ins...);
   }

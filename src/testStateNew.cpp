@@ -10,10 +10,10 @@ class TransformationExample: public Transformation<ElementPack<V3D>,ElementPack<
  public:
   TransformationExample(){};
   virtual ~TransformationExample(){};
-  void eval(V3D& posOut,const double& timeIn,const std::array<V3D,4>& posIn){
+  void evalTransform(V3D& posOut,const double& timeIn,const std::array<V3D,4>& posIn){
     posOut = (timeIn+1.0)*posIn[2];
   }
-  void jac(MXD* J,const double& timeIn,const std::array<V3D,4>& posIn){
+  void jacTransform(MXD& J,const double& timeIn,const std::array<V3D,4>& posIn){
 //    J.resize(n_,m_);
 //    J.block<3,1>(0,0) = b
 //

@@ -101,18 +101,18 @@ class Model{
     static_cast<Derived&>(*this).eval(elements...);
   }
 
-  template<int n, typename... Ps, typename std::enable_if<(sizeof...(Ps)<m_)>::type* = nullptr>
-  void _jac(MXD* J, const std::vector<std::pair<const ElementBase*,int>>& elementsIn, Ps&... elements){
+  template<int j, typename... Ps, typename std::enable_if<(sizeof...(Ps)<m_)>::type* = nullptr>
+  void _jac(MXD& J, const std::vector<const ElementBase*>& elementsIn, Ps&... elements){
     static constexpr int outerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::getOuter();
     static constexpr int innerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::getInner();
     typedef typename std::tuple_element<outerIndex,std::tuple<InPacks...>>::type::mtTuple mtTuple;
     typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
-    _jac(J,elementsIn, elements..., dynamic_cast<const Element<mtElementType>*>(elementsIn.at(sizeof...(Ps)).first)->get());
+    _jac<j>(J,elementsIn, elements..., dynamic_cast<const Element<mtElementType>*>(elementsIn.at(sizeof...(Ps)))->get());
   }
-  template<int n, typename... Ps, typename std::enable_if<(sizeof...(Ps)==m_)>::type* = nullptr>
-  void _jac(MXD* J, const std::vector<std::pair<const ElementBase*,int>>& elementsIn, Ps&... elements){
-    static_assert(n<N_,"No such Jacobian!");
-    static_cast<Derived&>(*this).template eval<n>(J,elements...);
+  template<int j, typename... Ps, typename std::enable_if<(sizeof...(Ps)==m_)>::type* = nullptr>
+  void _jac(MXD& J, const std::vector<const ElementBase*>& elementsIn, Ps&... elements){
+    static_assert(j<N_,"No such Jacobian!");
+    static_cast<Derived&>(*this).template jac<j>(J,elements...);
   }
 };
 
