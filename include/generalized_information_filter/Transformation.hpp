@@ -36,14 +36,14 @@ class Transformation<ElementPack<Out...>,ElementPack<In...>>: public Model<Trans
     jacTransform(J,ins...);
   }
   void transformState(Out&... outs, const In&... ins){
-    eval(outs..., ins...);
+    evalTransform(outs..., ins...);
   }
   void transformCovMat(const In&... ins,const MXD& inputCov, MXD& outputCov){
-    jac(J_,ins...);
+    jacTransform(J_,ins...);
     outputCov = J_*inputCov*J_.transpose();
-    postProcess(ins...,outputCov);
+    postProcess(outputCov, ins...);
   }
-  virtual void postProcess(const In&... ins, MXD& cov){};
+  virtual void postProcess(MXD& P, const In&... ins){};
   std::shared_ptr<StateDefinition> inputDefinition(){
     return inputDefinition_;
   }

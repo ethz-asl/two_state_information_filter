@@ -114,6 +114,30 @@ class Model{
     static_assert(j<N_,"No such Jacobian!");
     static_cast<Derived&>(*this).template jac<j>(J,elements...);
   }
+
+//  void _jacFD(const std::vector<const State*>& in, MXD& J, int c, const double& delta){
+//    J.setZero();
+//    State* stateDis = inputDefinitions_[c]->newState();
+//    *stateDis = *in[c];
+//    std::vector<const State*> inDis(in);
+//    inDis[c] = stateDis;
+//    State* outRef = outputDefinition_->newState();
+//    State* outDis = outputDefinition_->newState();
+//    _eval(inDis,outRef);
+//    VXD difIn(inputDefinitions_[c]->getDim());
+//    VXD difOut(outputDefinition_->getDim());
+//    for(int i=0; i<inputDefinitions_[c]->getDim(); i++){
+//      difIn.setZero();
+//      difIn(i) = delta;
+//      inputDefinitions_[c]->boxplus(in[c],difIn,stateDis);
+//      _eval(inDis,outDis);
+//      outputDefinition_->boxminus(outDis,outRef,difOut);
+//      J.col(i) = difOut/delta;
+//    }
+//    delete stateDis;
+//    delete outRef;
+//    delete outDis;
+//  }
 };
 
 }
