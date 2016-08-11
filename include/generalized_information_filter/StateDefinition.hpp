@@ -16,7 +16,7 @@
 
 namespace GIF{
 
-class StateDefinition{ // TODO: hshared ptrs
+class StateDefinition{ // TODO: shared_ptr
  public:
   StateDefinition(){
     d_ = 0;
@@ -34,16 +34,16 @@ class StateDefinition{ // TODO: hshared ptrs
     return newState;
   }
   template<typename T>
-  ElementDefinition<T>* addElementDefinition(const std::string& name){
+  int addElementDefinition(const std::string& name){
     auto q = namesMap_.find(name);
     if (q != namesMap_.end()){
-      return dynamic_cast<ElementDefinition<T>*>(elementDefinitions_.at(q->second).first);
+      return q->second;
     } else {
-      namesMap_[name] = elementDefinitions_.size();
       ElementDefinition<T>* newDefinition = new ElementDefinition<T>();
       elementDefinitions_.push_back(std::pair<ElementDefinitionBase*,int>(newDefinition,d_));
       d_ += newDefinition->getDim();
-      return newDefinition;
+      namesMap_.insert(std::pair<std::string, int>(name,elementDefinitions_.size()-1));
+      return elementDefinitions_.size()-1;
     }
   }
   int getDim() const{
