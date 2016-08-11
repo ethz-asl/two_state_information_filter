@@ -25,18 +25,24 @@ class ElementBase{
 template<typename ElementType>
 class Element: public ElementBase{
  public:
-  ElementType x_;
   Element(ElementDefinition<ElementType>* def): def_(def){};
   virtual ~Element(){};
   Element<ElementType>& operator=(const Element<ElementType>& other){
-    x_ = other.x_;
+    x_ = other.get();
     return *this;
   }
   virtual ElementBase& operator=(const ElementBase& other){
     *this = dynamic_cast<const Element<ElementType>&>(other);
     return *this;
   }
+  ElementType& get(){
+    return x_;
+  }
+  const ElementType& get() const{
+    return x_;
+  }
  protected:
+  ElementType x_;
   ElementDefinition<ElementType>* def_;
 };
 

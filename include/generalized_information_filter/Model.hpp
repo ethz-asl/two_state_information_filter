@@ -12,7 +12,6 @@
 #include <initializer_list>
 
 #include "generalized_information_filter/common.hpp"
-#include "generalized_information_filter/State.hpp"
 #include "generalized_information_filter/StateDefinition.hpp"
 
 namespace GIF{
@@ -97,7 +96,7 @@ class Model: public ModelBase{
     static constexpr int innerIndex = sizeof...(Ps);
     typedef typename OutPack::mtTuple mtTuple;
     typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
-    _eval(elementBasesOut,elementBasesIn, elements..., dynamic_cast<Element<mtElementType>*>(elementBasesOut.at(sizeof...(Ps)))->x_);
+    _eval(elementBasesOut,elementBasesIn, elements..., dynamic_cast<Element<mtElementType>*>(elementBasesOut.at(sizeof...(Ps)))->get());
   }
   template<typename... Ps, typename std::enable_if<(sizeof...(Ps)>=n_ & sizeof...(Ps)<n_+m_)>::type* = nullptr>
   void _eval(const std::vector<ElementBase*>& elementBasesOut, const std::vector<const ElementBase*>& elementBasesIn, Ps&... elements){
@@ -105,7 +104,7 @@ class Model: public ModelBase{
     static constexpr int innerIndex = TH_pack_index<sizeof...(Ps)-n_,InPacks...>::getInner();
     typedef typename std::tuple_element<outerIndex,std::tuple<InPacks...>>::type::mtTuple mtTuple;
     typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
-    _eval(elementBasesOut,elementBasesIn, elements..., dynamic_cast<const Element<mtElementType>*>(elementBasesIn.at(sizeof...(Ps)-n_))->x_);
+    _eval(elementBasesOut,elementBasesIn, elements..., dynamic_cast<const Element<mtElementType>*>(elementBasesIn.at(sizeof...(Ps)-n_))->get());
   }
   template<typename... Ps, typename std::enable_if<(sizeof...(Ps)==m_+n_)>::type* = nullptr>
   void _eval(const std::vector<ElementBase*>& elementBasesOut, const std::vector<const ElementBase*>& elementBasesIn, Ps&... elements){
@@ -118,7 +117,7 @@ class Model: public ModelBase{
     static constexpr int innerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::getInner();
     typedef typename std::tuple_element<outerIndex,std::tuple<InPacks...>>::type::mtTuple mtTuple;
     typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
-    _jac(J,elementsIn, elements..., dynamic_cast<const Element<mtElementType>*>(elementsIn.at(sizeof...(Ps)).first)->x_);
+    _jac(J,elementsIn, elements..., dynamic_cast<const Element<mtElementType>*>(elementsIn.at(sizeof...(Ps)).first)->get());
   }
   template<int n, typename... Ps, typename std::enable_if<(sizeof...(Ps)==m_)>::type* = nullptr>
   void _jac(MXD* J, const std::vector<std::pair<const ElementBase*,int>>& elementsIn, Ps&... elements){
