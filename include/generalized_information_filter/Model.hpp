@@ -72,15 +72,8 @@ struct TH_pack_index<i,ElementPack<Ts...>>{
   static constexpr int getInner(){return i;};
 };
 
-class ModelBase{
- public:
-  ModelBase(){};
-  virtual ~ModelBase(){};
-  virtual void evalBase(const std::vector<ElementBase*>& elementBasesOut, const std::vector<const ElementBase*>& elementBasesIn) = 0;
-};
-
 template<typename Derived, typename OutPack, typename... InPacks>
-class Model: public ModelBase{
+class Model{
  public:
   static constexpr int n_ = OutPack::n_;
   static constexpr int m_ = TH_pack_size<InPacks...>::n_;
@@ -88,9 +81,6 @@ class Model: public ModelBase{
   typedef Model<Derived,OutPack,InPacks...> mtBase;
   Model(){}
 
-  void evalBase(const std::vector<ElementBase*>& elementBasesOut, const std::vector<const ElementBase*>& elementBasesIn){
-    _eval(elementBasesOut,elementBasesIn);
-  }
   template<typename... Ps, typename std::enable_if<(sizeof...(Ps)<n_)>::type* = nullptr>
   void _eval(const std::vector<ElementBase*>& elementBasesOut, const std::vector<const ElementBase*>& elementBasesIn, Ps&... elements){
     static constexpr int innerIndex = sizeof...(Ps);
