@@ -6,34 +6,28 @@
 
 using namespace GIF;
 
-class TransformationExample: public Transformation{
+class TransformationExample: public Transformation<Pack<V3D>,Pack<double, std::array<V3D,4>>>{
  public:
-  TransformationExample(): timeOffset_(nullptr), posIn_(nullptr), fea_(nullptr), posOut_(nullptr){};
+  TransformationExample(): mtTransformation({"pos"},{"time","pos"}){};
   virtual ~TransformationExample(){};
-  void eval(const State* in, State* out){
-    Eigen::Matrix<double,5,1> v;
-    v << 1,2,3,4,5;
-    posOut_->get(out) = (posIn_->get(in)+v)*(timeOffset_->get(in)+2.0);
+  void eval(V3D& posOut,const double& timeIn,const std::array<V3D,4>& posIn){
+    posOut = (timeIn+1.0)*posIn[2];
   }
-  void jac(const State* in, MXD& out){
-    Eigen::Matrix<double,5,1> v;
-    v << 1,2,3,4,5;
-    out.setZero();
-    out.block(posOut_->getIndex(),posIn_->getIndex(),posOut_->getDim(),posIn_->getDim()).setIdentity();
-    out.block(posOut_->getIndex(),posIn_->getIndex(),posOut_->getDim(),posIn_->getDim()) *= (timeOffset_->get(in)+2.0);
-    out.block(posOut_->getIndex(),timeOffset_->getIndex(),posOut_->getDim(),timeOffset_->getDim()) = posIn_->get(in)+v;
-  }
- private:
-  ElementDefinition<double>* timeOffset_;
-  ElementDefinition<Eigen::Matrix<double,5,1>>* posIn_;
-  ElementDefinition<std::array<Eigen::Matrix<double,3,1>,3>>* fea_;
-  ElementDefinition<Eigen::Matrix<double,5,1>>* posOut_;
+  void jac(MXD* J,const double& timeIn,const std::array<V3D,4>& posIn){
+//    J.resize(n_,m_);
+//    J.block<3,1>(0,0) = b
+//
+//
+//
+//        getjac<0,0>(MXD* J) =
 
-  virtual void buildStateDefinitions(){
-    timeOffset_ = inputDefinition_->addElementDefinition<double>("timeOffset");
-    posIn_ = inputDefinition_->addElementDefinition<Eigen::Matrix<double,5,1>>("pos");
-    fea_ = inputDefinition_->addElementDefinition<std::array<Eigen::Matrix<double,3,1>,3>>("fea");
-    posOut_ = outputDefinition_->addElementDefinition<Eigen::Matrix<double,5,1>>("pos");
+
+//    Eigen::Matrix<double,5,1> v;
+//    v << 1,2,3,4,5;
+//    out.setZero();
+//    out.block(posOut_->getIndex(),posIn_->getIndex(),posOut_->getDim(),posIn_->getDim()).setIdentity();
+//    out.block(posOut_->getIndex(),posIn_->getIndex(),posOut_->getDim(),posIn_->getDim()) *= (timeOffset_->get(in)+2.0);
+//    out.block(posOut_->getIndex(),timeOffset_->getIndex(),posOut_->getDim(),timeOffset_->getDim()) = posIn_->get(in)+v;
   }
 };
 
@@ -50,7 +44,6 @@ class NewStateTest : public virtual ::testing::Test {
 // Test constructors
 TEST_F(NewStateTest, constructor) {
   TransformationExample t;
-  t.initStateDefinitions();
   State* s1a = t.inputDefinition()->newState();
   State* s1b = t.inputDefinition()->newState();
   t.inputDefinition()->init(s1a);
@@ -66,19 +59,19 @@ TEST_F(NewStateTest, constructor) {
   t.inputDefinition()->print(s1b);
   t.inputDefinition()->boxminus(s1a,s1b,v);
   std::cout << v.transpose() << std::endl;
-
-  // Transformation
-  State* s2 = t.outputDefinition()->newState();
-  MXD J(t.outputDefinition()->getDim(),t.inputDefinition()->getDim());
-  t.jac(s1a,J);
-  std::cout << J << std::endl;
-  MXD JFD(t.outputDefinition()->getDim(),t.inputDefinition()->getDim());
-  t.jacFD(s1a,JFD,1e-8);
-  std::cout << JFD << std::endl;
-
-  delete s1a;
-  delete s1b;
-//  delete s2;
+//
+//  // Transformation
+//  State* s2 = t.outputDefinition()->newState();
+//  MXD J(t.outputDefinition()->getDim(),t.inputDefinition()->getDim());
+//  t.jac(s1a,J);
+//  std::cout << J << std::endl;
+//  MXD JFD(t.outputDefinition()->getDim(),t.inputDefinition()->getDim());
+//  t.jacFD(s1a,JFD,1e-8);
+//  std::cout << JFD << std::endl;
+//
+//  delete s1a;
+//  delete s1b;
+////  delete s2;
 }
 
 int main(int argc, char **argv) {

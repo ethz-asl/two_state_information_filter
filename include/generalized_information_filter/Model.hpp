@@ -17,28 +17,19 @@
 
 namespace GIF{
 
-class TrafoBase{
- public:
-  TrafoBase(){};
-  virtual ~TrafoBase(){};
-  virtual void evalBase(const std::vector<ElementBase*>& elementBasesOut, const std::vector<const ElementBase*>& elementBasesIn) = 0;
-};
-
-template<typename... Ts> class Pack{
+template<typename... Ts>
+class Pack{
  public:
   static constexpr int n_ = sizeof...(Ts);
   typedef std::tuple<Ts...> mtTuple;
-  template<int i = 0, typename std::enable_if<(i<sizeof...(Ts)-1)>::type* = nullptr>
-  static void addElementToDefinition(const std::array<std::string,n_>& names, StateDefinition* def){
+  template<int i = 0, typename std::enable_if<(i<sizeof...(Ts))>::type* = nullptr>
+  static void addElementToDefinition(const std::array<std::string,n_>& names, std::shared_ptr<StateDefinition> def){
     typedef typename std::tuple_element<i,mtTuple>::type mtElementType;
     def->addElementDefinition<mtElementType>(names.at(i));
     addElementToDefinition<i+1>(names,def);
   }
-  template<int i = 0, typename std::enable_if<(i==sizeof...(Ts)-1)>::type* = nullptr>
-  static void addElementToDefinition(const std::array<std::string,n_>& names, StateDefinition* def){
-    typedef typename std::tuple_element<i,mtTuple>::type mtElementType;
-    def->addElementDefinition<mtElementType>(names.at(i));
-  }
+  template<int i = 0, typename std::enable_if<(i==sizeof...(Ts))>::type* = nullptr>
+  static void addElementToDefinition(const std::array<std::string,n_>& names, std::shared_ptr<StateDefinition> def){}
 };
 
 template<typename... InPacks>
@@ -73,14 +64,21 @@ struct TH_pack_index<i,Pack<Ts...>>{
   static constexpr int getInner(){return i;};
 };
 
+class ModelBase{
+ public:
+  ModelBase(){};
+  virtual ~ModelBase(){};
+  virtual void evalBase(const std::vector<ElementBase*>& elementBasesOut, const std::vector<const ElementBase*>& elementBasesIn) = 0;
+};
+
 template<typename Derived, typename OutPack, typename... InPacks>
-class Trafo: public TrafoBase{
+class Model: public ModelBase{
  public:
   static constexpr int n_ = OutPack::n_;
   static constexpr int m_ = TH_pack_size<InPacks...>::n_;
   static constexpr int N_ = sizeof...(InPacks);
-  typedef Trafo<Derived,OutPack,InPacks...> mtTrafo;
-  Trafo(std::array<std::string,n_> namesOut, std::array<std::string,m_> namesIn): namesOut_(namesOut){
+  typedef Model<Derived,OutPack,InPacks...> mtBase;
+  Model(std::array<std::string,n_> namesOut, std::array<std::string,m_> namesIn): namesOut_(namesOut){
     _initNamesIn(namesIn);
   };
 
@@ -120,16 +118,16 @@ class Trafo: public TrafoBase{
   }
 
   template<int n, typename... Ps, typename std::enable_if<(sizeof...(Ps)<m_)>::type* = nullptr>
-  void _jac(MXD* J, const std::vector<const ElementBase*>& elementBasesIn, Ps&... elements){
+  void _jac(MXD* J, const std::vector<std::pair<const ElementBase*,int>>& elementsIn, Ps&... elements){
     static constexpr int outerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::getOuter();
     static constexpr int innerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::getInner();
     typedef typename std::tuple_element<outerIndex,std::tuple<InPacks...>>::type::mtTuple mtTuple;
     typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
     std::cout << "In: " << std::get<outerIndex>(namesIn_).at(innerIndex) << std::endl;
-    _jac(J,elementBasesIn, elements..., dynamic_cast<const Element<mtElementType>*>(elementBasesIn.at(sizeof...(Ps)))->x_);
+    _jac(J,elementsIn, elements..., dynamic_cast<const Element<mtElementType>*>(elementsIn.at(sizeof...(Ps)).first)->x_);
   }
   template<int n, typename... Ps, typename std::enable_if<(sizeof...(Ps)==m_)>::type* = nullptr>
-  void _jac(MXD* J, const std::vector<const ElementBase*>& elementBasesIn, Ps&... elements){
+  void _jac(MXD* J, const std::vector<std::pair<const ElementBase*,int>>& elementsIn, Ps&... elements){
     static_assert(n<N_,"No such Jacobian!");
     static_cast<Derived&>(*this).template eval<n>(J,elements...);
   }
@@ -138,102 +136,16 @@ class Trafo: public TrafoBase{
   std::tuple<std::array<std::string,InPacks::n_>...> namesIn_;
 };
 
-class TrafoTest: public Trafo<TrafoTest,Pack<V3D>,Pack<V3D, QPD>> {
- public:
-  TrafoTest(std::array<std::string,n_> namesOut, std::array<std::string,m_> namesIn): mtTrafo(namesOut,namesIn){};
-  void eval(V3D& posOut, const V3D& pos, const QPD& att){
-    std::cout << pos.transpose() << std::endl;
-    std::cout << att << std::endl;
-  }
-//  void jac(const DataAndIndex<V3D>& pos, const DataAndIndex<QPD>& att, const DataAndIndex<V3D>& posOut, MXD* J, int i = -1){
+//class ResTest: public Model<ResTest,Pack<V3D>,Pack<V3D, QPD>,Pack<V3D>,Pack<V3D>> {
+// public:
+//  ResTest(std::array<std::string,n_> namesOut, std::array<std::string,m_> namesIn): mtBase(namesOut,namesIn){};
+//  void eval(V3D& posRes, const V3D& posIn, const QPD& attIn, const V3D& posOut, const V3D& posNoi){
+//    std::cout << posIn.transpose() << std::endl;
+//    std::cout << attIn << std::endl;
 //  }
-};
-
-class ResTest: public Trafo<ResTest,Pack<V3D>,Pack<V3D, QPD>,Pack<V3D>,Pack<V3D>> {
- public:
-  ResTest(std::array<std::string,n_> namesOut, std::array<std::string,m_> namesIn): mtTrafo(namesOut,namesIn){};
-  void eval(V3D& posRes, const V3D& posIn, const QPD& attIn, const V3D& posOut, const V3D& posNoi){
-    std::cout << posIn.transpose() << std::endl;
-    std::cout << attIn << std::endl;
-  }
-//  void jac(const DataAndIndex<V3D>& posIn, const DataAndIndex<QPD>& attIn, const DataAndIndex<V3D>& posOut, const DataAndIndex<V3D>& posNoi, const DataAndIndex<V3D>& posRes, MXD* J, int i = -1){
-//  }
-};
-
-class Filterr{
- public:
-  Filterr(){};
-  ~Filterr(){};
-
-  template<typename T, typename... Ress, typename... Pres, typename... Posts, typename... Nois>
-  void addRes(Trafo<T, Pack<Ress...>, Pack<Pres...>, Pack<Posts...>, Pack<Nois...>>& res){
-    res_.push_back(&res);
-    Pack<Ress...>::addElementToDefinition(res.namesOut_,&resDefinition_);
-    Pack<Pres...>::addElementToDefinition(std::get<0>(res.namesIn_),&stateDefinition_);
-    Pack<Posts...>::addElementToDefinition(std::get<1>(res.namesIn_),&stateDefinition_);
-    Pack<Nois...>::addElementToDefinition(std::get<2>(res.namesIn_),&noiseDefinition_);
-  }
-
-  void evalResidual(const State* pre,const State* post,const State* noi,State* res){
-    std::vector<const ElementBase*> in;
-    std::vector<const ElementBase*> preVec = pre->getElements();
-    std::vector<const ElementBase*> postVec = post->getElements();
-    std::vector<const ElementBase*> noiVec = noi->getElements();
-    in.insert(in.end(),preVec.begin(),preVec.end());
-    in.insert(in.end(),postVec.begin(),postVec.end());
-    in.insert(in.end(),noiVec.begin(),noiVec.end());
-    for(auto t : res_){
-      t->evalBase(res->getElements(), in);
-    }
-  }
-  StateDefinition stateDefinition_;
-  StateDefinition noiseDefinition_;
-  StateDefinition resDefinition_;
-  std::vector<TrafoBase*> res_;
-};
-
-class Model{
- public:
-  Model(){};
-  virtual ~Model(){};
-  virtual void _eval(const std::vector<const State*>& in, State* out) = 0;
-  virtual void _jac(const std::vector<const State*>& in, MXD& out, int c) = 0;
-  void _jacFD(const std::vector<const State*>& in, MXD& J, int c, const double& delta){
-    J.setZero();
-    State* stateDis = inputDefinitions_[c]->newState();
-    *stateDis = *in[c];
-    std::vector<const State*> inDis(in);
-    inDis[c] = stateDis;
-    State* outRef = outputDefinition_->newState();
-    State* outDis = outputDefinition_->newState();
-    _eval(inDis,outRef);
-    VXD difIn(inputDefinitions_[c]->getDim());
-    VXD difOut(outputDefinition_->getDim());
-    for(int i=0; i<inputDefinitions_[c]->getDim(); i++){
-      difIn.setZero();
-      difIn(i) = delta;
-      inputDefinitions_[c]->boxplus(in[c],difIn,stateDis);
-      _eval(inDis,outDis);
-      outputDefinition_->boxminus(outDis,outRef,difOut);
-      J.col(i) = difOut/delta;
-    }
-    delete stateDis;
-    delete outRef;
-    delete outDis;
-  }
-  void initStateDefinitions(std::shared_ptr<StateDefinition> outputDefinition, std::initializer_list<std::shared_ptr<StateDefinition>> inputList){
-    outputDefinition_ = outputDefinition;
-    inputDefinitions_ = inputList;
-    buildStateDefinitions();
-  }
-
- protected:
-  virtual void buildStateDefinitions() = 0;
-
- private:
-  std::vector<std::shared_ptr<StateDefinition>> inputDefinitions_;
-  std::shared_ptr<StateDefinition> outputDefinition_;
-};
+////  void jac(const DataAndIndex<V3D>& posIn, const DataAndIndex<QPD>& attIn, const DataAndIndex<V3D>& posOut, const DataAndIndex<V3D>& posNoi, const DataAndIndex<V3D>& posRes, MXD* J, int i = -1){
+////  }
+//};
 
 }
 
