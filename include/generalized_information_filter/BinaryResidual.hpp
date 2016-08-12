@@ -13,13 +13,24 @@
 
 namespace GIF{
 
+class BinaryResidualBase{
+ public:
+  BinaryResidualBase(){};
+  virtual ~BinaryResidualBase(){};
+  virtual void evalResidual(const std::shared_ptr<State>& res, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const = 0;
+  virtual void jacPre(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const  = 0;
+  virtual void jacPos(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const  = 0;
+  virtual void jacNoi(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const  = 0;
+};
+
 template<typename PackRes, typename PackPre, typename PackPos, typename PackNoi>
 class BinaryResidual;
 
 template<typename... Res, typename... Pre, typename... Pos, typename... Noi>
 class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>>:
     public Model<BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>>,
-                                ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>>{
+                                ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>>,
+    public BinaryResidualBase{
  public:
   using mtBase = Model<BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>>,
                                       ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>>;
@@ -38,6 +49,22 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
   virtual void jacNoi(MXD& J, const Pre&... pre, const Pos&... pos, const Noi&... noi) const  = 0;
 
   // Wrapping from user interface to base
+  void evalResidual(const std::shared_ptr<State>& res, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const{
+    const std::array<std::shared_ptr<const State>,3> ins = {pre, pos, noi};
+    this->_eval(res,ins);
+  }
+  void jacPre(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const{
+    const std::array<std::shared_ptr<const State>,3> ins = {pre, pos, noi};
+    this->template _jac<0>(J,ins);
+  }
+  void jacPos(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const{
+    const std::array<std::shared_ptr<const State>,3> ins = {pre, pos, noi};
+    this->template _jac<1>(J,ins);
+  }
+  void jacNoi(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const{
+    const std::array<std::shared_ptr<const State>,3> ins = {pre, pos, noi};
+    this->template _jac<2>(J,ins);
+  }
   void jacFDPre(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi, const double& delta = 1e-6){
     const std::array<std::shared_ptr<const State>,3> ins = {pre, pos, noi};
     this->template _jacFD<0>(J,ins,delta);
