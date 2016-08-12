@@ -32,8 +32,8 @@ class ElementBase{
   virtual int getDim() const = 0;
   virtual void print() const = 0;
   virtual void init() = 0;
-  virtual void boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec, ElementBase* out) const = 0;
-  virtual void boxminus(const ElementBase* ref, Eigen::Ref<Eigen::VectorXd> vec)  const= 0;
+  virtual void boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec, const std::shared_ptr<ElementBase>& out) const = 0;
+  virtual void boxminus(const std::shared_ptr<const ElementBase>& ref, Eigen::Ref<Eigen::VectorXd> vec)  const= 0;
 };
 
 template<typename ElementType>
@@ -58,11 +58,11 @@ class Element: public ElementBase{
   void init(){
     ElementTraits<ElementType>::init(get());
   }
-  void boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec, ElementBase* out) const{
-    ElementTraits<ElementType>::boxplus(get(),vec,dynamic_cast<Element<ElementType>*>(out)->get());
+  void boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec, const std::shared_ptr<ElementBase>& out) const{
+    ElementTraits<ElementType>::boxplus(get(),vec,std::dynamic_pointer_cast<Element<ElementType>>(out)->get());
   }
-  void boxminus(const ElementBase* ref, Eigen::Ref<Eigen::VectorXd> vec) const{
-    ElementTraits<ElementType>::boxminus(get(),dynamic_cast<const Element<ElementType>*>(ref)->get(),vec);
+  void boxminus(const std::shared_ptr<const ElementBase>& ref, Eigen::Ref<Eigen::VectorXd> vec) const{
+    ElementTraits<ElementType>::boxminus(get(),std::dynamic_pointer_cast<const Element<ElementType>>(ref)->get(),vec);
   }
   ElementType& get(){
     return x_;

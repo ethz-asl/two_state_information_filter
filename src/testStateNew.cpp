@@ -44,8 +44,8 @@ class NewStateTest : public virtual ::testing::Test {
 // Test constructors
 TEST_F(NewStateTest, constructor) {
   TransformationExample t;
-  State* s1a = t.inputDefinition()->newState();
-  State* s1b = t.inputDefinition()->newState();
+  auto s1a = t.inputDefinition()->newState();
+  auto s1b = t.inputDefinition()->newState();
   s1a->init();
   s1a->print();
 

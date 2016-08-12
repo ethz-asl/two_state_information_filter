@@ -17,7 +17,7 @@ class ElementDefinitionBase{
  public:
   ElementDefinitionBase(){};
   virtual ~ElementDefinitionBase(){};
-  virtual ElementBase* newElement() = 0;
+  virtual std::shared_ptr<ElementBase> newElement() = 0;
 };
 
 template<typename ElementType>
@@ -25,8 +25,8 @@ class ElementDefinition: public ElementDefinitionBase{
  public:
   ElementDefinition(){};
   ~ElementDefinition(){};
-  Element<ElementType>* newElement(){
-    return new Element<ElementType>();
+  std::shared_ptr<ElementBase> newElement(){
+    return std::shared_ptr<Element<ElementType>>(new Element<ElementType>());
   }
 };
 
