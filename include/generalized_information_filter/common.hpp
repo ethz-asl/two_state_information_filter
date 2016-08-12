@@ -9,9 +9,9 @@
 #define GIF_COMMON_HPP_
 
 #include <Eigen/Dense>
-#include "kindr/Core"
 #include <iostream>
 #include <memory>
+#include "kindr/Core"
 
 typedef kindr::RotationQuaternionPD QPD;
 typedef kindr::RotationMatrixPD MPD;

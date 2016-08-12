@@ -41,6 +41,15 @@ class StateDefinition{
       return elementDefinitions_.size()-1;
     }
   }
+  std::string getName(int ind){
+    for(auto e : namesMap_){
+      if(e.second == ind){
+        return e.first;
+      }
+    }
+    assert("Index not found in name map" == 0);
+    return "";
+  }
 
  protected:
   std::vector<std::shared_ptr<ElementDefinitionBase>> elementDefinitions_;

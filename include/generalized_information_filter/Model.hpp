@@ -17,9 +17,21 @@
 namespace GIF{
 
 template<typename... Ts>
+struct TH_pack_dim;
+template<typename T, typename... Ts>
+struct TH_pack_dim<T, Ts...>{
+  static constexpr int d_ = TH_pack_dim<Ts...>::d_+ElementTraits<T>::d_;
+};
+template<typename T>
+struct TH_pack_dim<T>{
+  static constexpr int d_ = ElementTraits<T>::d_;
+};
+
+template<typename... Ts>
 class ElementPack{
  public:
   static constexpr int n_ = sizeof...(Ts);
+  static constexpr int d_ = TH_pack_dim<Ts...>::d_;
   typedef std::tuple<Ts...> mtTuple;
 
   static std::shared_ptr<StateDefinition> makeStateDefinition(const std::array<std::string,n_>& names){
@@ -45,6 +57,20 @@ class ElementPack{
   }
   template<int i = 0, typename std::enable_if<(i==sizeof...(Ts))>::type* = nullptr>
   static void addElementToDefinition(std::shared_ptr<StateDefinition> def){}
+
+  template<int i>
+  static constexpr int getDim(){
+    return ElementTraits<typename std::tuple_element<i,mtTuple>::type>::d_;
+  }
+
+  template<int i, typename std::enable_if<(i>0)>::type* = nullptr>
+  static constexpr int getIndex(){
+    return getIndex<i-1>() + getDim<i-1>();
+  }
+  template<int i = 0, typename std::enable_if<(i==0)>::type* = nullptr>
+  static constexpr int getIndex(){
+    return 0;
+  }
 };
 
 template<typename... InPacks>
@@ -130,11 +156,11 @@ class Model{
   template<int j, typename... Ps, typename std::enable_if<(sizeof...(Ps)==m_)>::type* = nullptr>
   void _jac(MXD& J, const std::array<std::shared_ptr<const State>,N_>& ins, Ps&... elements) const{
     static_assert(j<N_,"No such Jacobian!");
-    static_cast<Derived&>(*this).template jac<j>(J,elements...);
+    static_cast<const Derived&>(*this).template jac<j>(J,elements...);
   }
 
   template<int j>
-  void _jacFD(MXD& J, const std::array<std::shared_ptr<const State>,N_>& ins, const double& delta = 1e-8){
+  void _jacFD(MXD& J, const std::array<std::shared_ptr<const State>,N_>& ins, const double& delta = 1e-8) const{
     auto stateDis = inDefinitions_[j]->newState();
     auto outRef = outDefinition_->newState();
     auto outDis = outDefinition_->newState();
@@ -154,6 +180,34 @@ class Model{
       outDis->boxminus(outRef,difOut);
       J.col(i) = difOut/delta;
     }
+  }
+
+  template<int j>
+  bool _testJacInput(const std::array<std::shared_ptr<const State>,N_>& ins, const double& delta = 1e-6, const double& th = 1e-6) const{
+    Eigen::MatrixXd J((int)OutPack::d_,(int)std::tuple_element<j,std::tuple<InPacks...>>::type::d_);
+    Eigen::MatrixXd J_FD((int)OutPack::d_,(int)std::tuple_element<j,std::tuple<InPacks...>>::type::d_);
+    auto output = outDefinition_->newState();
+    _jac<j>(J,ins);
+    _jacFD<j>(J_FD,ins,delta);
+    typename Eigen::MatrixXd::Index maxRow, maxCol = 0;
+    const double r = (J-J_FD).array().abs().maxCoeff(&maxRow, &maxCol);
+    if(r>th){
+      std::string outName = outDefinition_->getName(output->getOuter(maxRow));
+      std::string inName = inDefinitions_[j]->getName(ins[j]->getOuter(maxCol));
+      std::cout << "==== Model jacInput (" << j << ") Test failed: " << r << " is larger than " << th << " at row "
+          << maxRow << "("<< outName << "." << output->getInner(maxRow) << ") and col " << maxCol << "("<< inName << "." << ins[j]->getInner(maxCol) << ") ====" << std::endl;
+      std::cout << "  " << J(maxRow,maxCol) << "  " << J_FD(maxRow,maxCol) << std::endl;
+      return false;
+    } else {
+      std::cout << "==== Test successful (" << r << ") ====" << std::endl;
+      return true;
+    }
+  }
+
+  template<int j, int n, int m>
+  void _setJacBlock(MXD& J, const Eigen::Matrix<double,OutPack::template getDim<n>(),std::tuple_element<j,std::tuple<InPacks...>>::type::template getDim<m>()>& B) const{
+    J.block<OutPack::template getDim<n>(),std::tuple_element<j,std::tuple<InPacks...>>::type::template getDim<m>()>(
+        OutPack::template getIndex<n>(),std::tuple_element<j,std::tuple<InPacks...>>::type::template getIndex<m>()) = B;
   }
 
  protected:

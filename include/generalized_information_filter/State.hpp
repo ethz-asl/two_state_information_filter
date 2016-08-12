@@ -13,7 +13,7 @@
 
 namespace GIF{
 
-class State{ // TODO: shared_ptr
+class State{
  public:
   State(){
     d_ = 0;
@@ -21,7 +21,7 @@ class State{ // TODO: shared_ptr
   virtual ~State(){};
   State& operator=(const State& other){
     for(int i=0;i<elements_.size();i++){
-      *elements_[i].first = *other.elements_[i].first;
+      *elements_.at(i).first = *other.elements_.at(i).first;
     }
     return *this;
   }
@@ -29,14 +29,14 @@ class State{ // TODO: shared_ptr
     elements_.push_back(std::pair<std::shared_ptr<ElementBase>,int>(e,d_));
     d_ += e->getDim();
   }
-  std::shared_ptr<ElementBase>& getElement(int i){ // TODO thank about setter
-    return std::get<0>(elements_[i]);
+  std::shared_ptr<ElementBase>& getElement(int i){
+    return std::get<0>(elements_.at(i));
   }
   const std::shared_ptr<const ElementBase> getElement(int i) const{
-    return std::get<0>(elements_[i]);
+    return std::get<0>(elements_.at(i));
   }
   const int& getIndex(int i) const{
-    return std::get<1>(elements_[i]);
+    return std::get<1>(elements_.at(i));
   }
   int getDim() const{
     return d_;
@@ -60,6 +60,17 @@ class State{ // TODO: shared_ptr
     for(int i=0;i<elements_.size();i++){
       getElement(i)->boxminus(ref->getElement(i),vec.block(getIndex(i),0,getElement(i)->getDim(),1));
     }
+  }
+  int getOuter(int ind) const{
+    int i=0;
+    while(ind >= getElement(i)->getDim()){
+      ind -= getElement(i)->getDim();
+      ++i;
+    }
+    return i;
+  }
+  int getInner(int ind) const{
+    return ind-getIndex(getOuter(ind));
   }
 
  protected:

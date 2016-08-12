@@ -22,10 +22,48 @@ class Transformation<ElementPack<Out...>,ElementPack<In...>>: public Model<Trans
   using mtBase = Model<Transformation<ElementPack<Out...>,ElementPack<In...>>, ElementPack<Out...>, ElementPack<In...>>;
   typedef Transformation<ElementPack<Out...>,ElementPack<In...>> mtTransformation;
   Transformation(const std::array<std::string,mtBase::n_>& namesOut, const std::array<std::string,mtBase::m_>& namesIn):
-      mtBase(namesOut, std::forward_as_tuple(namesIn)), J_(0,0){};
+      mtBase(namesOut, std::forward_as_tuple(namesIn)), J_((int)ElementPack<Out...>::d_,(int)ElementPack<In...>::d_){};
   virtual ~Transformation(){};
+
+  // User implementations
   virtual void evalTransform(Out&... outs, const In&... ins) const = 0;
   virtual void jacTransform(MXD& J, const In&... ins) const  = 0;
+
+  // Wrapping from user interface to base
+  void jacFD(MXD& J, const std::shared_ptr<const State>& in, const double& delta = 1e-6){
+    const std::array<std::shared_ptr<const State>,1> ins = {in};
+    this->template _jacFD<0>(J,ins,delta);
+  }
+  void transformState(std::shared_ptr<State> out, const std::shared_ptr<const State>& in){
+    const std::array<std::shared_ptr<const State>,1> ins = {in};
+    this->template _eval(out,ins);
+  }
+  void transformCovMat(MXD& outputCov, const std::shared_ptr<const State>& in,const MXD& inputCov){
+    const std::array<std::shared_ptr<const State>,1> ins = {in};
+    this->template _jac<0>(J_,ins);
+    outputCov = J_*inputCov*J_.transpose();
+  }
+  template<int n, int m>
+  void setJacBlock(MXD& J, const Eigen::Matrix<double,ElementPack<Out...>::template getDim<n>(),ElementPack<In...>::template getDim<m>()>& B) const{
+    this->template _setJacBlock<0,n,m>(J,B);
+  }
+  bool testJac(const std::shared_ptr<const State>& in, const double& delta = 1e-6, const double& th = 1e-6) const{
+    const std::array<std::shared_ptr<const State>,1> ins = {in};
+    return this->template _testJacInput<0>(ins,delta,th);
+  }
+
+  // Access to definitions
+  std::shared_ptr<StateDefinition> outputDefinition(){
+    return this->outDefinition_;
+  }
+  std::shared_ptr<StateDefinition> inputDefinition(){
+    return this->inDefinitions_[0];
+  }
+
+ protected:
+  friend mtBase;
+
+  // Wrapping from base to user implementation
   void eval(Out&... outs, const In&... ins) const{
     evalTransform(outs...,ins...);
   }
@@ -33,27 +71,7 @@ class Transformation<ElementPack<Out...>,ElementPack<In...>>: public Model<Trans
   void jac(MXD& J, const In&... ins) const{
     jacTransform(J,ins...);
   }
-  void jacFD(MXD& J, const std::shared_ptr<const State>& in, const double& delta = 1e-8){
-    const std::array<std::shared_ptr<const State>,1> ins = {in};
-    this->template _jacFD<0>(J,ins,delta);
-  }
-  void transformState(Out&... outs, const In&... ins){ // TODO: switch to State*
-    evalTransform(outs..., ins...);
-  }
-  void transformCovMat(const In&... ins,const MXD& inputCov, MXD& outputCov){
-    jacTransform(J_,ins...);
-    outputCov = J_*inputCov*J_.transpose();
-    postProcess(outputCov, ins...);
-  }
-  virtual void postProcess(MXD& P, const In&... ins){};
-  std::shared_ptr<StateDefinition> inputDefinition(){
-    return this->inDefinitions_[0];
-  }
-  std::shared_ptr<StateDefinition> outputDefinition(){
-    return this->outDefinition_;
-  }
 
- protected:
   MXD J_;
 };
 
