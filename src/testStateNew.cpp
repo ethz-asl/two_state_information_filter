@@ -10,10 +10,10 @@ class TransformationExample: public Transformation<ElementPack<V3D>,ElementPack<
  public:
   TransformationExample(): mtTransformation({"pos"},{"tim","sta"}){};
   virtual ~TransformationExample(){};
-  void evalTransform(V3D& posOut,const double& timeIn,const std::array<V3D,4>& posIn){
-    posOut = (timeIn+1.0)*posIn[2];
+  void evalTransform(V3D& posOut,const double& timeIn,const std::array<V3D,4>& posIn) const{
+    posOut = (timeIn+1.0)*(posIn[2]+V3D(1,2,3));
   }
-  void jacTransform(MXD& J,const double& timeIn,const std::array<V3D,4>& posIn){
+  void jacTransform(MXD& J,const double& timeIn,const std::array<V3D,4>& posIn) const{
 //    J.resize(n_,m_);
 //    J.block<3,1>(0,0) = b
 //
@@ -59,6 +59,13 @@ TEST_F(NewStateTest, constructor) {
   s1b->print();
   s1a->boxminus(s1b,v);
   std::cout << v.transpose() << std::endl;
+
+  // Jacobian
+  MXD J;
+  t.jacFD(J,s1a);
+  std::cout << J << std::endl;
+
+
 //
 //  // Transformation
 //  State* s2 = t.outputDefinition()->newState();

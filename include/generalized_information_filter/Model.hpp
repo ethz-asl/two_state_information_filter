@@ -100,64 +100,60 @@ class Model{
   void makeInDefinitons(const std::tuple<std::array<std::string,InPacks::n_>...>& namesIn){}
 
   template<typename... Ps, typename std::enable_if<(sizeof...(Ps)<n_)>::type* = nullptr>
-  void _eval(const std::shared_ptr<State>& out, const std::array<const std::shared_ptr<const State>,N_>& ins, Ps&... elements) const{
+  void _eval(const std::shared_ptr<State>& out, const std::array<std::shared_ptr<const State>,N_>& ins, Ps&... elements) const{
     static constexpr int innerIndex = sizeof...(Ps);
     typedef typename OutPack::mtTuple mtTuple;
     typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
-    _eval(out, ins, elements..., dynamic_cast<Element<mtElementType>*>(out->getElement(innerIndex))->get());
+    _eval(out, ins, elements..., std::dynamic_pointer_cast<Element<mtElementType>>(out->getElement(innerIndex))->get());
   }
   template<typename... Ps, typename std::enable_if<(sizeof...(Ps)>=n_ & sizeof...(Ps)<n_+m_)>::type* = nullptr>
-  void _eval(const std::shared_ptr<State>& out, const std::array<const std::shared_ptr<const State>,N_>& ins, Ps&... elements) const{
+  void _eval(const std::shared_ptr<State>& out, const std::array<std::shared_ptr<const State>,N_>& ins, Ps&... elements) const{
     static constexpr int outerIndex = TH_pack_index<sizeof...(Ps)-n_,InPacks...>::getOuter();
     static constexpr int innerIndex = TH_pack_index<sizeof...(Ps)-n_,InPacks...>::getInner();
     typedef typename std::tuple_element<outerIndex,std::tuple<InPacks...>>::type::mtTuple mtTuple;
     typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
-    _eval(out, ins, elements..., dynamic_cast<const Element<mtElementType>*>(ins.at(outerIndex)->getElement(innerIndex))->get());
+    _eval(out, ins, elements..., std::dynamic_pointer_cast<const Element<mtElementType>>(ins.at(outerIndex)->getElement(innerIndex))->get());
   }
   template<typename... Ps, typename std::enable_if<(sizeof...(Ps)==m_+n_)>::type* = nullptr>
-  void _eval(const std::shared_ptr<State>& out, const std::array<const std::shared_ptr<const State>,N_>& ins, Ps&... elements) const{
-    static_cast<Derived&>(*this).eval(elements...);
+  void _eval(const std::shared_ptr<State>& out, const std::array<std::shared_ptr<const State>,N_>& ins, Ps&... elements) const{
+    static_cast<const Derived&>(*this).eval(elements...);
   }
 
   template<int j, typename... Ps, typename std::enable_if<(sizeof...(Ps)<m_)>::type* = nullptr>
-  void _jac(MXD& J, const std::array<const std::shared_ptr<const State>,N_>& ins, Ps&... elements) const{
+  void _jac(MXD& J, const std::array<std::shared_ptr<const State>,N_>& ins, Ps&... elements) const{
     static constexpr int outerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::getOuter();
     static constexpr int innerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::getInner();
     typedef typename std::tuple_element<outerIndex,std::tuple<InPacks...>>::type::mtTuple mtTuple;
     typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
-    _jac<j>(J, ins, elements..., dynamic_cast<const Element<mtElementType>*>(ins.at(outerIndex)->getElement(innerIndex))->get());
+    _jac<j>(J, ins, elements..., std::dynamic_pointer_cast<const Element<mtElementType>>(ins.at(outerIndex)->getElement(innerIndex))->get());
   }
   template<int j, typename... Ps, typename std::enable_if<(sizeof...(Ps)==m_)>::type* = nullptr>
-  void _jac(MXD& J, const std::array<const std::shared_ptr<const State>,N_>& ins, Ps&... elements) const{
+  void _jac(MXD& J, const std::array<std::shared_ptr<const State>,N_>& ins, Ps&... elements) const{
     static_assert(j<N_,"No such Jacobian!");
     static_cast<Derived&>(*this).template jac<j>(J,elements...);
   }
 
   template<int j>
-  void jacFD(MXD& J, const std::vector<const ElementBase*>& elementsIn) const{
-    //  void _jacFD(const std::vector<const State*>& in, MXD& J, int c, const double& delta){
-    //    J.setZero();
-    //    State* stateDis = inputDefinitions_[c]->newState();
-    //    *stateDis = *in[c];
-    //    std::vector<const State*> inDis(in);
-    //    inDis[c] = stateDis;
-    //    State* outRef = outputDefinition_->newState();
-    //    State* outDis = outputDefinition_->newState();
-    //    _eval(inDis,outRef);
-    //    VXD difIn(inputDefinitions_[c]->getDim());
-    //    VXD difOut(outputDefinition_->getDim());
-    //    for(int i=0; i<inputDefinitions_[c]->getDim(); i++){
-    //      difIn.setZero();
-    //      difIn(i) = delta;
-    //      inputDefinitions_[c]->boxplus(in[c],difIn,stateDis);
-    //      _eval(inDis,outDis);
-    //      outputDefinition_->boxminus(outDis,outRef,difOut);
-    //      J.col(i) = difOut/delta;
-    //    }
-    //    delete stateDis;
-    //    delete outRef;
-    //    delete outDis;
-    //  }
+  void _jacFD(MXD& J, const std::array<std::shared_ptr<const State>,N_>& ins, const double& delta = 1e-8){
+    auto stateDis = inDefinitions_[j]->newState();
+    auto outRef = outDefinition_->newState();
+    auto outDis = outDefinition_->newState();
+    J.resize(outRef->getDim(),stateDis->getDim());
+    J.setZero();
+    *stateDis = *ins[j];
+    std::array<std::shared_ptr<const State>,N_> inDis = ins;
+    inDis[j] = stateDis;
+    _eval(outRef,inDis);
+    VXD difIn(stateDis->getDim());
+    VXD difOut(outRef->getDim());
+    for(int i=0; i<stateDis->getDim(); i++){
+      difIn.setZero();
+      difIn(i) = delta;
+      ins[j]->boxplus(difIn,stateDis);
+      _eval(outDis,inDis);
+      outDis->boxminus(outRef,difOut);
+      J.col(i) = difOut/delta;
+    }
   }
 
  protected:

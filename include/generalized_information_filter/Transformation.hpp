@@ -24,14 +24,18 @@ class Transformation<ElementPack<Out...>,ElementPack<In...>>: public Model<Trans
   Transformation(const std::array<std::string,mtBase::n_>& namesOut, const std::array<std::string,mtBase::m_>& namesIn):
       mtBase(namesOut, std::forward_as_tuple(namesIn)), J_(0,0){};
   virtual ~Transformation(){};
-  virtual void evalTransform(Out&... outs, const In&... ins) = 0;
-  virtual void jacTransform(MXD& J, const In&... ins) = 0;
-  void eval(Out&... outs, const In&... ins){
+  virtual void evalTransform(Out&... outs, const In&... ins) const = 0;
+  virtual void jacTransform(MXD& J, const In&... ins) const  = 0;
+  void eval(Out&... outs, const In&... ins) const{
     evalTransform(outs...,ins...);
   }
   template<int j, typename std::enable_if<(j==0)>::type* = nullptr>
-  void jac(MXD& J, const In&... ins){
+  void jac(MXD& J, const In&... ins) const{
     jacTransform(J,ins...);
+  }
+  void jacFD(MXD& J, const std::shared_ptr<const State>& in, const double& delta = 1e-8){
+    const std::array<std::shared_ptr<const State>,1> ins = {in};
+    this->template _jacFD<0>(J,ins,delta);
   }
   void transformState(Out&... outs, const In&... ins){ // TODO: switch to State*
     evalTransform(outs..., ins...);
