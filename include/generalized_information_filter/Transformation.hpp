@@ -21,10 +21,8 @@ class Transformation<ElementPack<Out...>,ElementPack<In...>>: public Model<Trans
  public:
   using mtBase = Model<Transformation<ElementPack<Out...>,ElementPack<In...>>, ElementPack<Out...>, ElementPack<In...>>;
   typedef Transformation<ElementPack<Out...>,ElementPack<In...>> mtTransformation;
-  Transformation(): outputDefinition_(new StateDefinition()), inputDefinition_(new StateDefinition()), J_(0,0){
-    ElementPack<Out...>::addElementToDefinition(outputDefinition_);
-    ElementPack<In...>::addElementToDefinition(inputDefinition_);
-  };
+  Transformation(const std::array<std::string,mtBase::n_>& namesOut, const std::array<std::string,mtBase::m_>& namesIn):
+      mtBase(namesOut, std::forward_as_tuple(namesIn)), J_(0,0){};
   virtual ~Transformation(){};
   virtual void evalTransform(Out&... outs, const In&... ins) = 0;
   virtual void jacTransform(MXD& J, const In&... ins) = 0;
@@ -45,15 +43,13 @@ class Transformation<ElementPack<Out...>,ElementPack<In...>>: public Model<Trans
   }
   virtual void postProcess(MXD& P, const In&... ins){};
   std::shared_ptr<StateDefinition> inputDefinition(){
-    return inputDefinition_;
+    return this->inDefinitions_[0];
   }
   std::shared_ptr<StateDefinition> outputDefinition(){
-    return outputDefinition_;
+    return this->outDefinition_;
   }
 
  protected:
-  std::shared_ptr<StateDefinition> inputDefinition_;
-  std::shared_ptr<StateDefinition> outputDefinition_;
   MXD J_;
 };
 
