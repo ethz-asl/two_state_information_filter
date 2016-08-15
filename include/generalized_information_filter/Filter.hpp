@@ -15,20 +15,17 @@
 
 namespace GIF{
 
-//class Filter{
-// public:
-//  Filter(){};
-//  ~Filter(){};
-//
-//  template<typename T, typename... Ress, typename... Pres, typename... Posts, typename... Nois>
-//  void addRes(Model<T, Pack<Ress...>, Pack<Pres...>, Pack<Posts...>, Pack<Nois...>>& res){
-//    res_.push_back(&res);
-//    Pack<Ress...>::addElementToDefinition(res.namesOut_,&resDefinition_);
-//    Pack<Pres...>::addElementToDefinition(std::get<0>(res.namesIn_),&stateDefinition_);
-//    Pack<Posts...>::addElementToDefinition(std::get<1>(res.namesIn_),&stateDefinition_);
-//    Pack<Nois...>::addElementToDefinition(std::get<2>(res.namesIn_),&noiseDefinition_);
-//  }
-//
+class Filter{
+ public:
+  Filter(): stateDefinition_(new StateDefinition()){};
+  virtual ~Filter(){};
+
+  void addRes(std::shared_ptr<BinaryResidualBase> r){
+    binaryResiduals_.push_back(r);
+    stateDefinition_->extend(r->preDefinition());
+    stateDefinition_->extend(r->posDefinition());
+  }
+
 //  void evalResidual(const State* pre,const State* post,const State* noi,State* res){
 //    std::vector<const ElementBase*> in;
 //    std::vector<const ElementBase*> preVec = pre->getElements();
@@ -41,11 +38,10 @@ namespace GIF{
 //      t->evalBase(res->getElements(), in);
 //    }
 //  }
-//  StateDefinition stateDefinition_;
-//  StateDefinition noiseDefinition_;
-//  StateDefinition resDefinition_;
-//  std::vector<ModelBase*> res_;
-//};
+
+  std::shared_ptr<StateDefinition> stateDefinition_;
+  std::vector<std::shared_ptr<BinaryResidualBase>> binaryResiduals_;
+};
 
 }
 

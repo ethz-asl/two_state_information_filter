@@ -21,6 +21,10 @@ class BinaryResidualBase{
   virtual void jacPre(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const  = 0;
   virtual void jacPos(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const  = 0;
   virtual void jacNoi(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const  = 0;
+  virtual std::shared_ptr<StateDefinition> resDefinition() const = 0;
+  virtual std::shared_ptr<StateDefinition> preDefinition() const = 0;
+  virtual std::shared_ptr<StateDefinition> posDefinition() const = 0;
+  virtual std::shared_ptr<StateDefinition> noiDefinition() const = 0;
 };
 
 template<typename PackRes, typename PackPre, typename PackPos, typename PackNoi>
@@ -97,16 +101,16 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
   }
 
   // Access to definitions
-  std::shared_ptr<StateDefinition> resDefinition(){
+  std::shared_ptr<StateDefinition> resDefinition() const{
     return this->outDefinition_;
   }
-  std::shared_ptr<StateDefinition> preDefinition(){
+  std::shared_ptr<StateDefinition> preDefinition() const{
     return this->inDefinitions_[0];
   }
-  std::shared_ptr<StateDefinition> posDefinition(){
+  std::shared_ptr<StateDefinition> posDefinition() const{
     return this->inDefinitions_[1];
   }
-  std::shared_ptr<StateDefinition> noiDefinition(){
+  std::shared_ptr<StateDefinition> noiDefinition() const{
     return this->inDefinitions_[2];
   }
 

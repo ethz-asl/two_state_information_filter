@@ -4,6 +4,7 @@
 #include "generalized_information_filter/State.hpp"
 #include "generalized_information_filter/Transformation.hpp"
 #include "generalized_information_filter/BinaryResidual.hpp"
+#include "generalized_information_filter/Filter.hpp"
 
 using namespace GIF;
 
@@ -94,14 +95,19 @@ TEST_F(NewStateTest, constructor) {
   t.testJac(s1a);
 
   // Residual
-  BinaryRedidualVelocity velRes;
-  auto pre = velRes.preDefinition()->newState();
+  std::shared_ptr<BinaryRedidualVelocity> velRes(new BinaryRedidualVelocity());
+  auto pre = velRes->preDefinition()->newState();
   pre->init();
-  auto pos = velRes.posDefinition()->newState();
+  auto pos = velRes->posDefinition()->newState();
   pos->init();
-  auto noi = velRes.noiDefinition()->newState();
+  auto noi = velRes->noiDefinition()->newState();
   noi->init();
-  velRes.testJacs(pre,pos,noi);
+  velRes->testJacs(pre,pos,noi);
+
+  // Filter
+  Filter f;
+  f.addRes(velRes);
+  std::cout << f.stateDefinition_->getSize() << std::endl;
 }
 
 int main(int argc, char **argv) {

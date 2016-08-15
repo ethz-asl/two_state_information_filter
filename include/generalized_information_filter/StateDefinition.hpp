@@ -41,6 +41,19 @@ class StateDefinition{
       return elementDefinitions_.size()-1;
     }
   }
+  void extend(const std::shared_ptr<const StateDefinition>& stateDefinition, const std::string& name = ""){
+    for(auto nameEntry : stateDefinition->namesMap_){
+      auto query = namesMap_.find(name + nameEntry.first);
+      if (query != namesMap_.end()){
+        if(!elementDefinitions_[query->second]->isSame(stateDefinition->elementDefinitions_[nameEntry.second])){
+          assert("ERROR: invalid extention of state definition" == 0);
+        }
+      } else {
+        elementDefinitions_.push_back(stateDefinition->elementDefinitions_[nameEntry.second]);
+        namesMap_.insert(std::pair<std::string, int>(name + nameEntry.first,elementDefinitions_.size()-1));
+      }
+    }
+  }
   std::string getName(int ind){
     for(auto e : namesMap_){
       if(e.second == ind){
@@ -49,6 +62,9 @@ class StateDefinition{
     }
     assert("Index not found in name map" == 0);
     return "";
+  }
+  int getSize(){
+    return namesMap_.size();
   }
 
  protected:
