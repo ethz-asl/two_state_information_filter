@@ -70,8 +70,8 @@ class NewStateTest : public virtual ::testing::Test {
 // Test constructors
 TEST_F(NewStateTest, constructor) {
   TransformationExample t;
-  auto s1a = t.inputDefinition()->newState();
-  auto s1b = t.inputDefinition()->newState();
+  std::shared_ptr<State> s1a(new State(t.inputDefinition()));
+  std::shared_ptr<State> s1b(new State(t.inputDefinition()));
   s1a->init();
   s1a->print();
 
@@ -92,7 +92,7 @@ TEST_F(NewStateTest, constructor) {
   std::cout << J << std::endl;
 
   // Transformation
-  auto s2 = t.outputDefinition()->newState();
+  std::shared_ptr<State> s2(new State(t.outputDefinition()));
   MXD P1(s1a->getDim(),s1a->getDim());
   MXD P2(s2->getDim(),s2->getDim());
   t.transformState(s2,s1a);
@@ -101,21 +101,21 @@ TEST_F(NewStateTest, constructor) {
 
   // Residual
   std::shared_ptr<BinaryRedidualVelocity> velRes(new BinaryRedidualVelocity());
-  auto pre = velRes->preDefinition()->newState();
+  std::shared_ptr<State> pre(new State(velRes->preDefinition()));
   pre->init();
-  auto pos = velRes->posDefinition()->newState();
+  std::shared_ptr<State> pos(new State(velRes->posDefinition()));
   pos->init();
-  auto noi = velRes->noiDefinition()->newState();
+  std::shared_ptr<State> noi(new State(velRes->noiDefinition()));
   noi->init();
   velRes->testJacs(pre,pos,noi);
 
   // Filter
   Filter f;
   f.addRes(velRes);
-  std::cout << f.stateDefinition()->getSize() << std::endl;
-  auto preState = f.stateDefinition()->newState();
+  std::cout << f.stateDefinition()->getNumElement() << std::endl;
+  std::shared_ptr<State> preState(new State(f.stateDefinition()));
   preState->init();
-  auto posState = f.stateDefinition()->newState();
+  std::shared_ptr<State> posState(new State(f.stateDefinition()));
   posState->init();
   f.evalRes(preState,posState);
 }

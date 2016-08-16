@@ -33,7 +33,7 @@ class ElementDefinition: public ElementDefinitionBase{
   bool isSame(const std::shared_ptr<const ElementDefinitionBase>& in) const{
     return std::dynamic_pointer_cast<const ElementDefinition<T>>(in).get() != nullptr;
   }
-  int getDim() const{
+  inline int getDim() const{
     return ElementTraits<T>::d_;
   }
 };

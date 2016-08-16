@@ -12,88 +12,95 @@
 
 #include "generalized_information_filter/common.hpp"
 #include "generalized_information_filter/ElementDefinition.hpp"
-#include "generalized_information_filter/State.hpp"
 
 namespace GIF{
 
-class StateWrapper;
-
 class StateDefinition{
  public:
-  StateDefinition(){};
+  StateDefinition(){
+    d_ = 0;
+  };
   ~StateDefinition(){};
-  std::shared_ptr<State> newState() const{
-    std::shared_ptr<State> newState(new State());
-    for(auto d : elementDefinitions_){
-      newState->addElement(d->newElement());
+  bool isSame(const std::shared_ptr<const StateDefinition>& in) const{
+    if(getDim() != in->getDim()){
+      return false;
     }
-    return newState;
-  }
-  template<typename T>
-  int addElementDefinition(const std::string& name){
-    auto query = namesMap_.find(name);
-    if (query != namesMap_.end()){
-      return query->second;
-    } else {
-      std::shared_ptr<ElementDefinitionBase> newDefinition(new ElementDefinition<T>());
-      elementDefinitions_.push_back(newDefinition);
-      namesMap_.insert(std::pair<std::string, int>(name,elementDefinitions_.size()-1));
-      return elementDefinitions_.size()-1;
-    }
-  }
-  void extend(const std::shared_ptr<const StateDefinition>& stateDefinition, const std::string& name = ""){
-    for(auto nameEntry : stateDefinition->namesMap_){
-      auto query = namesMap_.find(name + nameEntry.first);
-      if (query != namesMap_.end()){
-        if(!elementDefinitions_[query->second]->isSame(stateDefinition->elementDefinitions_[nameEntry.second])){
-          assert("ERROR: invalid extention of state definition" == 0);
-        }
-      } else {
-        elementDefinitions_.push_back(stateDefinition->elementDefinitions_[nameEntry.second]);
-        namesMap_.insert(std::pair<std::string, int>(name + nameEntry.first,elementDefinitions_.size()-1));
+    for(auto name : namesMap_){
+      int indexIn = in->findName(name.first);
+      if(indexIn == -1){
+        return false;
+      }
+      if(!getElementDefinition(name.second)->isSame(in->getElementDefinition(indexIn))){
+        return false;
       }
     }
+    return true;
   }
-  std::string getName(int ind){
+  inline int getDim() const{
+    return d_;
+  }
+  inline int getNumElement() const{
+    return namesMap_.size();
+  }
+  inline int getStart(int i) const{
+    return elementDefinitions_.at(i).second;
+  }
+  inline int getOuter(int i) const{ // TODO: make more efficient
+    int j=0;
+    while(i >= getElementDefinition(j)->getDim()){
+      i -= getElementDefinition(j)->getDim();
+      ++j;
+    }
+    return j;
+  }
+  inline int getInner(int i) const{
+    return i-getStart(getOuter(i));
+  }
+  std::string getName(int i) const{
     for(auto e : namesMap_){
-      if(e.second == ind){
+      if(e.second == i){
         return e.first;
       }
     }
     assert("Index not found in name map" == 0);
     return "";
   }
-  int getSize(){
-    return namesMap_.size();
+  int findName(const std::string& name) const{
+    auto query = namesMap_.find(name);
+    return (query != namesMap_.end()) ? query->second : -1;
+  }
+  std::shared_ptr<const ElementDefinitionBase> getElementDefinition(int i) const{
+    return elementDefinitions_.at(i).first;
+  };
+  int addElementDefinition(const std::string& name, const std::shared_ptr<const ElementDefinitionBase>& elementDefinition){
+    int foundIndex = findName(name);
+    if (foundIndex != -1){
+      if(!getElementDefinition(foundIndex)->isSame(elementDefinition)){
+        assert("ERROR: invalid extention of state definition" == 0);
+      }
+      return foundIndex;
+    } else {
+      elementDefinitions_.push_back(std::pair<std::shared_ptr<const ElementDefinitionBase>,int>(elementDefinition,d_));
+      d_ += elementDefinition->getDim();
+      namesMap_.insert(std::pair<std::string, int>(name,elementDefinitions_.size()-1));
+      return elementDefinitions_.size()-1;
+    }
+  }
+  template<typename T>
+  int addElementDefinition(const std::string& name){
+    const std::shared_ptr<const ElementDefinitionBase> elementDefinition(new ElementDefinition<T>());
+    addElementDefinition(name,elementDefinition);
+  }
+  void extend(const std::shared_ptr<const StateDefinition>& stateDefinition, const std::string& name = ""){
+    for(auto nameEntry : stateDefinition->namesMap_){
+      addElementDefinition(name + nameEntry.first, stateDefinition->getElementDefinition(nameEntry.second));
+    }
   }
 
  protected:
-  std::vector<std::shared_ptr<ElementDefinitionBase>> elementDefinitions_;
+  std::vector<std::pair<std::shared_ptr<const ElementDefinitionBase>,int>> elementDefinitions_;
   std::unordered_map<std::string, int> namesMap_;
-
-  friend StateWrapper;
-};
-
-class StateWrapper{ // TODO: implement definiton checking (Wrapper-State, Wrapper-Definition)
- public:
-  StateWrapper(){};
-  ~StateWrapper(){};
-  void computeMap(){
-    indexMap_.resize(outDefinition_->namesMap_.size());
-    for(auto outElement : outDefinition_->namesMap_){
-      indexMap_.at(outElement.second) = inDefinition_->namesMap_.at(outElement.first);
-    }
-  }
-  void wrap(const std::shared_ptr<State>& out, const std::shared_ptr<State>& in){
-    for(int i=0;i<indexMap_.size();i++){
-      out->getElement(i) = in->getElement(indexMap_[i]);
-    }
-  }
-
- protected:
-  std::shared_ptr<StateDefinition> inDefinition_;
-  std::shared_ptr<StateDefinition> outDefinition_;
-  std::vector<int> indexMap_;
+  int d_;
 };
 
 }

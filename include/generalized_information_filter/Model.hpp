@@ -36,27 +36,18 @@ class ElementPack{
 
   static std::shared_ptr<StateDefinition> makeStateDefinition(const std::array<std::string,n_>& names){
     std::shared_ptr<StateDefinition> def(new StateDefinition());
-    addElementToDefinition(names,def);
+    addElementsToDefinition(names,def);
     return def;
   }
 
   template<int i = 0, typename std::enable_if<(i<sizeof...(Ts))>::type* = nullptr>
-  static void addElementToDefinition(const std::array<std::string,n_>& names, std::shared_ptr<StateDefinition> def){
+  static void addElementsToDefinition(const std::array<std::string,n_>& names, std::shared_ptr<StateDefinition> def){
     typedef typename std::tuple_element<i,mtTuple>::type mtElementType;
     def->addElementDefinition<mtElementType>(names.at(i));
-    addElementToDefinition<i+1>(names,def);
+    addElementsToDefinition<i+1>(names,def);
   }
   template<int i = 0, typename std::enable_if<(i==sizeof...(Ts))>::type* = nullptr>
-  static void addElementToDefinition(const std::array<std::string,n_>& names, std::shared_ptr<StateDefinition> def){}
-
-  template<int i = 0, typename std::enable_if<(i<sizeof...(Ts))>::type* = nullptr>
-  static void addElementToDefinition(std::shared_ptr<StateDefinition> def){
-    typedef typename std::tuple_element<i,mtTuple>::type mtElementType;
-    def->addElementDefinition<mtElementType>("def" + std::to_string(i));
-    addElementToDefinition<i+1>(def);
-  }
-  template<int i = 0, typename std::enable_if<(i==sizeof...(Ts))>::type* = nullptr>
-  static void addElementToDefinition(std::shared_ptr<StateDefinition> def){}
+  static void addElementsToDefinition(const std::array<std::string,n_>& names, std::shared_ptr<StateDefinition> def){}
 
   template<int i>
   static constexpr int getDim(){
@@ -64,11 +55,11 @@ class ElementPack{
   }
 
   template<int i, typename std::enable_if<(i>0)>::type* = nullptr>
-  static constexpr int getIndex(){
-    return getIndex<i-1>() + getDim<i-1>();
+  static constexpr int getStart(){
+    return getStart<i-1>() + getDim<i-1>();
   }
   template<int i = 0, typename std::enable_if<(i==0)>::type* = nullptr>
-  static constexpr int getIndex(){
+  static constexpr int getStart(){
     return 0;
   }
 };
@@ -161,9 +152,9 @@ class Model{
 
   template<int j>
   void _jacFD(MXD& J, const std::array<std::shared_ptr<const State>,N_>& ins, const double& delta = 1e-8) const{
-    auto stateDis = inDefinitions_[j]->newState();
-    auto outRef = outDefinition_->newState();
-    auto outDis = outDefinition_->newState();
+    std::shared_ptr<State> stateDis(new State(inDefinitions_[j]));
+    std::shared_ptr<State> outRef(new State(outDefinition_));
+    std::shared_ptr<State> outDis(new State(outDefinition_));
     J.resize(outRef->getDim(),stateDis->getDim());
     J.setZero();
     *stateDis = *ins[j];
@@ -186,7 +177,7 @@ class Model{
   bool _testJacInput(const std::array<std::shared_ptr<const State>,N_>& ins, const double& delta = 1e-6, const double& th = 1e-6) const{
     Eigen::MatrixXd J((int)OutPack::d_,(int)std::tuple_element<j,std::tuple<InPacks...>>::type::d_);
     Eigen::MatrixXd J_FD((int)OutPack::d_,(int)std::tuple_element<j,std::tuple<InPacks...>>::type::d_);
-    auto output = outDefinition_->newState();
+    std::shared_ptr<State> output(new State(outDefinition_));
     _jac<j>(J,ins);
     _jacFD<j>(J_FD,ins,delta);
     typename Eigen::MatrixXd::Index maxRow, maxCol = 0;
@@ -207,7 +198,7 @@ class Model{
   template<int j, int n, int m>
   void _setJacBlock(MXD& J, const Eigen::Matrix<double,OutPack::template getDim<n>(),std::tuple_element<j,std::tuple<InPacks...>>::type::template getDim<m>()>& B) const{
     J.block<OutPack::template getDim<n>(),std::tuple_element<j,std::tuple<InPacks...>>::type::template getDim<m>()>(
-        OutPack::template getIndex<n>(),std::tuple_element<j,std::tuple<InPacks...>>::type::template getIndex<m>()) = B;
+        OutPack::template getStart<n>(),std::tuple_element<j,std::tuple<InPacks...>>::type::template getStart<m>()) = B;
   }
 
  protected:

@@ -17,7 +17,7 @@ class ElementTraits{
  public:
   static constexpr int d_ = 0;
   static void print(const T& x){}
-  static void init(T& x){}
+  static void setIdentity(T& x){}
   static void boxplus(const T& in, const Eigen::Ref<const Eigen::VectorXd>& vec, T& out){
     out = in;
   }
@@ -31,9 +31,9 @@ class ElementBase{
   virtual ElementBase& operator=(const ElementBase& other) = 0;
   virtual int getDim() const = 0;
   virtual void print() const = 0;
-  virtual void init() = 0;
+  virtual void setIdentity() = 0;
   virtual void boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec, const std::shared_ptr<ElementBase>& out) const = 0;
-  virtual void boxminus(const std::shared_ptr<const ElementBase>& ref, Eigen::Ref<Eigen::VectorXd> vec)  const= 0;
+  virtual void boxminus(const std::shared_ptr<const ElementBase>& ref, Eigen::Ref<Eigen::VectorXd> vec)  const = 0;
 };
 
 template<typename T>
@@ -52,14 +52,14 @@ class Element: public ElementBase{
     *this = dynamic_cast<const Element<T>&>(other);
     return *this;
   }
-  int getDim() const{
+  inline int getDim() const{
     return def_->getDim();
   }
   void print() const{
     ElementTraits<T>::print(get());
   }
-  void init(){
-    ElementTraits<T>::init(get());
+  void setIdentity(){
+    ElementTraits<T>::setIdentity(get());
   }
   void boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec, const std::shared_ptr<ElementBase>& out) const{
     ElementTraits<T>::boxplus(get(),vec,std::dynamic_pointer_cast<Element<T>>(out)->get());
@@ -86,7 +86,7 @@ class ElementTraits<double>{
   static void print(const double& x){
     std::cout << x << std::endl;
   }
-  static void init(double& x){
+  static void setIdentity(double& x){
     x = 0;
   }
   static void boxplus(const double& in, const Eigen::Ref<const Eigen::VectorXd>& vec, double& out){
@@ -103,7 +103,7 @@ class ElementTraits<Eigen::Matrix<double,N,1>>{
   static void print(const Eigen::Matrix<double,N,1>& x){
     std::cout << x.transpose() << std::endl;
   }
-  static void init(Eigen::Matrix<double,N,1>& x){
+  static void setIdentity(Eigen::Matrix<double,N,1>& x){
     x.setZero();
   }
   static void boxplus(const Eigen::Matrix<double,N,1>& in, const Eigen::Ref<const Eigen::VectorXd>& vec, Eigen::Matrix<double,N,1>& out){
@@ -122,9 +122,9 @@ class ElementTraits<std::array<T,N>>{
       ElementTraits<T>::print(i);
     }
   }
-  static void init(std::array<T,N>& x){
+  static void setIdentity(std::array<T,N>& x){
     for(T& i : x){
-      ElementTraits<T>::init(i);
+      ElementTraits<T>::setIdentity(i);
     }
   }
   static void boxplus(const std::array<T,N>& in, const Eigen::Ref<const Eigen::VectorXd>& vec, std::array<T,N>& out){
