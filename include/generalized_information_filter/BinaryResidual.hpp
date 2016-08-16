@@ -13,6 +13,12 @@
 
 namespace GIF{
 
+class BinaryMeasurementBase{
+ public:
+  double t0_;
+  double t1_;
+};
+
 class BinaryResidualBase{
  public:
   BinaryResidualBase(){};
@@ -27,24 +33,28 @@ class BinaryResidualBase{
   virtual std::shared_ptr<StateDefinition> noiDefinition() const = 0;
 };
 
-template<typename PackRes, typename PackPre, typename PackPos, typename PackNoi>
+template<typename PackRes, typename PackPre, typename PackPos, typename PackNoi, typename Meas>
 class BinaryResidual;
 
-template<typename... Res, typename... Pre, typename... Pos, typename... Noi>
-class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>>:
-    public Model<BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>>,
+template<typename... Res, typename... Pre, typename... Pos, typename... Noi, typename Meas>
+class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>,Meas>:
+    public Model<BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>,Meas>,
                                 ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>>,
     public BinaryResidualBase{
  public:
-  using mtBase = Model<BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>>,
-                                      ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>>;
-  typedef BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>> mtBinaryRedidual;
+  typedef BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>,Meas> mtBinaryRedidual;
+  using mtBase = Model<mtBinaryRedidual,ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>>;
   BinaryResidual(const std::array<std::string,ElementPack<Res...>::n_>& namesRes,
                  const std::array<std::string,ElementPack<Pre...>::n_>& namesPre,
                  const std::array<std::string,ElementPack<Pos...>::n_>& namesPos,
                  const std::array<std::string,ElementPack<Noi...>::n_>& namesNoi):
       mtBase(namesRes, std::forward_as_tuple(namesPre,namesPos,namesNoi)){};
   virtual ~BinaryResidual(){};
+
+  // Set measurement
+  void setMeas(std::shared_ptr<BinaryMeasurementBase> meas){
+    meas_ = std::dynamic_pointer_cast<Meas>(meas);
+  }
 
   // User implementations
   virtual void evalResidual(Res&... res, const Pre&... pre, const Pos&... pos, const Noi&... noi) const = 0;
@@ -116,6 +126,7 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
 
  protected:
   friend mtBase;
+  std::shared_ptr<const Meas> meas_;
 
   // Wrapping from base to user implementation
   void eval(Res&... res, const Pre&... pre, const Pos&... pos, const Noi&... noi) const{

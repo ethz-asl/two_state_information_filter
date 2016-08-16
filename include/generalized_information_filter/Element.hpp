@@ -42,7 +42,7 @@ class Element: public ElementBase{
   Element(){};
   virtual ~Element(){};
   Element<ElementType>& operator=(const Element<ElementType>& other){
-    x_ = other.get();
+    get() = other.get();
     return *this;
   }
   virtual ElementBase& operator=(const ElementBase& other){

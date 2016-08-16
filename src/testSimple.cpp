@@ -25,7 +25,12 @@ class TransformationExample: public Transformation<ElementPack<V3D>,ElementPack<
   }
 };
 
-class BinaryRedidualVelocity: public BinaryResidual<ElementPack<V3D>,ElementPack<V3D,V3D>,ElementPack<V3D>,ElementPack<V3D>>{
+class AccelerometerMeas: public BinaryMeasurementBase{
+ public:
+  V3D acc_;
+};
+
+class BinaryRedidualVelocity: public BinaryResidual<ElementPack<V3D>,ElementPack<V3D,V3D>,ElementPack<V3D>,ElementPack<V3D>,AccelerometerMeas>{
  public:
   BinaryRedidualVelocity(): mtBinaryRedidual({"pos"},{"pos","vel"},{"pos"},{"pos"}){
     dt_ = 0.1;
@@ -107,7 +112,12 @@ TEST_F(NewStateTest, constructor) {
   // Filter
   Filter f;
   f.addRes(velRes);
-  std::cout << f.stateDefinition_->getSize() << std::endl;
+  std::cout << f.stateDefinition()->getSize() << std::endl;
+  auto preState = f.stateDefinition()->newState();
+  preState->init();
+  auto posState = f.stateDefinition()->newState();
+  posState->init();
+  f.evalRes(preState,posState);
 }
 
 int main(int argc, char **argv) {
