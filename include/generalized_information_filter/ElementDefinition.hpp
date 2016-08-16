@@ -17,20 +17,24 @@ class ElementDefinitionBase{
  public:
   ElementDefinitionBase(){};
   virtual ~ElementDefinitionBase(){};
-  virtual std::shared_ptr<ElementBase> newElement() = 0;
+  virtual std::shared_ptr<ElementBase> newElement() const = 0;
   virtual bool isSame(const std::shared_ptr<const ElementDefinitionBase>& in) const = 0;
+  virtual int getDim() const = 0;
 };
 
-template<typename ElementType>
+template<typename T>
 class ElementDefinition: public ElementDefinitionBase{
  public:
   ElementDefinition(){};
   ~ElementDefinition(){};
-  std::shared_ptr<ElementBase> newElement(){
-    return std::shared_ptr<Element<ElementType>>(new Element<ElementType>());
+  std::shared_ptr<ElementBase> newElement() const{
+    return std::shared_ptr<Element<T>>(new Element<T>(this));
   }
   bool isSame(const std::shared_ptr<const ElementDefinitionBase>& in) const{
-    return std::dynamic_pointer_cast<const ElementDefinition<ElementType>>(in).get() != nullptr;
+    return std::dynamic_pointer_cast<const ElementDefinition<T>>(in).get() != nullptr;
+  }
+  int getDim() const{
+    return ElementTraits<T>::d_;
   }
 };
 

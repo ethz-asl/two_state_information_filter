@@ -12,16 +12,16 @@
 
 namespace GIF{
 
-template<typename ElementType>
+template<typename T>
 class ElementTraits{
  public:
   static constexpr int d_ = 0;
-  static void print(const ElementType& x){}
-  static void init(ElementType& x){}
-  static void boxplus(const ElementType& in, const Eigen::Ref<const Eigen::VectorXd>& vec, ElementType& out){
+  static void print(const T& x){}
+  static void init(T& x){}
+  static void boxplus(const T& in, const Eigen::Ref<const Eigen::VectorXd>& vec, T& out){
     out = in;
   }
-  static void boxminus(const ElementType& in, const ElementType& ref, Eigen::Ref<Eigen::VectorXd> vec){}
+  static void boxminus(const T& in, const T& ref, Eigen::Ref<Eigen::VectorXd> vec){}
 };
 
 class ElementBase{
@@ -36,42 +36,46 @@ class ElementBase{
   virtual void boxminus(const std::shared_ptr<const ElementBase>& ref, Eigen::Ref<Eigen::VectorXd> vec)  const= 0;
 };
 
-template<typename ElementType>
+template<typename T>
+class ElementDefinition;
+
+template<typename T>
 class Element: public ElementBase{
  public:
-  Element(){};
+  Element(const ElementDefinition<T>* def): def_(def){};
   virtual ~Element(){};
-  Element<ElementType>& operator=(const Element<ElementType>& other){
+  Element<T>& operator=(const Element<T>& other){
     get() = other.get();
     return *this;
   }
   virtual ElementBase& operator=(const ElementBase& other){
-    *this = dynamic_cast<const Element<ElementType>&>(other);
+    *this = dynamic_cast<const Element<T>&>(other);
     return *this;
   }
   int getDim() const{
-    return ElementTraits<ElementType>::d_;
+    return def_->getDim();
   }
   void print() const{
-    ElementTraits<ElementType>::print(get());
+    ElementTraits<T>::print(get());
   }
   void init(){
-    ElementTraits<ElementType>::init(get());
+    ElementTraits<T>::init(get());
   }
   void boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec, const std::shared_ptr<ElementBase>& out) const{
-    ElementTraits<ElementType>::boxplus(get(),vec,std::dynamic_pointer_cast<Element<ElementType>>(out)->get());
+    ElementTraits<T>::boxplus(get(),vec,std::dynamic_pointer_cast<Element<T>>(out)->get());
   }
   void boxminus(const std::shared_ptr<const ElementBase>& ref, Eigen::Ref<Eigen::VectorXd> vec) const{
-    ElementTraits<ElementType>::boxminus(get(),std::dynamic_pointer_cast<const Element<ElementType>>(ref)->get(),vec);
+    ElementTraits<T>::boxminus(get(),std::dynamic_pointer_cast<const Element<T>>(ref)->get(),vec);
   }
-  ElementType& get(){
+  T& get(){
     return x_;
   }
-  const ElementType& get() const{
+  const T& get() const{
     return x_;
   }
  protected:
-  ElementType x_;
+  T x_;
+  const ElementDefinition<T>* def_;
 };
 
 // ==================== Traits Implementation ====================
