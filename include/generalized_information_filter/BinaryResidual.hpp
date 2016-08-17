@@ -10,19 +10,9 @@
 
 #include "generalized_information_filter/common.hpp"
 #include "generalized_information_filter/Model.hpp"
+#include "generalized_information_filter/Measurement.hpp"
 
 namespace GIF{
-
-class BinaryMeasurementBase: public State{
- public:
-  BinaryMeasurementBase(const std::shared_ptr<const StateDefinition>& def): State(def){
-    t0_ = 0;
-    t1_ = 1;
-  }
-  virtual ~BinaryMeasurementBase(){};
-  double t0_;
-  double t1_;
-};
 
 class BinaryResidualBase{
  public:
@@ -57,7 +47,7 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
   virtual ~BinaryResidual(){};
 
   // Set measurement
-  void setMeas(const std::shared_ptr<BinaryMeasurementBase>& meas){
+  void setMeas(const std::shared_ptr<MeasurementBase>& meas){
     meas_ = std::dynamic_pointer_cast<Meas>(meas);
   }
 

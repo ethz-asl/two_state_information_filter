@@ -24,7 +24,7 @@ class Filter{
     binaryResiduals_.push_back(r);
     stateDefinition_->extend(r->preDefinition());
     stateDefinition_->extend(r->posDefinition());
-    binaryMeasurements_.push_back(std::list<std::shared_ptr<BinaryMeasurementBase>>());
+    binaryMeasurements_.push_back(std::list<std::shared_ptr<MeasurementBase>>());
     binaryWrappersPre_.emplace_back(new StateWrapper(r->preDefinition(),stateDefinition_));
     binaryWrappersPos_.emplace_back(new StateWrapper(r->posDefinition(),stateDefinition_));
   }
@@ -46,7 +46,7 @@ class Filter{
  protected:
   std::shared_ptr<StateDefinition> stateDefinition_;
   std::vector<std::shared_ptr<BinaryResidualBase>> binaryResiduals_;
-  std::vector<std::list<std::shared_ptr<BinaryMeasurementBase>>> binaryMeasurements_;
+  std::vector<std::list<std::shared_ptr<MeasurementBase>>> binaryMeasurements_;
   std::vector<std::shared_ptr<const StateWrapper>> binaryWrappersPre_;
   std::vector<std::shared_ptr<const StateWrapper>> binaryWrappersPos_;
 };

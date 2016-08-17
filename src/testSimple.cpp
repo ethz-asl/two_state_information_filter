@@ -25,16 +25,16 @@ class TransformationExample: public Transformation<ElementPack<V3D>,ElementPack<
   }
 };
 
-class AccelerometerMeas: public BinaryMeasurementBase{
+class AccelerometerMeas: public MeasurementBase{
  public:
-  AccelerometerMeas(): BinaryMeasurementBase(ElementPack<V3D>::makeStateDefinition({"acc"})),
+  AccelerometerMeas(): MeasurementBase(ElementPack<V3D>::makeStateDefinition({"acc"})),
       acc_(State::getValue<V3D>("acc")){};
   V3D& acc_;
 };
 
-class EmptyMeas: public BinaryMeasurementBase{
+class EmptyMeas: public MeasurementBase{
  public:
-  EmptyMeas(): BinaryMeasurementBase(std::shared_ptr<StateDefinition>(new StateDefinition())){};
+  EmptyMeas(): MeasurementBase(std::shared_ptr<StateDefinition>(new StateDefinition())){};
 };
 
 class BinaryRedidualVelocity: public BinaryResidual<ElementPack<V3D>,ElementPack<V3D,V3D>,ElementPack<V3D>,ElementPack<V3D>,EmptyMeas>{
