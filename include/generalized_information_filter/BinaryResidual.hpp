@@ -23,10 +23,10 @@ class BinaryResidualBase{
  public:
   BinaryResidualBase(){};
   virtual ~BinaryResidualBase(){};
-  virtual void evalResidual(const std::shared_ptr<State>& res, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const = 0;
-  virtual void jacPre(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const  = 0;
-  virtual void jacPos(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const  = 0;
-  virtual void jacNoi(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const  = 0;
+  virtual void evalResidual(const std::shared_ptr<StateBase>& res, const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi) const = 0;
+  virtual void jacPre(MXD& J, const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi) const  = 0;
+  virtual void jacPos(MXD& J, const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi) const  = 0;
+  virtual void jacNoi(MXD& J, const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi) const  = 0;
   virtual std::shared_ptr<StateDefinition> resDefinition() const = 0;
   virtual std::shared_ptr<StateDefinition> preDefinition() const = 0;
   virtual std::shared_ptr<StateDefinition> posDefinition() const = 0;
@@ -63,32 +63,32 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
   virtual void jacNoi(MXD& J, const Pre&... pre, const Pos&... pos, const Noi&... noi) const  = 0;
 
   // Wrapping from user interface to base
-  void evalResidual(const std::shared_ptr<State>& res, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const{
-    const std::array<std::shared_ptr<const State>,3> ins = {pre, pos, noi};
+  void evalResidual(const std::shared_ptr<StateBase>& res, const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi) const{
+    const std::array<std::shared_ptr<const StateBase>,3> ins = {pre, pos, noi};
     this->_eval(res,ins);
   }
-  void jacPre(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const{
-    const std::array<std::shared_ptr<const State>,3> ins = {pre, pos, noi};
+  void jacPre(MXD& J, const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi) const{
+    const std::array<std::shared_ptr<const StateBase>,3> ins = {pre, pos, noi};
     this->template _jac<0>(J,ins);
   }
-  void jacPos(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const{
-    const std::array<std::shared_ptr<const State>,3> ins = {pre, pos, noi};
+  void jacPos(MXD& J, const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi) const{
+    const std::array<std::shared_ptr<const StateBase>,3> ins = {pre, pos, noi};
     this->template _jac<1>(J,ins);
   }
-  void jacNoi(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi) const{
-    const std::array<std::shared_ptr<const State>,3> ins = {pre, pos, noi};
+  void jacNoi(MXD& J, const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi) const{
+    const std::array<std::shared_ptr<const StateBase>,3> ins = {pre, pos, noi};
     this->template _jac<2>(J,ins);
   }
-  void jacFDPre(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi, const double& delta = 1e-6){
-    const std::array<std::shared_ptr<const State>,3> ins = {pre, pos, noi};
+  void jacFDPre(MXD& J, const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi, const double& delta = 1e-6){
+    const std::array<std::shared_ptr<const StateBase>,3> ins = {pre, pos, noi};
     this->template _jacFD<0>(J,ins,delta);
   }
-  void jacFDPos(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi, const double& delta = 1e-6){
-    const std::array<std::shared_ptr<const State>,3> ins = {pre, pos, noi};
+  void jacFDPos(MXD& J, const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi, const double& delta = 1e-6){
+    const std::array<std::shared_ptr<const StateBase>,3> ins = {pre, pos, noi};
     this->template _jacFD<1>(J,ins,delta);
   }
-  void jacFDNoi(MXD& J, const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi, const double& delta = 1e-6){
-    const std::array<std::shared_ptr<const State>,3> ins = {pre, pos, noi};
+  void jacFDNoi(MXD& J, const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi, const double& delta = 1e-6){
+    const std::array<std::shared_ptr<const StateBase>,3> ins = {pre, pos, noi};
     this->template _jacFD<2>(J,ins,delta);
   }
   template<int n, int m>
@@ -103,8 +103,8 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
   void setJacBlockNoi(MXD& J, const Eigen::Matrix<double,ElementPack<Res...>::template getDim<n>(),ElementPack<Noi...>::template getDim<m>()>& B) const{
     this->template _setJacBlock<2,n,m>(J,B);
   }
-  bool testJacs(const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos, const std::shared_ptr<const State>& noi, const double& delta = 1e-6, const double& th = 1e-6) const{
-    const std::array<std::shared_ptr<const State>,3> ins = {pre, pos, noi};
+  bool testJacs(const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi, const double& delta = 1e-6, const double& th = 1e-6) const{
+    const std::array<std::shared_ptr<const StateBase>,3> ins = {pre, pos, noi};
     return this->template _testJacInput<0>(ins,delta,th) &
            this->template _testJacInput<1>(ins,delta,th) &
            this->template _testJacInput<2>(ins,delta,th);

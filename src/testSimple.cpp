@@ -72,7 +72,7 @@ TEST_F(NewStateTest, constructor) {
   TransformationExample t;
   std::shared_ptr<State> s1a(new State(t.inputDefinition()));
   std::shared_ptr<State> s1b(new State(t.inputDefinition()));
-  s1a->init();
+  s1a->setIdentity();
   s1a->print();
 
   // Boxplus and boxminus
@@ -102,11 +102,11 @@ TEST_F(NewStateTest, constructor) {
   // Residual
   std::shared_ptr<BinaryRedidualVelocity> velRes(new BinaryRedidualVelocity());
   std::shared_ptr<State> pre(new State(velRes->preDefinition()));
-  pre->init();
+  pre->setIdentity();
   std::shared_ptr<State> pos(new State(velRes->posDefinition()));
-  pos->init();
+  pos->setIdentity();
   std::shared_ptr<State> noi(new State(velRes->noiDefinition()));
-  noi->init();
+  noi->setIdentity();
   velRes->testJacs(pre,pos,noi);
 
   // Filter
@@ -114,9 +114,9 @@ TEST_F(NewStateTest, constructor) {
   f.addRes(velRes);
   std::cout << f.stateDefinition()->getNumElement() << std::endl;
   std::shared_ptr<State> preState(new State(f.stateDefinition()));
-  preState->init();
+  preState->setIdentity();
   std::shared_ptr<State> posState(new State(f.stateDefinition()));
-  posState->init();
+  posState->setIdentity();
   f.evalRes(preState,posState);
 }
 

@@ -14,26 +14,18 @@
 
 namespace GIF{
 
-class State{
+class StateBase{
  public:
-  State(const std::shared_ptr<const StateDefinition> def): def_(def){
-    for(int i=0;i<def_->getNumElement();i++){
-      elements_.push_back(def_->getElementDefinition(i)->newElement());
-    }
-  };
-  virtual ~State(){};
-  State& operator=(const State& other){
-    for(int i=0;i<elements_.size();i++){
+  StateBase(const std::shared_ptr<const StateDefinition> def): def_(def){};
+  virtual ~StateBase(){};
+  StateBase& operator=(const StateBase& other){
+    for(int i=0;i<getNumElement();i++){
       *getElement(i) = *other.getElement(i);
     }
     return *this;
   }
-  inline std::shared_ptr<ElementBase>& getElement(int i){
-    return elements_.at(i);
-  }
-  inline const std::shared_ptr<const ElementBase> getElement(int i) const{
-    return elements_.at(i);
-  }
+  virtual std::shared_ptr<ElementBase>& getElement(int i) = 0;
+  virtual const std::shared_ptr<const ElementBase> getElement(int i) const = 0;
   inline int getDim() const{
     return def_->getDim();
   }
@@ -50,52 +42,88 @@ class State{
     return def_->getInner(i);
   }
   void print() const{
-    for(auto e : elements_){
-      e->print();
+    for(int i=0;i<getNumElement();i++){
+      getElement(i)->print();
     }
   }
-  void init(){
-    for(auto e : elements_){
-      e->setIdentity();
+  void setIdentity(){
+    for(int i=0;i<getNumElement();i++){
+      getElement(i)->setIdentity();
     }
   }
-  void boxplus(const VXD& vec, const std::shared_ptr<State> out) const{
+  void boxplus(const VXD& vec, const std::shared_ptr<StateBase> out) const{
     for(int i=0;i<getNumElement();i++){
       getElement(i)->boxplus(vec.block(getStart(i),0,getElement(i)->getDim(),1),out->getElement(i));
     }
   }
-  void boxminus(const std::shared_ptr<const State> ref, VXD& vec) const{
+  void boxminus(const std::shared_ptr<const StateBase> ref, VXD& vec) const{
     for(int i=0;i<getNumElement();i++){
       getElement(i)->boxminus(ref->getElement(i),vec.block(getStart(i),0,getElement(i)->getDim(),1));
     }
   }
 
  protected:
-  std::vector<std::shared_ptr<ElementBase>> elements_;
   const std::shared_ptr<const StateDefinition> def_;
 };
 
-//class StateWrapper{ // TODO: implement definiton checking (Wrapper-State, Wrapper-Definition)
-// public:
-//  StateWrapper(){};
-//  ~StateWrapper(){};
-//  void computeMap(){
-//    indexMap_.resize(outDefinition_->namesMap_.size());
-//    for(auto outElement : outDefinition_->namesMap_){
-//      indexMap_.at(outElement.second) = inDefinition_->namesMap_.at(outElement.first);
-//    }
-//  }
-//  void wrap(const std::shared_ptr<State>& out, const std::shared_ptr<State>& in){
-//    for(int i=0;i<indexMap_.size();i++){
-//      out->getElement(i) = in->getElement(indexMap_[i]);
-//    }
-//  }
-//
-// protected:
-//  std::shared_ptr<StateDefinition> inDefinition_;
-//  std::shared_ptr<StateDefinition> outDefinition_;
-//  std::vector<int> indexMap_;
-//};
+class State: public StateBase{
+ public:
+  State(const std::shared_ptr<const StateDefinition> def): StateBase(def){
+    for(int i=0;i<def_->getNumElement();i++){
+      elements_.push_back(def_->getElementDefinition(i)->newElement());
+    }
+  };
+  virtual ~State(){};
+  State& operator=(const StateBase& other){
+    dynamic_cast<const StateBase&>(*this) = other;
+    return *this;
+  }
+  inline std::shared_ptr<ElementBase>& getElement(int i){
+    return elements_.at(i);
+  }
+  inline const std::shared_ptr<const ElementBase> getElement(int i) const{
+    return elements_.at(i);
+  }
+
+ protected:
+  std::vector<std::shared_ptr<ElementBase>> elements_;
+};
+
+class StateWrapper: public StateBase{ // TODO: implement definiton checking (Wrapper-State, Wrapper-Definition)
+ public:
+  StateWrapper(const std::shared_ptr<const StateDefinition> def, const std::shared_ptr<const StateDefinition> in): StateBase(def), in_(in){
+    computeMap();
+  };
+  ~StateWrapper(){};
+  StateWrapper& operator=(const StateBase& other){
+    dynamic_cast<const StateBase&>(*this) = other;
+    return *this;
+  }
+  inline std::shared_ptr<ElementBase>& getElement(int i){
+    return state_->getElement(indexMap_[i]);
+  }
+  inline const std::shared_ptr<const ElementBase> getElement(int i) const{
+    return constState_->getElement(indexMap_[i]);
+  }
+  void computeMap(){
+    indexMap_.resize(def_->getNumElement());
+    for(int i=0;i<def_->getNumElement();i++){
+      indexMap_[i] = in_->findName(def_->getName(i));
+    }
+  }
+  void setState(const std::shared_ptr<StateBase>& state){
+    state_ = state;
+  }
+  void setState(const std::shared_ptr<const StateBase>& state) const{
+    constState_ = state;
+  }
+
+ protected:
+  std::shared_ptr<StateBase> state_;
+  mutable std::shared_ptr<const StateBase> constState_;
+  const std::shared_ptr<const StateDefinition> in_;
+  std::vector<int> indexMap_;
+};
 
 }
 

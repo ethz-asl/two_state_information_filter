@@ -30,16 +30,16 @@ class Transformation<ElementPack<Out...>,ElementPack<In...>>: public Model<Trans
   virtual void jacTransform(MXD& J, const In&... ins) const  = 0;
 
   // Wrapping from user interface to base
-  void jacFD(MXD& J, const std::shared_ptr<const State>& in, const double& delta = 1e-6){
-    const std::array<std::shared_ptr<const State>,1> ins = {in};
+  void jacFD(MXD& J, const std::shared_ptr<const StateBase>& in, const double& delta = 1e-6){
+    const std::array<std::shared_ptr<const StateBase>,1> ins = {in};
     this->template _jacFD<0>(J,ins,delta);
   }
-  void transformState(std::shared_ptr<State> out, const std::shared_ptr<const State>& in){
-    const std::array<std::shared_ptr<const State>,1> ins = {in};
+  void transformState(std::shared_ptr<StateBase> out, const std::shared_ptr<const StateBase>& in){
+    const std::array<std::shared_ptr<const StateBase>,1> ins = {in};
     this->template _eval(out,ins);
   }
-  void transformCovMat(MXD& outputCov, const std::shared_ptr<const State>& in,const MXD& inputCov){
-    const std::array<std::shared_ptr<const State>,1> ins = {in};
+  void transformCovMat(MXD& outputCov, const std::shared_ptr<const StateBase>& in,const MXD& inputCov){
+    const std::array<std::shared_ptr<const StateBase>,1> ins = {in};
     this->template _jac<0>(J_,ins);
     outputCov = J_*inputCov*J_.transpose();
   }
@@ -47,8 +47,8 @@ class Transformation<ElementPack<Out...>,ElementPack<In...>>: public Model<Trans
   void setJacBlock(MXD& J, const Eigen::Matrix<double,ElementPack<Out...>::template getDim<n>(),ElementPack<In...>::template getDim<m>()>& B) const{
     this->template _setJacBlock<0,n,m>(J,B);
   }
-  bool testJac(const std::shared_ptr<const State>& in, const double& delta = 1e-6, const double& th = 1e-6) const{
-    const std::array<std::shared_ptr<const State>,1> ins = {in};
+  bool testJac(const std::shared_ptr<const StateBase>& in, const double& delta = 1e-6, const double& th = 1e-6) const{
+    const std::array<std::shared_ptr<const StateBase>,1> ins = {in};
     return this->template _testJacInput<0>(ins,delta,th);
   }
 

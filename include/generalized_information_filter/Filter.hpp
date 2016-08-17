@@ -25,15 +25,19 @@ class Filter{
     stateDefinition_->extend(r->preDefinition());
     stateDefinition_->extend(r->posDefinition());
     binaryMeasurements_.push_back(std::list<std::shared_ptr<BinaryMeasurementBase>>());
+    binaryWrappersPre_.emplace_back(new StateWrapper(r->preDefinition(),stateDefinition_));
+    binaryWrappersPos_.emplace_back(new StateWrapper(r->posDefinition(),stateDefinition_));
   }
-  void evalRes(const std::shared_ptr<const State>& pre, const std::shared_ptr<const State>& pos){
-//    for(int i=0;i<binaryResiduals_.size();i++){
-//      auto noi = binaryResiduals_[i]->noiDefinition()->newState();
-//      noi->init();
-//      auto inn = binaryResiduals_[i]->resDefinition()->newState();
-//      binaryResiduals_[i]->evalResidual(inn,preStateWrapper_[i]->wrap(pre),pos,noi);
-//      inn->print();
-//    }
+  void evalRes(const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos){
+    for(int i=0;i<binaryResiduals_.size();i++){
+      std::shared_ptr<State> inn(new State(binaryResiduals_[i]->resDefinition()));
+      std::shared_ptr<State> noi(new State(binaryResiduals_[i]->noiDefinition()));
+      noi->setIdentity();
+      binaryWrappersPre_[i]->setState(pre);
+      binaryWrappersPos_[i]->setState(pos);
+      binaryResiduals_[i]->evalResidual(inn,binaryWrappersPre_[i],binaryWrappersPos_[i],noi);
+      inn->print();
+    }
   }
   std::shared_ptr<StateDefinition> stateDefinition() const{
     return stateDefinition_;
@@ -43,6 +47,8 @@ class Filter{
   std::shared_ptr<StateDefinition> stateDefinition_;
   std::vector<std::shared_ptr<BinaryResidualBase>> binaryResiduals_;
   std::vector<std::list<std::shared_ptr<BinaryMeasurementBase>>> binaryMeasurements_;
+  std::vector<std::shared_ptr<const StateWrapper>> binaryWrappersPre_;
+  std::vector<std::shared_ptr<const StateWrapper>> binaryWrappersPos_;
 };
 
 }
