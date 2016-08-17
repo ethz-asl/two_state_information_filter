@@ -25,7 +25,7 @@ class StateBase{
     return *this;
   }
   virtual std::shared_ptr<ElementBase> getElement(int i) = 0;
-  virtual const std::shared_ptr<const ElementBase> getElement(int i) const = 0;
+  virtual std::shared_ptr<const ElementBase> getElement(int i) const = 0;
   template<typename T>
   inline T& getValue(int i){
     return std::dynamic_pointer_cast<Element<T>>(getElement(i))->get();
@@ -101,7 +101,7 @@ class State: public StateBase{
   inline std::shared_ptr<ElementBase> getElement(int i){
     return elements_.at(i);
   }
-  inline const std::shared_ptr<const ElementBase> getElement(int i) const{
+  inline std::shared_ptr<const ElementBase> getElement(int i) const{
     return elements_.at(i);
   }
 
@@ -122,7 +122,7 @@ class StateWrapper: public StateBase{ // TODO: implement definiton checking (Wra
   inline std::shared_ptr<ElementBase> getElement(int i){
     return state_->getElement(indexMap_[i]);
   }
-  inline const std::shared_ptr<const ElementBase> getElement(int i) const{
+  inline std::shared_ptr<const ElementBase> getElement(int i) const{
     return constState_->getElement(indexMap_[i]);
   }
   void computeMap(){
