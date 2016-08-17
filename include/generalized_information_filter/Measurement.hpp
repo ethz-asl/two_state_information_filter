@@ -23,15 +23,25 @@ class MeasurementBase: public State{
 
 class MeasurementTimeline{
  public:
-  MeasurementTimeline(){
-    maxWaitTime_ = 0.1;
-    minWaitTime_ = 0.0;
+  MeasurementTimeline(const double& maxWaitTime = 0.1, const double& minWaitTime = 0.0){
+    maxWaitTime_ = maxWaitTime;
+    minWaitTime_ = minWaitTime;
     lastProcessedTime_ = 0.0;
     hasProcessedTime_ = false;
   };
   virtual ~MeasurementTimeline(){};
   void addMeas(const std::shared_ptr<const MeasurementBase>& meas, const double& t){
-    measMap_[t] = meas;
+    if(hasProcessedTime_ && t<lastProcessedTime_){
+      std::cout << "Error: adding measurements before last processed time (will be discarded)" << std::endl;
+    } else {
+      measMap_[t] = meas;
+    }
+  }
+  void removeProcessedFirst(){
+    assert(measMap_.size() > 0);
+    lastProcessedTime_ = measMap_.begin()->first;
+    measMap_.erase(measMap_.begin());
+    hasProcessedTime_ = true;
   }
   void removeProcessedMeas(const double& t){
     assert(measMap_.count(t) > 0);
@@ -46,6 +56,9 @@ class MeasurementTimeline{
   bool getLastTime(double& lastTime) const{
     if(!measMap_.empty()){
       lastTime = measMap_.rbegin()->first;
+      return true;
+    } else if(hasProcessedTime_){
+      lastTime = lastProcessedTime_;
       return true;
     } else {
       return false;

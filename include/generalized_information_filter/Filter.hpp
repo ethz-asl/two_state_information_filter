@@ -22,7 +22,7 @@ class Filter{
     binaryResiduals_.push_back(r);
     stateDefinition_->extend(r->preDefinition());
     stateDefinition_->extend(r->posDefinition());
-    binaryMeasurements_.push_back(std::list<std::shared_ptr<MeasurementBase>>());
+    binaryMeasurementTimelines_.emplace_back(new MeasurementTimeline());
     binaryWrappersPre_.emplace_back(new StateWrapper(r->preDefinition(),stateDefinition_));
     binaryWrappersPos_.emplace_back(new StateWrapper(r->posDefinition(),stateDefinition_));
   }
@@ -40,11 +40,42 @@ class Filter{
   std::shared_ptr<StateDefinition> stateDefinition() const{
     return stateDefinition_;
   }
+  bool getCurrentTimeFromMeasurements(double& currentTime) const{
+    bool foundMeasurement;
+    double lastMeasurementTime;
+    for(int i=0;i<binaryMeasurementTimelines_.size();i++){
+      if(!foundMeasurement){
+        foundMeasurement = binaryMeasurementTimelines_[i]->getLastTime(currentTime);
+      } else {
+        if(binaryMeasurementTimelines_[i]->getLastTime(lastMeasurementTime) && lastMeasurementTime > currentTime){
+          currentTime = lastMeasurementTime;
+        }
+      }
+    }
+    return foundMeasurement;
+  }
+  double getMaxUpdateTime(const double& currentTime) const{
+    double maxUpdateTime = currentTime;
+    for(int i=0;i<binaryMeasurementTimelines_.size();i++){
+      maxUpdateTime = std::min(maxUpdateTime,binaryMeasurementTimelines_[i]->getMaximalUpdateTime(currentTime));
+    }
+    return maxUpdateTime;
+  }
+  void getMeasurementTimeList(std::list<double>& times, const double& maxUpdateTime) const{
+    // Compose list of times which need to be processed
+    // First register all time between current state time and maxUpdateTime
+    // Second check which times can be eliminated
+  }
+  void splitAndMergeMeasurements(const std::list<double>& times){
+    // Change the measurement timelines by applying the split and merge functionality of the residuals
+    // UnaryDiscrete: split only second, merge not possible
+    // Differential: split leads to twice the same, merge as weighted mean
+  }
 
  protected:
   std::shared_ptr<StateDefinition> stateDefinition_;
   std::vector<std::shared_ptr<BinaryResidualBase>> binaryResiduals_;
-  std::vector<std::list<std::shared_ptr<MeasurementBase>>> binaryMeasurements_;
+  std::vector<std::shared_ptr<MeasurementTimeline>> binaryMeasurementTimelines_;
   std::vector<std::shared_ptr<const StateWrapper>> binaryWrappersPre_;
   std::vector<std::shared_ptr<const StateWrapper>> binaryWrappersPos_;
 };

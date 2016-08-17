@@ -16,7 +16,10 @@ namespace GIF{
 
 class BinaryResidualBase{
  public:
-  BinaryResidualBase(){};
+  BinaryResidualBase(){
+    isUnaryDiscrete_ = false;
+    isDifferential_ = false;
+  };
   virtual ~BinaryResidualBase(){};
   virtual void evalResidual(const std::shared_ptr<StateBase>& res, const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi) const = 0;
   virtual void jacPre(MXD& J, const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi) const  = 0;
@@ -26,6 +29,9 @@ class BinaryResidualBase{
   virtual std::shared_ptr<StateDefinition> preDefinition() const = 0;
   virtual std::shared_ptr<StateDefinition> posDefinition() const = 0;
   virtual std::shared_ptr<StateDefinition> noiDefinition() const = 0;
+ protected:
+  bool isUnaryDiscrete_;
+  bool isDifferential_;
 };
 
 template<typename PackRes, typename PackPre, typename PackPos, typename PackNoi, typename Meas>
