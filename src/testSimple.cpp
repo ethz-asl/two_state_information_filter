@@ -27,10 +27,17 @@ class TransformationExample: public Transformation<ElementPack<V3D>,ElementPack<
 
 class AccelerometerMeas: public BinaryMeasurementBase{
  public:
-  V3D acc_;
+  AccelerometerMeas(): BinaryMeasurementBase(ElementPack<V3D>::makeStateDefinition({"acc"})),
+      acc_(State::getValue<V3D>("acc")){};
+  V3D& acc_;
 };
 
-class BinaryRedidualVelocity: public BinaryResidual<ElementPack<V3D>,ElementPack<V3D,V3D>,ElementPack<V3D>,ElementPack<V3D>,AccelerometerMeas>{
+class EmptyMeas: public BinaryMeasurementBase{
+ public:
+  EmptyMeas(): BinaryMeasurementBase(std::shared_ptr<StateDefinition>(new StateDefinition())){};
+};
+
+class BinaryRedidualVelocity: public BinaryResidual<ElementPack<V3D>,ElementPack<V3D,V3D>,ElementPack<V3D>,ElementPack<V3D>,EmptyMeas>{
  public:
   BinaryRedidualVelocity(): mtBinaryRedidual({"pos"},{"pos","vel"},{"pos"},{"pos"}){
     dt_ = 0.1;
@@ -112,11 +119,13 @@ TEST_F(NewStateTest, constructor) {
   // Filter
   Filter f;
   f.addRes(velRes);
-  std::cout << f.stateDefinition()->getNumElement() << std::endl;
   std::shared_ptr<State> preState(new State(f.stateDefinition()));
   preState->setIdentity();
+  preState->getValue<V3D>("pos") = V3D(1,2,3);
+  preState->print();
   std::shared_ptr<State> posState(new State(f.stateDefinition()));
   posState->setIdentity();
+  posState->print();
   f.evalRes(preState,posState);
 }
 

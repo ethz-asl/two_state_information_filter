@@ -26,6 +26,26 @@ class StateBase{
   }
   virtual std::shared_ptr<ElementBase>& getElement(int i) = 0;
   virtual const std::shared_ptr<const ElementBase> getElement(int i) const = 0;
+  template<typename T>
+  inline T& getValue(int i){
+    return std::dynamic_pointer_cast<Element<T>>(getElement(i))->get();
+  }
+  template<typename T>
+  inline T& getValue(int i) const{
+    return std::dynamic_pointer_cast<const Element<T>>(getElement(i))->get();
+  }
+  template<typename T>
+  T& getValue(const std::string& name){
+    int i = def_->findName(name);
+    assert(i != -1);
+    return getValue<T>(i);
+  }
+  template<typename T>
+  T& getValue(const std::string& name) const{
+    int i = def_->findName(name);
+    assert(i != -1);
+    return getValue<T>(i);
+  }
   inline int getDim() const{
     return def_->getDim();
   }
@@ -109,6 +129,7 @@ class StateWrapper: public StateBase{ // TODO: implement definiton checking (Wra
     indexMap_.resize(def_->getNumElement());
     for(int i=0;i<def_->getNumElement();i++){
       indexMap_[i] = in_->findName(def_->getName(i));
+      assert(indexMap_[i] != -1);
     }
   }
   void setState(const std::shared_ptr<StateBase>& state){

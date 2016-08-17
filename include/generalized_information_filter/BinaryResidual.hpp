@@ -13,8 +13,13 @@
 
 namespace GIF{
 
-class BinaryMeasurementBase{
+class BinaryMeasurementBase: public State{
  public:
+  BinaryMeasurementBase(const std::shared_ptr<const StateDefinition> def): State(def){
+    t0_ = 0;
+    t1_ = 1;
+  }
+  virtual ~BinaryMeasurementBase(){};
   double t0_;
   double t1_;
 };
