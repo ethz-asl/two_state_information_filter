@@ -88,10 +88,12 @@ void StateWrapper::computeMap(){
 }
 
 void StateWrapper::setState(const std::shared_ptr<StateBase>& state){
+  state->matchesDef(in_);
   state_ = state;
 }
 
 void StateWrapper::setState(const std::shared_ptr<const StateBase>& state) const{
+  state->matchesDef(in_);
   constState_ = state;
 }
 

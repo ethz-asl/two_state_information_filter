@@ -57,7 +57,7 @@ class State: public StateBase{
   std::vector<std::shared_ptr<ElementBase>> elements_;
 };
 
-class StateWrapper: public StateBase{ // TODO: implement definiton checking (Wrapper-State, Wrapper-Definition)
+class StateWrapper: public StateBase{
  public:
   StateWrapper(const std::shared_ptr<const StateDefinition>& def, const std::shared_ptr<const StateDefinition>& in);
   ~StateWrapper();
