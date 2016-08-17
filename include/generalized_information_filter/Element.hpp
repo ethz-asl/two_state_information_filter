@@ -78,7 +78,8 @@ class Element: public ElementBase{
   const ElementDefinition<T>* def_;
 };
 
-// ==================== Traits Implementation ====================
+
+// ==================== Traits Implementation ==================== //
 template<>
 class ElementTraits<double>{
  public:

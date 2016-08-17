@@ -17,7 +17,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/gtest/" AND (NOT DEFINED CATKIN_DEVEL_PRE
 	add_subdirectory(gtest gtest)
 	enable_testing()
 	include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
-	add_executable(testSimple src/testSimple.cpp)
+	add_executable(testSimple src/testSimple.cpp src/StateDefinition.cpp src/State.cpp)
 	target_link_libraries(testSimple gtest_main gtest pthread )
 	add_test(testSimple testSimple)
 endif()
