@@ -41,13 +41,13 @@ class ElementPack{
   }
 
   template<int i = 0, typename std::enable_if<(i<sizeof...(Ts))>::type* = nullptr>
-  static void addElementsToDefinition(const std::array<std::string,n_>& names, std::shared_ptr<StateDefinition> def){
+  static void addElementsToDefinition(const std::array<std::string,n_>& names, const std::shared_ptr<StateDefinition>& def){
     typedef typename std::tuple_element<i,mtTuple>::type mtElementType;
     def->addElementDefinition<mtElementType>(names.at(i));
     addElementsToDefinition<i+1>(names,def);
   }
   template<int i = 0, typename std::enable_if<(i==sizeof...(Ts))>::type* = nullptr>
-  static void addElementsToDefinition(const std::array<std::string,n_>& names, std::shared_ptr<StateDefinition> def){}
+  static void addElementsToDefinition(const std::array<std::string,n_>& names, const std::shared_ptr<StateDefinition>& def){}
 
   template<int i>
   static constexpr int getDim(){

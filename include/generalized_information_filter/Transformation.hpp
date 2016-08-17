@@ -34,7 +34,7 @@ class Transformation<ElementPack<Out...>,ElementPack<In...>>: public Model<Trans
     const std::array<std::shared_ptr<const StateBase>,1> ins = {in};
     this->template _jacFD<0>(J,ins,delta);
   }
-  void transformState(std::shared_ptr<StateBase> out, const std::shared_ptr<const StateBase>& in){
+  void transformState(const std::shared_ptr<StateBase>& out, const std::shared_ptr<const StateBase>& in){
     const std::array<std::shared_ptr<const StateBase>,1> ins = {in};
     this->template _eval(out,ins);
   }

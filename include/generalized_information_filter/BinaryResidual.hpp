@@ -15,7 +15,7 @@ namespace GIF{
 
 class BinaryMeasurementBase: public State{
  public:
-  BinaryMeasurementBase(const std::shared_ptr<const StateDefinition> def): State(def){
+  BinaryMeasurementBase(const std::shared_ptr<const StateDefinition>& def): State(def){
     t0_ = 0;
     t1_ = 1;
   }
@@ -57,7 +57,7 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
   virtual ~BinaryResidual(){};
 
   // Set measurement
-  void setMeas(std::shared_ptr<BinaryMeasurementBase> meas){
+  void setMeas(const std::shared_ptr<BinaryMeasurementBase>& meas){
     meas_ = std::dynamic_pointer_cast<Meas>(meas);
   }
 

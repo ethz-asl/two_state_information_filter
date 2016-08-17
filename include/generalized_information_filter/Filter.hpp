@@ -20,7 +20,7 @@ class Filter{
   Filter(): stateDefinition_(new StateDefinition()){};
   virtual ~Filter(){};
 
-  void addRes(std::shared_ptr<BinaryResidualBase> r, const std::string& name = ""){
+  void addRes(const std::shared_ptr<BinaryResidualBase>& r, const std::string& name = ""){
     binaryResiduals_.push_back(r);
     stateDefinition_->extend(r->preDefinition());
     stateDefinition_->extend(r->posDefinition());
