@@ -69,7 +69,7 @@ class StateDefinition{
     auto query = namesMap_.find(name);
     return (query != namesMap_.end()) ? query->second : -1;
   }
-  std::shared_ptr<const ElementDefinitionBase> getElementDefinition(int i) const{
+  const std::shared_ptr<const ElementDefinitionBase>& getElementDefinition(int i) const{
     return elementDefinitions_.at(i).first;
   };
   int addElementDefinition(const std::string& name, const std::shared_ptr<const ElementDefinitionBase>& elementDefinition){
