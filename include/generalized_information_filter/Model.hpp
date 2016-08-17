@@ -118,6 +118,7 @@ class Model{
 
   template<typename... Ps, typename std::enable_if<(sizeof...(Ps)<n_)>::type* = nullptr>
   void _eval(const std::shared_ptr<StateBase>& out, const std::array<std::shared_ptr<const StateBase>,N_>& ins, Ps&... elements) const{
+    assert(out->matchesDef(outDefinition_));
     static constexpr int innerIndex = sizeof...(Ps);
     typedef typename OutPack::mtTuple mtTuple;
     typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
@@ -127,6 +128,7 @@ class Model{
   void _eval(const std::shared_ptr<StateBase>& out, const std::array<std::shared_ptr<const StateBase>,N_>& ins, Ps&... elements) const{
     static constexpr int outerIndex = TH_pack_index<sizeof...(Ps)-n_,InPacks...>::getOuter();
     static constexpr int innerIndex = TH_pack_index<sizeof...(Ps)-n_,InPacks...>::getInner();
+    assert(ins.at(outerIndex)->matchesDef(inDefinitions_[outerIndex]));
     typedef typename std::tuple_element<outerIndex,std::tuple<InPacks...>>::type::mtTuple mtTuple;
     typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
     _eval(out, ins, elements..., std::dynamic_pointer_cast<const Element<mtElementType>>(ins.at(outerIndex)->getElement(innerIndex))->get());
@@ -140,6 +142,7 @@ class Model{
   void _jac(MXD& J, const std::array<std::shared_ptr<const StateBase>,N_>& ins, Ps&... elements) const{
     static constexpr int outerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::getOuter();
     static constexpr int innerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::getInner();
+    assert(ins.at(outerIndex)->matchesDef(inDefinitions_[outerIndex]));
     typedef typename std::tuple_element<outerIndex,std::tuple<InPacks...>>::type::mtTuple mtTuple;
     typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
     _jac<j>(J, ins, elements..., std::dynamic_pointer_cast<const Element<mtElementType>>(ins.at(outerIndex)->getElement(innerIndex))->get());
