@@ -8,8 +8,6 @@
 #ifndef GIF_FILTER_HPP_
 #define GIF_FILTER_HPP_
 
-#include <map>
-
 #include "generalized_information_filter/BinaryResidual.hpp"
 #include "generalized_information_filter/common.hpp"
 

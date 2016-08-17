@@ -7,6 +7,7 @@
 
 #ifndef GIF_MEASUREMENT_HPP_
 #define GIF_MEASUREMENT_HPP_
+#include <map>
 
 #include "generalized_information_filter/common.hpp"
 #include "generalized_information_filter/State.hpp"
@@ -22,29 +23,52 @@ class MeasurementBase: public State{
 
 class MeasurementTimeline{
  public:
+  MeasurementTimeline(){
+    maxWaitTime_ = 0.1;
+    minWaitTime_ = 0.0;
+    lastProcessedTime_ = 0.0;
+    hasProcessedTime_ = false;
+  };
+  virtual ~MeasurementTimeline(){};
+  void addMeas(const std::shared_ptr<const MeasurementBase>& meas, const double& t){
+    measMap_[t] = meas;
+  }
+  void removeProcessedMeas(const double& t){
+    assert(measMap_.count(t) > 0);
+    measMap_.erase(t);
+    lastProcessedTime_ = t;
+    hasProcessedTime_ = true;
+  }
+  void clear(){
+    measMap_.clear();
+    hasProcessedTime_ = false;
+  }
+  bool getLastTime(double& lastTime) const{
+    if(!measMap_.empty()){
+      lastTime = measMap_.rbegin()->first;
+      return true;
+    } else {
+      return false;
+    }
+  }
+  double getMaximalUpdateTime(const double& currentTime) const{
+    double maximalUpdateTime = currentTime-maxWaitTime_;
+    if(!measMap_.empty()){
+      maximalUpdateTime = std::max(maximalUpdateTime,measMap_.rbegin()->first+minWaitTime_);
+    } else if(hasProcessedTime_){
+      maximalUpdateTime = std::max(maximalUpdateTime,lastProcessedTime_+minWaitTime_);
+    }
+    return maximalUpdateTime;
+  }
+ protected:
+  std::map<double,std::shared_ptr<const MeasurementBase>> measMap_;
+  double maxWaitTime_;
+  double minWaitTime_;
+  double lastProcessedTime_;
+  bool hasProcessedTime_;
 };
 
-
-//template<typename Meas>
 //class MeasurementTimeline{
-// public:
-//  typedef Meas mtMeas;
-//  std::map<double,mtMeas> measMap_;
-//  typename std::map<double,mtMeas>::iterator itMeas_;
-//  double maxWaitTime_;
-//  double minWaitTime_;
-//  MeasurementTimeline(){
-//    maxWaitTime_ = 0.1;
-//    minWaitTime_ = 0.0;
-//  };
-//  virtual ~MeasurementTimeline(){};
-//  void addMeas(const mtMeas& meas, const double& t){
-//    measMap_[t] = meas;
-//  }
-//  void clear()
-//  {
-//    measMap_.clear();
-//  }
 //  void clean(double t){
 //    while(measMap_.size() > 1 && measMap_.begin()->first<=t){
 //      measMap_.erase(measMap_.begin());
