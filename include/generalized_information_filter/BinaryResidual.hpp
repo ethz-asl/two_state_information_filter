@@ -29,6 +29,7 @@ class BinaryResidualBase{
   virtual std::shared_ptr<StateDefinition> noiDefinition() const = 0;
   virtual void splitMeasurements(const std::shared_ptr<const MeasurementBase>& in, const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
                                 std::shared_ptr<const MeasurementBase>& out1, std::shared_ptr<const MeasurementBase>& out2) const{
+    // carefull: in/out1/out2 may point to the same elements
     if(isSplitable_){
       out1 = in;
       out2 = in;
@@ -37,12 +38,13 @@ class BinaryResidualBase{
     }
   }
   virtual void mergeMeasurements(const std::shared_ptr<const MeasurementBase>& in1, const std::shared_ptr<const MeasurementBase>& in2,
-                                const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, std::shared_ptr<MeasurementBase>& out) const{
+                                const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, std::shared_ptr<const MeasurementBase>& out) const{
     if(isMergeable_){
-      out.reset(new MeasurementBase(in1->getDef()));
+      std::shared_ptr<MeasurementBase> newMeas(new MeasurementBase(in1->getDef()));
       VXD diff(in1->getDim());
       in1->boxminus(in2,diff);
-      in2->boxplus(toSec(t1-t0)/toSec(t2-t0)*diff,out);
+      in2->boxplus(toSec(t1-t0)/toSec(t2-t0)*diff,newMeas);
+      out = newMeas;
     } else {
       std::cout << "ERROR: merging of specific residual not supported!/implemented" << std::endl;
     }

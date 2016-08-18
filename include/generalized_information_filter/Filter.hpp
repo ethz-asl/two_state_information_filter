@@ -72,8 +72,10 @@ class Filter{
   void getMeasurementTimeList(std::set<TimePoint>& times, const TimePoint& maxUpdateTime, const bool includeMax = false) const{
     for(int i=0;i<binaryMeasurementTimelines_.size();i++){
       if(!binaryResiduals_[i]->isMergeable_){
+        // Add all non-mergeable measurement times
         binaryMeasurementTimelines_[i]->addAllInRange(times,time_,maxUpdateTime);
       } else if(!binaryResiduals_[i]->isSplitable_ && binaryResiduals_[i]->isUnary_){
+        // For the special case of unary and mergeable residuals add the last measurement time
         binaryMeasurementTimelines_[i]->addLastInRange(times,time_,maxUpdateTime);
       }
     }
