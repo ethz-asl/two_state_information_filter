@@ -36,14 +36,17 @@ class MeasurementTimeline{
   TimePoint getMaximalUpdateTime(const TimePoint& currentTime) const;
   void addAllInRange(std::set<TimePoint>& times, const TimePoint& start, const TimePoint& end) const;
   void addLastInRange(std::set<TimePoint>& times, const TimePoint& start, const TimePoint& end) const;
-  void splitMeasurements(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, std::shared_ptr<const BinaryResidualBase>& res);
-  void mergeMeasurements(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, std::shared_ptr<const BinaryResidualBase>& res);
+  void split(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, const std::shared_ptr<const BinaryResidualBase>& res);
+  void split(const std::set<TimePoint>& times, const std::shared_ptr<const BinaryResidualBase>& res);
+  void merge(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, const std::shared_ptr<const BinaryResidualBase>& res);
+  void mergeUndesired(const std::set<TimePoint>& times, const std::shared_ptr<const BinaryResidualBase>& res);
  protected:
   std::map<TimePoint,std::shared_ptr<const MeasurementBase>> measMap_;
   Duration maxWaitTime_;
   Duration minWaitTime_;
   TimePoint lastProcessedTime_;
   bool hasProcessedTime_;
+  void print(const TimePoint& start = TimePoint::min()) const;
 };
 
 }

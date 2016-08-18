@@ -20,7 +20,8 @@ class Filter{
   };
   virtual ~Filter(){};
 
-  void init(const TimePoint& t = TimePoint::min()){
+  void init(const TimePoint& t = TimePoint::min()){ // TODO: pass optional State
+    startTime_ = t;
     time_ = t;
     state_.reset(new State(stateDefinition_));
     cov_.setIdentity();
@@ -85,13 +86,20 @@ class Filter{
   }
   void splitAndMergeMeasurements(const std::set<TimePoint>& times){
     for(int i=0;i<binaryMeasurementTimelines_.size();i++){
-      // First insert all (splitable + !unary)
-      // Then remove all undisered (mergeable)
+      if(binaryResiduals_[i]->isSplitable_ && !binaryResiduals_[i]->isUnary_){
+        // First insert all (splitable + !unary)
+        binaryMeasurementTimelines_[i]->split(times,binaryResiduals_[i]);
+      }
+      if(binaryResiduals_[i]->isMergeable_){
+        // Then remove all undesired (mergeable)
+        binaryMeasurementTimelines_[i]->mergeUndesired(times,binaryResiduals_[i]);
+      }
     }
   }
 
  protected:
   TimePoint time_;
+  TimePoint startTime_;
   std::shared_ptr<State> state_;
   MXD cov_;
 

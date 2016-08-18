@@ -83,13 +83,56 @@ void MeasurementTimeline::addLastInRange(std::set<TimePoint>& times, const TimeP
   }
 }
 
-void MeasurementTimeline::splitMeasurements(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, std::shared_ptr<const BinaryResidualBase>& res){
+void MeasurementTimeline::split(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, const std::shared_ptr<const BinaryResidualBase>& res){
   addMeas(std::shared_ptr<const MeasurementBase>(),t1);
   res->splitMeasurements(measMap_.at(t2),t0,t1,t2,measMap_.at(t1),measMap_.at(t2));
 }
 
-void MeasurementTimeline::mergeMeasurements(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, std::shared_ptr<const BinaryResidualBase>& res){
+void MeasurementTimeline::split(const std::set<TimePoint>& times, const std::shared_ptr<const BinaryResidualBase>& res){
+  for(auto t : times){
+    auto it = measMap_.lower_bound(t);
+    if(it == measMap_.end() || (it == measMap_.begin() && (!hasProcessedTime_ || lastProcessedTime_ >= t))){
+      std::cout << "Error: range error while splitting!" << std::endl;
+      continue;
+    }
+    if(it->first == t){
+      // Measurement already available
+      continue;
+    }
+    TimePoint previous = (it == measMap_.begin()) ? lastProcessedTime_ : std::prev(it)->first;
+    split(previous,t,it->first,res);
+  }
+}
+
+void MeasurementTimeline::merge(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, const std::shared_ptr<const BinaryResidualBase>& res){
   res->mergeMeasurements(measMap_.at(t1),measMap_.at(t2),t0,t1,t2,measMap_.at(t2));
+  measMap_.erase(t1); // does not count as processed
+}
+
+void MeasurementTimeline::mergeUndesired(const std::set<TimePoint>& times, const std::shared_ptr<const BinaryResidualBase>& res){
+  // Merge measurements such that only timepoints remain which are in times or past its end
+  for(auto it = measMap_.begin(); it != measMap_.end();){
+    if(it->first > *times.rbegin()){
+      break;
+    }
+    if(times.count(it->first) > 0){
+      continue;
+    }
+    if((it == measMap_.begin() && (!hasProcessedTime_ || lastProcessedTime_ > it->first)) || next(it) == measMap_.end()){
+      std::cout << "Error: range error while merging!" << std::endl;
+      break;
+    }
+    TimePoint previous = (it == measMap_.begin()) ? lastProcessedTime_ : std::prev(it)->first;
+    ++it; // Needs to be increment before erase
+    merge(previous,std::prev(it)->first,it->first,res);
+  }
+}
+
+void MeasurementTimeline::print(const TimePoint& start) const{
+  for(auto it = measMap_.begin(); it != measMap_.end();++it){
+    std::cout << toSec(it->first-start) << "\t";
+  }
+  std::cout << std::endl;
 }
 
 }
