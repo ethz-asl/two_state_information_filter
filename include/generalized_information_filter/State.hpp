@@ -39,6 +39,7 @@ class StateBase{
   void setIdentity();
   void boxplus(const VXD& vec, const std::shared_ptr<StateBase>& out) const;
   void boxminus(const std::shared_ptr<const StateBase>& ref, VXD& vec) const;
+  std::shared_ptr<const StateDefinition> getDef() const;
 
  protected:
   const std::shared_ptr<const StateDefinition> def_;

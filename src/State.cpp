@@ -49,6 +49,10 @@ void StateBase::boxminus(const std::shared_ptr<const StateBase>& ref, VXD& vec) 
   }
 }
 
+std::shared_ptr<const StateDefinition> StateBase::getDef() const{
+  return def_;
+}
+
 State::State(const std::shared_ptr<const StateDefinition>& def): StateBase(def){
   for(int i=0;i<def_->getNumElement();i++){
     elements_.push_back(def_->getElementDefinition(i)->newElement());
