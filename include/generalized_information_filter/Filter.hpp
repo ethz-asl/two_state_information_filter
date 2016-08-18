@@ -31,53 +31,46 @@ class Filter{
     binaryResiduals_.push_back(r);
     stateDefinition_->extend(r->preDefinition());
     stateDefinition_->extend(r->posDefinition());
-    binaryMeasurementTimelines_.emplace_back(new MeasurementTimeline());
+    binaryMeasurementTimelines_.emplace_back(new MeasurementTimeline(!r->isUnary_));
     binaryWrappersPre_.emplace_back(new StateWrapper(r->preDefinition(),stateDefinition_));
     binaryWrappersPos_.emplace_back(new StateWrapper(r->posDefinition(),stateDefinition_));
   }
   void evalRes(const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos){
     for(int i=0;i<binaryResiduals_.size();i++){
-      std::shared_ptr<State> inn(new State(binaryResiduals_[i]->resDefinition()));
-      std::shared_ptr<State> noi(new State(binaryResiduals_[i]->noiDefinition()));
+      std::shared_ptr<State> inn(new State(binaryResiduals_.at(i)->resDefinition()));
+      std::shared_ptr<State> noi(new State(binaryResiduals_.at(i)->noiDefinition()));
       noi->setIdentity();
-      binaryWrappersPre_[i]->setState(pre);
-      binaryWrappersPos_[i]->setState(pos);
-      binaryResiduals_[i]->evalResidual(inn,binaryWrappersPre_[i],binaryWrappersPos_[i],noi);
+      binaryWrappersPre_.at(i)->setState(pre);
+      binaryWrappersPos_.at(i)->setState(pos);
+      binaryResiduals_.at(i)->evalResidual(inn,binaryWrappersPre_.at(i),binaryWrappersPos_.at(i),noi);
       inn->print();
     }
   }
   std::shared_ptr<StateDefinition> stateDefinition() const{
     return stateDefinition_;
   }
-  bool getCurrentTimeFromMeasurements(TimePoint& currentTime) const{
-    bool foundMeasurement;
-    TimePoint lastMeasurementTime;
+  TimePoint getCurrentTimeFromMeasurements() const{
+    TimePoint currentTime = TimePoint::min();
     for(int i=0;i<binaryMeasurementTimelines_.size();i++){
-      if(!foundMeasurement){
-        foundMeasurement = binaryMeasurementTimelines_[i]->getLastTime(currentTime);
-      } else {
-        if(binaryMeasurementTimelines_[i]->getLastTime(lastMeasurementTime) && lastMeasurementTime > currentTime){
-          currentTime = lastMeasurementTime;
-        }
-      }
+      currentTime = std::max(currentTime,binaryMeasurementTimelines_.at(i)->getLastTime());
     }
-    return foundMeasurement;
+    return currentTime;
   }
   TimePoint getMaxUpdateTime(const TimePoint& currentTime) const{
     TimePoint maxUpdateTime = currentTime;
     for(int i=0;i<binaryMeasurementTimelines_.size();i++){
-      maxUpdateTime = std::min(maxUpdateTime,binaryMeasurementTimelines_[i]->getMaximalUpdateTime(currentTime));
+      maxUpdateTime = std::min(maxUpdateTime,binaryMeasurementTimelines_.at(i)->getMaximalUpdateTime(currentTime));
     }
     return maxUpdateTime;
   }
   void getMeasurementTimeList(std::set<TimePoint>& times, const TimePoint& maxUpdateTime, const bool includeMax = false) const{
     for(int i=0;i<binaryMeasurementTimelines_.size();i++){
-      if(!binaryResiduals_[i]->isMergeable_){
+      if(!binaryResiduals_.at(i)->isMergeable_){
         // Add all non-mergeable measurement times
-        binaryMeasurementTimelines_[i]->addAllInRange(times,time_,maxUpdateTime);
-      } else if(!binaryResiduals_[i]->isSplitable_ && binaryResiduals_[i]->isUnary_){
+        binaryMeasurementTimelines_.at(i)->addAllInRange(times,time_,maxUpdateTime);
+      } else if(!binaryResiduals_.at(i)->isSplitable_ && binaryResiduals_.at(i)->isUnary_){
         // For the special case of unary and mergeable residuals add the last measurement time
-        binaryMeasurementTimelines_[i]->addLastInRange(times,time_,maxUpdateTime);
+        binaryMeasurementTimelines_.at(i)->addLastInRange(times,time_,maxUpdateTime);
       }
     }
     if(includeMax){
@@ -86,14 +79,25 @@ class Filter{
   }
   void splitAndMergeMeasurements(const std::set<TimePoint>& times){
     for(int i=0;i<binaryMeasurementTimelines_.size();i++){
-      if(binaryResiduals_[i]->isSplitable_ && !binaryResiduals_[i]->isUnary_){
+      binaryMeasurementTimelines_.at(i)->print(*times.begin());
+      if(binaryResiduals_.at(i)->isSplitable_ && !binaryResiduals_.at(i)->isUnary_){
         // First insert all (splitable + !unary)
-        binaryMeasurementTimelines_[i]->split(times,binaryResiduals_[i]);
+        binaryMeasurementTimelines_.at(i)->split(times,binaryResiduals_.at(i));
       }
-      if(binaryResiduals_[i]->isMergeable_){
+      binaryMeasurementTimelines_.at(i)->print(*times.begin());
+      if(binaryResiduals_.at(i)->isMergeable_){
         // Then remove all undesired (mergeable)
-        binaryMeasurementTimelines_[i]->mergeUndesired(times,binaryResiduals_[i]);
+        binaryMeasurementTimelines_.at(i)->mergeUndesired(times,binaryResiduals_.at(i));
       }
+      binaryMeasurementTimelines_.at(i)->print(*times.begin());
+    }
+  }
+  void addMeas(const int i, const std::shared_ptr<const MeasurementBase>& meas, const TimePoint& t){
+    binaryMeasurementTimelines_.at(i)->addMeas(meas,t);
+  }
+  void printMeasurementTimelines(const TimePoint& start = TimePoint::min()){
+    for(int i=0;i<binaryMeasurementTimelines_.size();i++){
+      binaryMeasurementTimelines_.at(i)->print(start);
     }
   }
 

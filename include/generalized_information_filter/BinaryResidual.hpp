@@ -69,8 +69,10 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
   BinaryResidual(const std::array<std::string,ElementPack<Res...>::n_>& namesRes,
                  const std::array<std::string,ElementPack<Pre...>::n_>& namesPre,
                  const std::array<std::string,ElementPack<Pos...>::n_>& namesPos,
-                 const std::array<std::string,ElementPack<Noi...>::n_>& namesNoi):
-      mtBase(namesRes, std::forward_as_tuple(namesPre,namesPos,namesNoi)){};
+                 const std::array<std::string,ElementPack<Noi...>::n_>& namesNoi,
+                 bool isUnary = false, bool isSplitable = false, bool isMergeable = false):
+      mtBase(namesRes, std::forward_as_tuple(namesPre,namesPos,namesNoi)),
+      BinaryResidualBase(isUnary,isSplitable,isMergeable){};
   virtual ~BinaryResidual(){};
 
   // Set measurement

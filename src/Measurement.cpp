@@ -3,17 +3,22 @@
 
 namespace GIF{
 
-MeasurementTimeline::MeasurementTimeline(const Duration& maxWaitTime, const Duration& minWaitTime){
+MeasurementTimeline::MeasurementTimeline(const bool ignoreFirst, const Duration& maxWaitTime, const Duration& minWaitTime){
+  ignoreFirst_ = ignoreFirst;
   maxWaitTime_ = maxWaitTime;
   minWaitTime_ = minWaitTime;
   lastProcessedTime_ = TimePoint::min();
-  hasProcessedTime_ = false;
 };
 
 MeasurementTimeline::~MeasurementTimeline(){};
 
 void MeasurementTimeline::addMeas(const std::shared_ptr<const MeasurementBase>& meas, const TimePoint& t){
-  if(hasProcessedTime_ && t<=lastProcessedTime_){
+  // Discard first measurement in binary case
+  if(!ignoreFirst_ && lastProcessedTime_ == TimePoint::min()){
+    lastProcessedTime_ = t;
+    return;
+  }
+  if(!ignoreFirst_ && t<=lastProcessedTime_){
     std::cout << "Error: adding measurements before last processed time (will be discarded)" << std::endl;
   } else {
     std::pair<std::map<TimePoint,std::shared_ptr<const MeasurementBase>>::iterator,bool> ret;
@@ -28,30 +33,24 @@ void MeasurementTimeline::removeProcessedFirst(){
   assert(measMap_.size() > 0);
   lastProcessedTime_ = measMap_.begin()->first;
   measMap_.erase(measMap_.begin());
-  hasProcessedTime_ = true;
 }
 
 void MeasurementTimeline::removeProcessedMeas(const TimePoint& t){
   assert(measMap_.count(t) > 0);
   measMap_.erase(t);
   lastProcessedTime_ = t;
-  hasProcessedTime_ = true;
 }
 
-void MeasurementTimeline::clear(){
+void MeasurementTimeline::reset(){
   measMap_.clear();
-  hasProcessedTime_ = false;
+  lastProcessedTime_ = TimePoint::min();
 }
 
-bool MeasurementTimeline::getLastTime(TimePoint& lastTime) const{
+TimePoint MeasurementTimeline::getLastTime() const{
   if(!measMap_.empty()){
-    lastTime = measMap_.rbegin()->first;
-    return true;
-  } else if(hasProcessedTime_){
-    lastTime = lastProcessedTime_;
-    return true;
+    return measMap_.rbegin()->first;
   } else {
-    return false;
+    return lastProcessedTime_;
   }
 }
 
@@ -59,7 +58,7 @@ TimePoint MeasurementTimeline::getMaximalUpdateTime(const TimePoint& currentTime
   TimePoint maximalUpdateTime = currentTime-maxWaitTime_;
   if(!measMap_.empty()){
     maximalUpdateTime = std::max(maximalUpdateTime,measMap_.rbegin()->first+minWaitTime_);
-  } else if(hasProcessedTime_){
+  } else {
     maximalUpdateTime = std::max(maximalUpdateTime,lastProcessedTime_+minWaitTime_);
   }
   return maximalUpdateTime;
@@ -84,6 +83,7 @@ void MeasurementTimeline::addLastInRange(std::set<TimePoint>& times, const TimeP
 }
 
 void MeasurementTimeline::split(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, const std::shared_ptr<const BinaryResidualBase>& res){
+  assert(t0 <= t1 && t1 <= t2);
   addMeas(std::shared_ptr<const MeasurementBase>(),t1);
   res->splitMeasurements(measMap_.at(t2),t0,t1,t2,measMap_.at(t1),measMap_.at(t2));
 }
@@ -91,7 +91,7 @@ void MeasurementTimeline::split(const TimePoint& t0, const TimePoint& t1, const 
 void MeasurementTimeline::split(const std::set<TimePoint>& times, const std::shared_ptr<const BinaryResidualBase>& res){
   for(auto t : times){
     auto it = measMap_.lower_bound(t);
-    if(it == measMap_.end() || (it == measMap_.begin() && (!hasProcessedTime_ || lastProcessedTime_ >= t))){
+    if(it == measMap_.end()){
       std::cout << "Error: range error while splitting!" << std::endl;
       continue;
     }
@@ -105,6 +105,7 @@ void MeasurementTimeline::split(const std::set<TimePoint>& times, const std::sha
 }
 
 void MeasurementTimeline::merge(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, const std::shared_ptr<const BinaryResidualBase>& res){
+  assert(t0 <= t1 && t1 <= t2);
   res->mergeMeasurements(measMap_.at(t1),measMap_.at(t2),t0,t1,t2,measMap_.at(t2));
   measMap_.erase(t1); // does not count as processed
 }
@@ -116,9 +117,10 @@ void MeasurementTimeline::mergeUndesired(const std::set<TimePoint>& times, const
       break;
     }
     if(times.count(it->first) > 0){
+      ++it;
       continue;
     }
-    if((it == measMap_.begin() && (!hasProcessedTime_ || lastProcessedTime_ > it->first)) || next(it) == measMap_.end()){
+    if(next(it) == measMap_.end()){
       std::cout << "Error: range error while merging!" << std::endl;
       break;
     }
