@@ -14,6 +14,8 @@
 
 namespace GIF{
 
+class BinaryResidualBase;
+
 class MeasurementBase: public State{
  public:
   MeasurementBase(const std::shared_ptr<const StateDefinition>& def): State(def){
@@ -23,14 +25,14 @@ class MeasurementBase: public State{
 
 class MeasurementTimeline{
  public:
-  MeasurementTimeline(const double& maxWaitTime = 0.1, const double& minWaitTime = 0.0){
+  MeasurementTimeline(const Duration& maxWaitTime = fromSec(0.1), const Duration& minWaitTime = Duration::zero()){
     maxWaitTime_ = maxWaitTime;
     minWaitTime_ = minWaitTime;
-    lastProcessedTime_ = 0.0;
+    lastProcessedTime_ = TimePoint::min();
     hasProcessedTime_ = false;
   };
   virtual ~MeasurementTimeline(){};
-  void addMeas(const std::shared_ptr<const MeasurementBase>& meas, const double& t){
+  void addMeas(const std::shared_ptr<const MeasurementBase>& meas, const TimePoint& t){
     if(hasProcessedTime_ && t<lastProcessedTime_){
       std::cout << "Error: adding measurements before last processed time (will be discarded)" << std::endl;
     } else {
@@ -43,7 +45,7 @@ class MeasurementTimeline{
     measMap_.erase(measMap_.begin());
     hasProcessedTime_ = true;
   }
-  void removeProcessedMeas(const double& t){
+  void removeProcessedMeas(const TimePoint& t){
     assert(measMap_.count(t) > 0);
     measMap_.erase(t);
     lastProcessedTime_ = t;
@@ -53,7 +55,7 @@ class MeasurementTimeline{
     measMap_.clear();
     hasProcessedTime_ = false;
   }
-  bool getLastTime(double& lastTime) const{
+  bool getLastTime(TimePoint& lastTime) const{
     if(!measMap_.empty()){
       lastTime = measMap_.rbegin()->first;
       return true;
@@ -64,8 +66,8 @@ class MeasurementTimeline{
       return false;
     }
   }
-  double getMaximalUpdateTime(const double& currentTime) const{
-    double maximalUpdateTime = currentTime-maxWaitTime_;
+  TimePoint getMaximalUpdateTime(const TimePoint& currentTime) const{
+    TimePoint maximalUpdateTime = currentTime-maxWaitTime_;
     if(!measMap_.empty()){
       maximalUpdateTime = std::max(maximalUpdateTime,measMap_.rbegin()->first+minWaitTime_);
     } else if(hasProcessedTime_){
@@ -73,11 +75,33 @@ class MeasurementTimeline{
     }
     return maximalUpdateTime;
   }
+  void addAllInRange(std::set<TimePoint>& times, const TimePoint& start, const TimePoint& end) const{
+    auto it = measMap_.upper_bound(start);
+    while (it != measMap_.end() && it->first<= end){
+      times.insert(it->first);
+      ++it;
+    }
+  }
+  void addLastInRange(std::set<TimePoint>& times, const TimePoint& start, const TimePoint& end) const{
+    auto it = measMap_.upper_bound(end);
+    if(it!=measMap_.begin()){
+      --it;
+      if(it->first > start){
+        times.insert(it->first);
+      }
+    }
+  }
+
+  void splitMeasurements(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, std::shared_ptr<const BinaryResidualBase>& res) const{
+//    std::shared_ptr<MeasurementBase> newMeas1;
+//    std::shared_ptr<MeasurementBase> newMeas2;
+//    res->splitMeasurements(measMap_.at(t0),t0,t1,t2,newMeas1,newMeas2);
+  }
  protected:
-  std::map<double,std::shared_ptr<const MeasurementBase>> measMap_;
-  double maxWaitTime_;
-  double minWaitTime_;
-  double lastProcessedTime_;
+  std::map<TimePoint,std::shared_ptr<const MeasurementBase>> measMap_;
+  Duration maxWaitTime_;
+  Duration minWaitTime_;
+  TimePoint lastProcessedTime_;
   bool hasProcessedTime_;
 };
 

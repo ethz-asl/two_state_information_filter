@@ -15,8 +15,16 @@ namespace GIF{
 
 class Filter{
  public:
-  Filter(): stateDefinition_(new StateDefinition()){};
+  Filter(): stateDefinition_(new StateDefinition()){
+    init();
+  };
   virtual ~Filter(){};
+
+  void init(const TimePoint& t = TimePoint::min()){
+    time_ = t;
+    state_.reset(new State(stateDefinition_));
+    cov_.setIdentity();
+  }
 
   void addRes(const std::shared_ptr<BinaryResidualBase>& r, const std::string& name = ""){
     binaryResiduals_.push_back(r);
@@ -40,9 +48,9 @@ class Filter{
   std::shared_ptr<StateDefinition> stateDefinition() const{
     return stateDefinition_;
   }
-  bool getCurrentTimeFromMeasurements(double& currentTime) const{
+  bool getCurrentTimeFromMeasurements(TimePoint& currentTime) const{
     bool foundMeasurement;
-    double lastMeasurementTime;
+    TimePoint lastMeasurementTime;
     for(int i=0;i<binaryMeasurementTimelines_.size();i++){
       if(!foundMeasurement){
         foundMeasurement = binaryMeasurementTimelines_[i]->getLastTime(currentTime);
@@ -54,25 +62,37 @@ class Filter{
     }
     return foundMeasurement;
   }
-  double getMaxUpdateTime(const double& currentTime) const{
-    double maxUpdateTime = currentTime;
+  TimePoint getMaxUpdateTime(const TimePoint& currentTime) const{
+    TimePoint maxUpdateTime = currentTime;
     for(int i=0;i<binaryMeasurementTimelines_.size();i++){
       maxUpdateTime = std::min(maxUpdateTime,binaryMeasurementTimelines_[i]->getMaximalUpdateTime(currentTime));
     }
     return maxUpdateTime;
   }
-  void getMeasurementTimeList(std::list<double>& times, const double& maxUpdateTime) const{
-    // Compose list of times which need to be processed
-    // First register all time between current state time and maxUpdateTime
-    // Second check which times can be eliminated
+  void getMeasurementTimeList(std::set<TimePoint>& times, const TimePoint& maxUpdateTime, const bool includeMax = false) const{
+    for(int i=0;i<binaryMeasurementTimelines_.size();i++){
+      if(!binaryResiduals_[i]->isMergeable_){
+        binaryMeasurementTimelines_[i]->addAllInRange(times,time_,maxUpdateTime);
+      } else if(!binaryResiduals_[i]->isSplitable_ && binaryResiduals_[i]->isUnary_){
+        binaryMeasurementTimelines_[i]->addLastInRange(times,time_,maxUpdateTime);
+      }
+    }
+    if(includeMax){
+      times.insert(maxUpdateTime);
+    }
   }
-  void splitAndMergeMeasurements(const std::list<double>& times){
-    // Change the measurement timelines by applying the split and merge functionality of the residuals
-    // UnaryDiscrete: split only second, merge not possible
-    // Differential: split leads to twice the same, merge as weighted mean
+  void splitAndMergeMeasurements(const std::set<TimePoint>& times){
+    for(int i=0;i<binaryMeasurementTimelines_.size();i++){
+      // First insert all (splitable + !unary)
+      // Then remove all undisered (mergeable)
+    }
   }
 
  protected:
+  TimePoint time_;
+  std::shared_ptr<State> state_;
+  MXD cov_;
+
   std::shared_ptr<StateDefinition> stateDefinition_;
   std::vector<std::shared_ptr<BinaryResidualBase>> binaryResiduals_;
   std::vector<std::shared_ptr<MeasurementTimeline>> binaryMeasurementTimelines_;

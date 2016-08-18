@@ -16,9 +16,7 @@ namespace GIF{
 
 class BinaryResidualBase{
  public:
-  BinaryResidualBase(){
-    isUnaryDiscrete_ = false;
-    isDifferential_ = false;
+  BinaryResidualBase(bool isUnary = false, bool isSplitable = false, bool isMergeable = false): isUnary_(isUnary), isSplitable_(isSplitable), isMergeable_(isMergeable){
   };
   virtual ~BinaryResidualBase(){};
   virtual void evalResidual(const std::shared_ptr<StateBase>& res, const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi) const = 0;
@@ -29,9 +27,30 @@ class BinaryResidualBase{
   virtual std::shared_ptr<StateDefinition> preDefinition() const = 0;
   virtual std::shared_ptr<StateDefinition> posDefinition() const = 0;
   virtual std::shared_ptr<StateDefinition> noiDefinition() const = 0;
- protected:
-  bool isUnaryDiscrete_;
-  bool isDifferential_;
+  virtual void splitMeasurements(const std::shared_ptr<const MeasurementBase>& in, const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
+                                std::shared_ptr<const MeasurementBase>& out1, std::shared_ptr<const MeasurementBase>& out2) const{
+    if(isSplitable_){
+      out1 = in;
+      out2 = in;
+    } else {
+      std::cout << "ERROR: splitting of specific residual not supported/implemented!" << std::endl;
+    }
+  }
+  virtual void mergeMeasurements(const std::shared_ptr<const MeasurementBase>& in1, const std::shared_ptr<const MeasurementBase>& in2,
+                                const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, std::shared_ptr<MeasurementBase>& out) const{
+    if(isMergeable_){
+      out.reset(new MeasurementBase(in1->getDef()));
+      VXD diff(in1->getDim());
+      in1->boxminus(in2,diff);
+      in2->boxplus(toSec(t1-t0)/toSec(t2-t0)*diff,out);
+    } else {
+      std::cout << "ERROR: merging of specific residual not supported!/implemented" << std::endl;
+    }
+  }
+
+  const bool isUnary_;
+  const bool isSplitable_;
+  const bool isMergeable_;
 };
 
 template<typename PackRes, typename PackPre, typename PackPos, typename PackNoi, typename Meas>
