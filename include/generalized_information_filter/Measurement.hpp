@@ -29,6 +29,7 @@ class MeasurementTimeline{
   MeasurementTimeline(const bool ignoreFirst, const Duration& maxWaitTime = fromSec(0.1), const Duration& minWaitTime = Duration::zero());
   virtual ~MeasurementTimeline();
   void addMeas(const std::shared_ptr<const MeasurementBase>& meas, const TimePoint& t);
+  bool getMeas(const TimePoint& t, std::shared_ptr<const MeasurementBase>& meas);
   void removeProcessedFirst();
   void removeProcessedMeas(const TimePoint& t);
   void reset();

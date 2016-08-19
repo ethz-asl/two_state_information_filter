@@ -29,6 +29,16 @@ void MeasurementTimeline::addMeas(const std::shared_ptr<const MeasurementBase>& 
   }
 }
 
+bool MeasurementTimeline::getMeas(const TimePoint& t, std::shared_ptr<const MeasurementBase>& meas){
+  auto it = measMap_.find(t);
+  if(it == measMap_.end()){
+    return false;
+  } else {
+    meas = it->second;
+    return true;
+  }
+}
+
 void MeasurementTimeline::removeProcessedFirst(){
   assert(measMap_.size() > 0);
   lastProcessedTime_ = measMap_.begin()->first;
@@ -112,6 +122,9 @@ void MeasurementTimeline::merge(const TimePoint& t0, const TimePoint& t1, const 
 
 void MeasurementTimeline::mergeUndesired(const std::set<TimePoint>& times, const std::shared_ptr<const BinaryResidualBase>& res){
   // Merge measurements such that only timepoints remain which are in times or past its end
+  if(times.size() == 0){
+    return;
+  }
   for(auto it = measMap_.begin(); it != measMap_.end();){
     if(it->first > *times.rbegin()){
       break;

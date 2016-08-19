@@ -164,31 +164,25 @@ TEST_F(NewStateTest, constructor) {
 
   // Test measurements
   std::shared_ptr<EmptyMeas> eptMeas(new EmptyMeas);
+  std::cout << eptMeas.get() << std::endl;
   TimePoint start = Clock::now();
-  f.init(start+fromSec(-0.05));
+  f.init(start+fromSec(0.00));
   f.addMeas(0,eptMeas,start+fromSec(-0.1));
   f.addMeas(0,eptMeas,start+fromSec(0.0));
   f.addMeas(0,eptMeas,start+fromSec(0.2));
   f.addMeas(0,eptMeas,start+fromSec(0.3));
   f.addMeas(0,eptMeas,start+fromSec(0.4));
-  std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas());
-  f.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(-0.1,0.0,0.0))),start+fromSec(-0.1));
-  f.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(0.0,0.0,0.0))),start+fromSec(0.0));
-  f.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(0.1,0.0,0.0))),start+fromSec(0.1));
-  f.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(0.4,0.0,0.0))),start+fromSec(0.3));
-  f.printMeasurementTimelines(start);
-  TimePoint currentTime = f.getCurrentTimeFromMeasurements();
-  std::cout << "currentTime " << toSec(currentTime-start) << std::endl;
-  TimePoint maxUpdateTime = f.getMaxUpdateTime(currentTime);
-  std::cout << "maxUpdateTime " << toSec(maxUpdateTime-start) << std::endl;
-  std::set<TimePoint> times;
-  f.getMeasurementTimeList(times,maxUpdateTime,false);
-  for(auto t : times){
-    std::cout << toSec(t-start) << "\t";
-  }
-  std::cout << std::endl;
-  f.splitAndMergeMeasurements(times);
+  std::shared_ptr<AccelerometerMeas> accMeas(new AccelerometerMeas);
+  std::cout << accMeas.get() << std::endl;
+  f.addMeas(1,accMeas,start+fromSec(-0.1));
+  f.addMeas(1,accMeas,start+fromSec(0.0));
+  f.addMeas(1,accMeas,start+fromSec(0.1));
+  f.addMeas(1,accMeas,start+fromSec(0.3));
+  f.addMeas(1,accMeas,start+fromSec(0.5));
 
+  f.update();
+
+  f.update();
 
 }
 
