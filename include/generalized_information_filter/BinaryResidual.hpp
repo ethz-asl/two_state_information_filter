@@ -32,6 +32,7 @@ class BinaryResidualBase{
   virtual void mergeMeasurements(const std::shared_ptr<const MeasurementBase>& in1, const std::shared_ptr<const MeasurementBase>& in2,
                                 const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, std::shared_ptr<const MeasurementBase>& out) const = 0;
   virtual void setMeas(const std::shared_ptr<const MeasurementBase>& meas) = 0;
+  virtual const MXD& getR() const = 0;
 
   const bool isUnary_;
   const bool isSplitable_;
@@ -55,7 +56,10 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
                  const std::array<std::string,ElementPack<Noi...>::n_>& namesNoi,
                  bool isUnary = false, bool isSplitable = false, bool isMergeable = false):
       mtBase(namesRes, std::forward_as_tuple(namesPre,namesPos,namesNoi)),
-      BinaryResidualBase(isUnary,isSplitable,isMergeable){};
+      BinaryResidualBase(isUnary,isSplitable,isMergeable){
+    R_.resize(noiDefinition()->getDim(),noiDefinition()->getDim());
+    R_.setIdentity();
+  };
   virtual ~BinaryResidual(){};
 
   // Set measurement
@@ -158,9 +162,15 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
     return this->inDefinitions_[2];
   }
 
+  // Get Noise Matrix
+  const MXD& getR() const{
+    return R_;
+  }
+
  protected:
   friend mtBase;
   std::shared_ptr<const Meas> meas_;
+  MXD R_;
 
   // Wrapping from base to user implementation
   void eval(Res&... res, const Pre&... pre, const Pos&... pos, const Noi&... noi) const{

@@ -25,6 +25,7 @@ class Filter{
     time_ = t;
     state_.reset(new State(stateDefinition_));
     posLinState_.reset(new State(stateDefinition_));
+    cov_.resize(stateDefinition_->getDim(),stateDefinition_->getDim());
     cov_.setIdentity();
   }
 
@@ -147,6 +148,8 @@ class Filter{
     jacPre.setZero();
     MXD jacPos(innDim,stateDefinition_->getDim());
     jacPos.setZero();
+    MXD Winv(innDim,innDim);
+    Winv.setZero();
     int count = 0;
     for(int i=0;i<binaryMeasurementTimelines_.size();i++){
       if(hasMeas.at(i)){
@@ -161,15 +164,18 @@ class Filter{
         std::shared_ptr<State> innRef(new State(binaryResiduals_.at(i)->resDefinition()));
         innRef->setIdentity();
         const int singleDimension = binaryResiduals_.at(i)->resDefinition()->getDim();
-        inn->boxminus(innRef,y.block(count,0,singleDimension,1));
+        innRef->boxminus(inn,y.block(count,0,singleDimension,1));
 
         // Compute Jacobians
         MXD jacPreSingle(singleDimension,binaryWrappersPre_.at(i)->getDim());
         MXD jacPosSingle(singleDimension,binaryWrappersPos_.at(i)->getDim());
+        MXD jacNoiSingle(singleDimension,binaryResiduals_.at(i)->noiDefinition()->getDim());
         binaryResiduals_.at(i)->jacPre(jacPreSingle,binaryWrappersPre_.at(i),binaryWrappersPos_.at(i),noi);
         binaryResiduals_.at(i)->jacPos(jacPosSingle,binaryWrappersPre_.at(i),binaryWrappersPos_.at(i),noi);
+        binaryResiduals_.at(i)->jacNoi(jacNoiSingle,binaryWrappersPre_.at(i),binaryWrappersPos_.at(i),noi);
         binaryWrappersPre_.at(i)->wrapJacobian(jacPre,jacPreSingle,count);
         binaryWrappersPos_.at(i)->wrapJacobian(jacPos,jacPosSingle,count);
+        Winv.block(count,count,singleDimension,singleDimension) = (jacNoiSingle*binaryResiduals_.at(i)->getR()*jacNoiSingle.transpose()).inverse();
 
         // Increment counter
         count += singleDimension;
@@ -178,11 +184,18 @@ class Filter{
     std::cout << "Innovation:\t" << y.transpose() << std::endl;
     std::cout << jacPre << std::endl;
     std::cout << jacPos << std::endl;
+    std::cout << Winv << std::endl;
 
-
-    // Compute Kalman update
+    // Compute Kalman update // TODO: make more efficient
+    MXD D = cov_.inverse() + jacPre.transpose()*Winv*jacPre;
+    MXD S = jacPos.transpose()*(Winv-Winv*jacPre*D.inverse()*jacPre.transpose()*Winv);
+    cov_ = S*jacPos;
+    VXD dx = cov_.inverse()*S*y;
 
     // Apply Kalman update
+    posLinState_->boxplus(dx,state_);
+    std::cout << "state after update:" << std::endl;
+    state_->print();
 
     // Remove measurements and update timepoint
     time_ = t;
