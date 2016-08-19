@@ -37,13 +37,13 @@ void StateBase::setIdentity(){
   }
 }
 
-void StateBase::boxplus(const VXD& vec, const std::shared_ptr<StateBase>& out) const{
+void StateBase::boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec, const std::shared_ptr<StateBase>& out) const{
   for(int i=0;i<getNumElement();i++){
     getElement(i)->boxplus(vec.block(getStart(i),0,getElement(i)->getDim(),1),out->getElement(i));
   }
 }
 
-void StateBase::boxminus(const std::shared_ptr<const StateBase>& ref, VXD& vec) const{
+void StateBase::boxminus(const std::shared_ptr<const StateBase>& ref, Eigen::Ref<Eigen::VectorXd> vec) const{
   for(int i=0;i<getNumElement();i++){
     getElement(i)->boxminus(ref->getElement(i),vec.block(getStart(i),0,getElement(i)->getDim(),1));
   }

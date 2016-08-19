@@ -143,9 +143,27 @@ void MeasurementTimeline::mergeUndesired(const std::set<TimePoint>& times, const
   }
 }
 
-void MeasurementTimeline::print(const TimePoint& start) const{
+void MeasurementTimeline::removeOutdated(const TimePoint& time){
+  while(!measMap_.empty() && measMap_.begin()->first <= time){
+    removeProcessedFirst();
+  }
+}
+
+void MeasurementTimeline::print(const TimePoint& start, int startOffset, double resolution) const{
+  const int width = measMap_.empty() ? startOffset : startOffset + ceil(toSec(measMap_.rbegin()->first-start)/resolution) + 1;
+  std::vector<int> counts(width,0);
   for(auto it = measMap_.begin(); it != measMap_.end();++it){
-    std::cout << toSec(it->first-start) << "\t";
+    const int x = startOffset + ceil(toSec(it->first-start)/resolution);
+    if(x>=0){
+      counts[x]++;
+    }
+  }
+  for(auto c : counts){
+    if(c==0){
+      std::cout << "-";
+    } else {
+      std::cout << c;
+    }
   }
   std::cout << std::endl;
 }

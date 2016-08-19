@@ -37,8 +37,8 @@ class StateBase{
   inline int getInner(int i) const;
   void print() const;
   void setIdentity();
-  void boxplus(const VXD& vec, const std::shared_ptr<StateBase>& out) const;
-  void boxminus(const std::shared_ptr<const StateBase>& ref, VXD& vec) const;
+  void boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec, const std::shared_ptr<StateBase>& out) const;
+  void boxminus(const std::shared_ptr<const StateBase>& ref, Eigen::Ref<Eigen::VectorXd> vec) const;
   std::shared_ptr<const StateDefinition> getDef() const;
 
  protected:

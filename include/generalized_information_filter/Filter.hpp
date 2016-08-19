@@ -93,28 +93,35 @@ class Filter{
   void addMeas(const int i, const std::shared_ptr<const MeasurementBase>& meas, const TimePoint& t){
     binaryMeasurementTimelines_.at(i)->addMeas(meas,t);
   }
-  void printMeasurementTimelines(const TimePoint& start = TimePoint::min()){
+  void printMeasurementTimelines(const TimePoint& start = TimePoint::min(), int startOffset = 0, double resolution = 0.01){
+    for(int i=0;i<startOffset;i++){
+      std::cout << " ";
+    }
+    std::cout << "|" << std::endl;
     for(int i=0;i<binaryMeasurementTimelines_.size();i++){
-      std::cout << "Timeline " << i << std::endl;
-      binaryMeasurementTimelines_.at(i)->print(start);
+      binaryMeasurementTimelines_.at(i)->print(start,startOffset,resolution);
     }
   }
   void update(){
-    printMeasurementTimelines(startTime_);
-    std::cout << "stateTime " << toSec(time_-startTime_) << std::endl;
+    // Remove outdated
+    for(int i=0;i<binaryResiduals_.size();i++){
+      binaryMeasurementTimelines_.at(i)->removeOutdated(time_);
+    }
+    printMeasurementTimelines(time_,20);
+    std::cout << "stateTime:\t" << toSec(time_-startTime_) << std::endl;
     TimePoint currentTime = getCurrentTimeFromMeasurements();
-    std::cout << "currentTime " << toSec(currentTime-startTime_) << std::endl;
+    std::cout << "currentTime:\t" << toSec(currentTime-startTime_) << std::endl;
     TimePoint maxUpdateTime = getMaxUpdateTime(currentTime);
-    std::cout << "maxUpdateTime " << toSec(maxUpdateTime-startTime_) << std::endl;
+    std::cout << "maxUpdateTime:\t" << toSec(maxUpdateTime-startTime_) << std::endl;
     std::set<TimePoint> times;
     getMeasurementTimeList(times,maxUpdateTime,false);
-    std::cout << "updateTimes ";
+    std::cout << "updateTimes:\t";
     for(auto t : times){
       std::cout << toSec(t-startTime_) << "\t";
     }
     std::cout << std::endl;
     splitAndMergeMeasurements(times);
-    printMeasurementTimelines(startTime_);
+    printMeasurementTimelines(time_,20);
 
     for(auto t : times){
       makeUpdateStep(t);
@@ -126,11 +133,21 @@ class Filter{
     posLinState_ = state_;
 
     // Eval residual and Jacobians
+    int innDim = 0;
     std::vector<bool> hasMeas(binaryResiduals_.size(),false);
+    std::shared_ptr<const MeasurementBase> meas;
     for(int i=0;i<binaryMeasurementTimelines_.size();i++){
-      std::shared_ptr<const MeasurementBase> meas;
       hasMeas.at(i) = binaryMeasurementTimelines_.at(i)->getMeas(t,meas);
       if(hasMeas.at(i)){
+        innDim += binaryResiduals_.at(i)->resDefinition()->getDim();
+      }
+    }
+    VXD y(innDim);
+    MXD J(innDim,stateDefinition_->getDim());
+    int count = 0;
+    for(int i=0;i<binaryMeasurementTimelines_.size();i++){
+      if(hasMeas.at(i)){
+        binaryMeasurementTimelines_.at(i)->getMeas(t,meas);
         binaryResiduals_.at(i)->setMeas(meas);
         std::shared_ptr<State> inn(new State(binaryResiduals_.at(i)->resDefinition()));
         std::shared_ptr<State> noi(new State(binaryResiduals_.at(i)->noiDefinition()));
@@ -138,9 +155,14 @@ class Filter{
         binaryWrappersPre_.at(i)->setState(state_);
         binaryWrappersPos_.at(i)->setState(posLinState_);
         binaryResiduals_.at(i)->evalResidual(inn,binaryWrappersPre_.at(i),binaryWrappersPos_.at(i),noi);
-        inn->print();
+        std::shared_ptr<State> innRef(new State(binaryResiduals_.at(i)->resDefinition()));
+        innRef->setIdentity();
+        const int singleDimension = binaryResiduals_.at(i)->resDefinition()->getDim();
+        inn->boxminus(innRef,y.block(count,0,singleDimension,1));
+        count += singleDimension;
       }
     }
+    std::cout << "Innovation:\t" << y.transpose() << std::endl;
 
 
     // Compute Kalman update

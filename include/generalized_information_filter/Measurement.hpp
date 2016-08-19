@@ -41,7 +41,8 @@ class MeasurementTimeline{
   void split(const std::set<TimePoint>& times, const std::shared_ptr<const BinaryResidualBase>& res);
   void merge(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, const std::shared_ptr<const BinaryResidualBase>& res);
   void mergeUndesired(const std::set<TimePoint>& times, const std::shared_ptr<const BinaryResidualBase>& res);
-  void print(const TimePoint& start = TimePoint::min()) const;
+  void removeOutdated(const TimePoint& time);
+  void print(const TimePoint& start = TimePoint::min(), int startOffset = 0, double resolution = 0.01) const;
  protected:
   std::map<TimePoint,std::shared_ptr<const MeasurementBase>> measMap_;
   Duration maxWaitTime_;
