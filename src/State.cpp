@@ -87,18 +87,27 @@ void StateWrapper::computeMap(){
   indexMap_.resize(def_->getNumElement());
   for(int i=0;i<def_->getNumElement();i++){
     indexMap_[i] = in_->findName(def_->getName(i));
-    assert(indexMap_[i] != -1);
+    assert(indexMap_.at(i) != -1);
   }
 }
 
 void StateWrapper::setState(const std::shared_ptr<StateBase>& state){
   state->matchesDef(in_);
   state_ = state;
+  constState_ = state;
 }
 
 void StateWrapper::setState(const std::shared_ptr<const StateBase>& state) const{
   state->matchesDef(in_);
   constState_ = state;
+}
+
+void StateWrapper::wrapJacobian(Eigen::Ref<MXD> out,const Eigen::Ref<const MXD>& in, int rowOffset) const{
+  const int rows = in.rows();
+  for(int i=0;i<getNumElement();++i){
+    const int cols = getElement(i)->getDim();
+    out.block(rowOffset,constState_->getStart(indexMap_.at(i)),rows,cols) = in.block(0,getStart(i),rows,cols);
+  }
 }
 
 }

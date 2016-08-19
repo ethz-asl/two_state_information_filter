@@ -69,6 +69,7 @@ class StateWrapper: public StateBase{
   void computeMap();
   void setState(const std::shared_ptr<StateBase>& state);
   void setState(const std::shared_ptr<const StateBase>& state) const;
+  void wrapJacobian(Eigen::Ref<MXD> out,const Eigen::Ref<const MXD>& in, int rowOffset = 0) const;
 
  protected:
   std::shared_ptr<StateBase> state_;

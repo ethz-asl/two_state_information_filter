@@ -143,7 +143,10 @@ class Filter{
       }
     }
     VXD y(innDim);
-    MXD J(innDim,stateDefinition_->getDim());
+    MXD jacPre(innDim,stateDefinition_->getDim());
+    jacPre.setZero();
+    MXD jacPos(innDim,stateDefinition_->getDim());
+    jacPos.setZero();
     int count = 0;
     for(int i=0;i<binaryMeasurementTimelines_.size();i++){
       if(hasMeas.at(i)){
@@ -159,10 +162,22 @@ class Filter{
         innRef->setIdentity();
         const int singleDimension = binaryResiduals_.at(i)->resDefinition()->getDim();
         inn->boxminus(innRef,y.block(count,0,singleDimension,1));
+
+        // Compute Jacobians
+        MXD jacPreSingle(singleDimension,binaryWrappersPre_.at(i)->getDim());
+        MXD jacPosSingle(singleDimension,binaryWrappersPos_.at(i)->getDim());
+        binaryResiduals_.at(i)->jacPre(jacPreSingle,binaryWrappersPre_.at(i),binaryWrappersPos_.at(i),noi);
+        binaryResiduals_.at(i)->jacPos(jacPosSingle,binaryWrappersPre_.at(i),binaryWrappersPos_.at(i),noi);
+        binaryWrappersPre_.at(i)->wrapJacobian(jacPre,jacPreSingle,count);
+        binaryWrappersPos_.at(i)->wrapJacobian(jacPos,jacPosSingle,count);
+
+        // Increment counter
         count += singleDimension;
       }
     }
     std::cout << "Innovation:\t" << y.transpose() << std::endl;
+    std::cout << jacPre << std::endl;
+    std::cout << jacPos << std::endl;
 
 
     // Compute Kalman update
