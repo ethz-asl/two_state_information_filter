@@ -13,6 +13,41 @@
 
 namespace GIF{
 
+class ResidualStruct{
+ public:
+  ResidualStruct(const std::shared_ptr<BinaryResidualBase>& res, const std::shared_ptr<StateDefinition>& stateDefinition){
+    stateDefinition->extend(res->preDefinition());
+    stateDefinition->extend(res->posDefinition());
+    res_ = res;
+    mt_.reset(new MeasurementTimeline(!res->isUnary_));
+    preWrap_.reset(new StateWrapper(res->preDefinition(),stateDefinition));
+    posWrap_.reset(new StateWrapper(res->posDefinition(),stateDefinition));
+    inn_.reset(new State(res->resDefinition()));
+    innRef_.reset(new State(res->resDefinition()));
+    innRef_->setIdentity();
+    noi_.reset(new State(res->noiDefinition()));
+    noi_->setIdentity();
+    innDim_ = res->resDefinition()->getDim();
+    jacPre_.resize(innDim_,res->preDefinition()->getDim());
+    jacPos_.resize(innDim_,res->posDefinition()->getDim());
+    jacNoi_.resize(innDim_,res->noiDefinition()->getDim());
+  };
+  ~ResidualStruct(){};
+
+
+  std::shared_ptr<BinaryResidualBase> res_;
+  std::shared_ptr<MeasurementTimeline> mt_;
+  std::shared_ptr<StateWrapper> preWrap_;
+  std::shared_ptr<StateWrapper> posWrap_;
+  std::shared_ptr<State> inn_;
+  std::shared_ptr<State> innRef_;
+  std::shared_ptr<State> noi_;
+  MXD jacPre_;
+  MXD jacPos_;
+  MXD jacNoi_;
+  int innDim_;
+};
+
 class Filter{
  public:
   Filter(): stateDefinition_(new StateDefinition()){
@@ -24,28 +59,21 @@ class Filter{
     startTime_ = t;
     time_ = t;
     state_.reset(new State(stateDefinition_));
+    state_->setIdentity();
     posLinState_.reset(new State(stateDefinition_));
     cov_.resize(stateDefinition_->getDim(),stateDefinition_->getDim());
     cov_.setIdentity();
   }
 
-  void addRes(const std::shared_ptr<BinaryResidualBase>& r, const std::string& name = ""){
-    binaryResiduals_.push_back(r);
-    stateDefinition_->extend(r->preDefinition());
-    stateDefinition_->extend(r->posDefinition());
-    binaryMeasurementTimelines_.emplace_back(new MeasurementTimeline(!r->isUnary_));
-    binaryWrappersPre_.emplace_back(new StateWrapper(r->preDefinition(),stateDefinition_));
-    binaryWrappersPos_.emplace_back(new StateWrapper(r->posDefinition(),stateDefinition_));
+  void addRes(const std::shared_ptr<BinaryResidualBase>& res, const std::string& name = ""){
+    residuals_.emplace_back(res,stateDefinition_);
   }
   void evalRes(const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos){
-    for(int i=0;i<binaryResiduals_.size();i++){
-      std::shared_ptr<State> inn(new State(binaryResiduals_.at(i)->resDefinition()));
-      std::shared_ptr<State> noi(new State(binaryResiduals_.at(i)->noiDefinition()));
-      noi->setIdentity();
-      binaryWrappersPre_.at(i)->setState(pre);
-      binaryWrappersPos_.at(i)->setState(pos);
-      binaryResiduals_.at(i)->evalResidual(inn,binaryWrappersPre_.at(i),binaryWrappersPos_.at(i),noi);
-      inn->print();
+    for(int i=0;i<residuals_.size();i++){
+      residuals_.at(i).preWrap_->setState(pre);
+      residuals_.at(i).posWrap_->setState(pos);
+      residuals_.at(i).res_->evalResidual(residuals_.at(i).inn_,residuals_.at(i).preWrap_,residuals_.at(i).posWrap_,residuals_.at(i).noi_);
+      residuals_.at(i).inn_->print();
     }
   }
   std::shared_ptr<StateDefinition> stateDefinition() const{
@@ -53,26 +81,26 @@ class Filter{
   }
   TimePoint getCurrentTimeFromMeasurements() const{
     TimePoint currentTime = TimePoint::min();
-    for(int i=0;i<binaryMeasurementTimelines_.size();i++){
-      currentTime = std::max(currentTime,binaryMeasurementTimelines_.at(i)->getLastTime());
+    for(int i=0;i<residuals_.size();i++){
+      currentTime = std::max(currentTime,residuals_.at(i).mt_->getLastTime());
     }
     return currentTime;
   }
   TimePoint getMaxUpdateTime(const TimePoint& currentTime) const{
     TimePoint maxUpdateTime = currentTime;
-    for(int i=0;i<binaryMeasurementTimelines_.size();i++){
-      maxUpdateTime = std::min(maxUpdateTime,binaryMeasurementTimelines_.at(i)->getMaximalUpdateTime(currentTime));
+    for(int i=0;i<residuals_.size();i++){
+      maxUpdateTime = std::min(maxUpdateTime,residuals_.at(i).mt_->getMaximalUpdateTime(currentTime));
     }
     return maxUpdateTime;
   }
   void getMeasurementTimeList(std::set<TimePoint>& times, const TimePoint& maxUpdateTime, const bool includeMax = false) const{
-    for(int i=0;i<binaryMeasurementTimelines_.size();i++){
-      if(!binaryResiduals_.at(i)->isMergeable_){
+    for(int i=0;i<residuals_.size();i++){
+      if(!residuals_.at(i).res_->isMergeable_){
         // Add all non-mergeable measurement times
-        binaryMeasurementTimelines_.at(i)->addAllInRange(times,time_,maxUpdateTime);
-      } else if(!binaryResiduals_.at(i)->isSplitable_ && binaryResiduals_.at(i)->isUnary_){
+        residuals_.at(i).mt_->addAllInRange(times,time_,maxUpdateTime);
+      } else if(!residuals_.at(i).res_->isSplitable_ && residuals_.at(i).res_->isUnary_){
         // For the special case of unary and mergeable residuals add the last measurement time
-        binaryMeasurementTimelines_.at(i)->addLastInRange(times,time_,maxUpdateTime);
+        residuals_.at(i).mt_->addLastInRange(times,time_,maxUpdateTime);
       }
     }
     if(includeMax){
@@ -80,33 +108,33 @@ class Filter{
     }
   }
   void splitAndMergeMeasurements(const std::set<TimePoint>& times){
-    for(int i=0;i<binaryMeasurementTimelines_.size();i++){
-      if(binaryResiduals_.at(i)->isSplitable_ && !binaryResiduals_.at(i)->isUnary_){
+    for(int i=0;i<residuals_.size();i++){
+      if(residuals_.at(i).res_->isSplitable_ && !residuals_.at(i).res_->isUnary_){
         // First insert all (splitable + !unary)
-        binaryMeasurementTimelines_.at(i)->split(times,binaryResiduals_.at(i));
+        residuals_.at(i).mt_->split(times,residuals_.at(i).res_);
       }
-      if(binaryResiduals_.at(i)->isMergeable_){
+      if(residuals_.at(i).res_->isMergeable_){
         // Then remove all undesired (mergeable)
-        binaryMeasurementTimelines_.at(i)->mergeUndesired(times,binaryResiduals_.at(i));
+        residuals_.at(i).mt_->mergeUndesired(times,residuals_.at(i).res_);
       }
     }
   }
   void addMeas(const int i, const std::shared_ptr<const MeasurementBase>& meas, const TimePoint& t){
-    binaryMeasurementTimelines_.at(i)->addMeas(meas,t);
+    residuals_.at(i).mt_->addMeas(meas,t);
   }
   void printMeasurementTimelines(const TimePoint& start = TimePoint::min(), int startOffset = 0, double resolution = 0.01){
     for(int i=0;i<startOffset;i++){
       std::cout << " ";
     }
     std::cout << "|" << std::endl;
-    for(int i=0;i<binaryMeasurementTimelines_.size();i++){
-      binaryMeasurementTimelines_.at(i)->print(start,startOffset,resolution);
+    for(int i=0;i<residuals_.size();i++){
+      residuals_.at(i).mt_->print(start,startOffset,resolution);
     }
   }
   void update(){
     // Remove outdated
-    for(int i=0;i<binaryResiduals_.size();i++){
-      binaryMeasurementTimelines_.at(i)->removeOutdated(time_);
+    for(int i=0;i<residuals_.size();i++){
+      residuals_.at(i).mt_->removeOutdated(time_);
     }
     printMeasurementTimelines(time_,20);
     std::cout << "stateTime:\t" << toSec(time_-startTime_) << std::endl;
@@ -135,50 +163,41 @@ class Filter{
 
     // Eval residual and Jacobians
     int innDim = 0;
-    std::vector<bool> hasMeas(binaryResiduals_.size(),false);
+    std::vector<bool> hasMeas(residuals_.size(),false);
     std::shared_ptr<const MeasurementBase> meas;
-    for(int i=0;i<binaryMeasurementTimelines_.size();i++){
-      hasMeas.at(i) = binaryMeasurementTimelines_.at(i)->getMeas(t,meas);
+    for(int i=0;i<residuals_.size();i++){
+      hasMeas.at(i) = residuals_.at(i).mt_->getMeas(t,meas);
       if(hasMeas.at(i)){
-        innDim += binaryResiduals_.at(i)->resDefinition()->getDim();
+        innDim += residuals_.at(i).res_->resDefinition()->getDim();
       }
     }
     VXD y(innDim);
     MXD jacPre(innDim,stateDefinition_->getDim());
-    jacPre.setZero();
     MXD jacPos(innDim,stateDefinition_->getDim());
+    jacPre.setZero();
     jacPos.setZero();
     MXD Winv(innDim,innDim);
     Winv.setZero();
     int count = 0;
-    for(int i=0;i<binaryMeasurementTimelines_.size();i++){
+    for(int i=0;i<residuals_.size();i++){
       if(hasMeas.at(i)){
-        binaryMeasurementTimelines_.at(i)->getMeas(t,meas);
-        binaryResiduals_.at(i)->setMeas(meas);
-        std::shared_ptr<State> inn(new State(binaryResiduals_.at(i)->resDefinition()));
-        std::shared_ptr<State> noi(new State(binaryResiduals_.at(i)->noiDefinition()));
-        noi->setIdentity();
-        binaryWrappersPre_.at(i)->setState(state_);
-        binaryWrappersPos_.at(i)->setState(posLinState_);
-        binaryResiduals_.at(i)->evalResidual(inn,binaryWrappersPre_.at(i),binaryWrappersPos_.at(i),noi);
-        std::shared_ptr<State> innRef(new State(binaryResiduals_.at(i)->resDefinition()));
-        innRef->setIdentity();
-        const int singleDimension = binaryResiduals_.at(i)->resDefinition()->getDim();
-        innRef->boxminus(inn,y.block(count,0,singleDimension,1));
+        residuals_.at(i).mt_->getMeas(t,meas);
+        residuals_.at(i).res_->setMeas(meas);
+        residuals_.at(i).preWrap_->setState(state_);
+        residuals_.at(i).posWrap_->setState(posLinState_);
+        residuals_.at(i).res_->evalResidual(residuals_.at(i).inn_,residuals_.at(i).preWrap_,residuals_.at(i).posWrap_,residuals_.at(i).noi_);
+        residuals_.at(i).innRef_->boxminus(residuals_.at(i).inn_,y.block(count,0,residuals_.at(i).innDim_,1));
 
         // Compute Jacobians
-        MXD jacPreSingle(singleDimension,binaryWrappersPre_.at(i)->getDim());
-        MXD jacPosSingle(singleDimension,binaryWrappersPos_.at(i)->getDim());
-        MXD jacNoiSingle(singleDimension,binaryResiduals_.at(i)->noiDefinition()->getDim());
-        binaryResiduals_.at(i)->jacPre(jacPreSingle,binaryWrappersPre_.at(i),binaryWrappersPos_.at(i),noi);
-        binaryResiduals_.at(i)->jacPos(jacPosSingle,binaryWrappersPre_.at(i),binaryWrappersPos_.at(i),noi);
-        binaryResiduals_.at(i)->jacNoi(jacNoiSingle,binaryWrappersPre_.at(i),binaryWrappersPos_.at(i),noi);
-        binaryWrappersPre_.at(i)->wrapJacobian(jacPre,jacPreSingle,count);
-        binaryWrappersPos_.at(i)->wrapJacobian(jacPos,jacPosSingle,count);
-        Winv.block(count,count,singleDimension,singleDimension) = (jacNoiSingle*binaryResiduals_.at(i)->getR()*jacNoiSingle.transpose()).inverse();
+        residuals_.at(i).res_->jacPre(residuals_.at(i).jacPre_,residuals_.at(i).preWrap_,residuals_.at(i).posWrap_,residuals_.at(i).noi_);
+        residuals_.at(i).res_->jacPos(residuals_.at(i).jacPos_,residuals_.at(i).preWrap_,residuals_.at(i).posWrap_,residuals_.at(i).noi_);
+        residuals_.at(i).res_->jacNoi(residuals_.at(i).jacNoi_,residuals_.at(i).preWrap_,residuals_.at(i).posWrap_,residuals_.at(i).noi_);
+        residuals_.at(i).preWrap_->wrapJacobian(jacPre,residuals_.at(i).jacPre_,count);
+        residuals_.at(i).posWrap_->wrapJacobian(jacPos,residuals_.at(i).jacPos_,count);
+        Winv.block(count,count,residuals_.at(i).innDim_,residuals_.at(i).innDim_) = (residuals_.at(i).jacNoi_*residuals_.at(i).res_->getR()*residuals_.at(i).jacNoi_.transpose()).inverse();
 
         // Increment counter
-        count += singleDimension;
+        count += residuals_.at(i).innDim_;
       }
     }
     std::cout << "Innovation:\t" << y.transpose() << std::endl;
@@ -209,10 +228,7 @@ class Filter{
   MXD cov_;
 
   std::shared_ptr<StateDefinition> stateDefinition_;
-  std::vector<std::shared_ptr<BinaryResidualBase>> binaryResiduals_;
-  std::vector<std::shared_ptr<MeasurementTimeline>> binaryMeasurementTimelines_;
-  std::vector<std::shared_ptr<const StateWrapper>> binaryWrappersPre_;
-  std::vector<std::shared_ptr<const StateWrapper>> binaryWrappersPos_;
+  std::vector<ResidualStruct> residuals_;
 };
 
 }
