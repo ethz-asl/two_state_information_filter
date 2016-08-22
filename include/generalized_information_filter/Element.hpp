@@ -139,6 +139,23 @@ class ElementTraits<std::array<T,N>>{
     }
   }
 };
+template<>
+class ElementTraits<QPD>{
+ public:
+  static constexpr int d_ = 3;
+  static void print(const QPD& x){
+    std::cout << x << std::endl;
+  }
+  static void setIdentity(QPD& x){
+    x.setIdentity();
+  }
+  static void boxplus(const QPD& in, const Eigen::Ref<const Eigen::VectorXd>& vec, QPD& out){
+    out = in.boxPlus(vec);
+  }
+  static void boxminus(const QPD& in, const QPD& ref, Eigen::Ref<Eigen::VectorXd> vec){
+    vec = ref.boxMinus(in);
+  }
+};
 
 }
 
