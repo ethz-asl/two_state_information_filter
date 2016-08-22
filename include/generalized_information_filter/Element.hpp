@@ -13,15 +13,19 @@
 namespace GIF{
 
 template<typename T>
-class ElementTraits{
+class ElementTraits{ // Default implementation for zero dimension elements (may hold data which is not actively estimated/optimized)
  public:
   static constexpr int d_ = 0;
   static void print(const T& x){}
+  static const T identity(){
+    T x;
+    return x;
+  }
   static void setIdentity(T& x){}
   static void boxplus(const T& in, const Eigen::Ref<const Eigen::VectorXd>& vec, T& out){
     out = in;
   }
-  static void boxminus(const T& in, const T& ref, Eigen::Ref<Eigen::VectorXd> vec){}
+  static void boxminus(const T& in, const T& ref, Eigen::Ref<Eigen::VectorXd> vec){} // Must be computable in-place
 };
 
 class ElementBase{
@@ -87,6 +91,9 @@ class ElementTraits<double>{
   static void print(const double& x){
     std::cout << x << std::endl;
   }
+  static const double identity(){
+    return 0;
+  }
   static void setIdentity(double& x){
     x = 0;
   }
@@ -103,6 +110,9 @@ class ElementTraits<Eigen::Matrix<double,N,1>>{
   static constexpr int d_ = N;
   static void print(const Eigen::Matrix<double,N,1>& x){
     std::cout << x.transpose() << std::endl;
+  }
+  static const Eigen::Matrix<double,N,1> identity(){
+    return Eigen::Matrix<double,N,1>::Zero();
   }
   static void setIdentity(Eigen::Matrix<double,N,1>& x){
     x.setZero();
@@ -122,6 +132,11 @@ class ElementTraits<std::array<T,N>>{
     for(const T& i : x){
       ElementTraits<T>::print(i);
     }
+  }
+  static const std::array<T,N> identity(){
+    std::array<T,N> x;
+    setIdentity(x);
+    return x;
   }
   static void setIdentity(std::array<T,N>& x){
     for(T& i : x){
@@ -145,6 +160,9 @@ class ElementTraits<QPD>{
   static constexpr int d_ = 3;
   static void print(const QPD& x){
     std::cout << x << std::endl;
+  }
+  static const QPD identity(){
+    return QPD();
   }
   static void setIdentity(QPD& x){
     x.setIdentity();

@@ -4,6 +4,7 @@
 #include "generalized_information_filter/State.hpp"
 #include "generalized_information_filter/Transformation.hpp"
 #include "generalized_information_filter/BinaryResidual.hpp"
+#include "generalized_information_filter/Prediction.hpp"
 #include "generalized_information_filter/Filter.hpp"
 
 using namespace GIF;
@@ -85,6 +86,29 @@ class BinaryRedidualAccelerometer: public BinaryResidual<ElementPack<V3D>,Elemen
     setJacBlockPre<0,0>(J,-M3D::Identity());
   }
   void jacNoiImpl(MXD& J,const V3D& velPre,const V3D& velPos,const V3D& velNoi) const{
+    J.setZero();
+    setJacBlockPre<0,0>(J,M3D::Identity());
+  }
+
+ protected:
+  double dt_;
+};
+
+class PredictionAccelerometer: public Prediction<ElementPack<V3D>,ElementPack<V3D>,AccelerometerMeas>{
+ public:
+  PredictionAccelerometer(): mtPrediction({"vel"},{"vel"}){
+    dt_ = 0.1;
+    meas_.reset(new AccelerometerMeas());
+  };
+  virtual ~PredictionAccelerometer(){};
+  void evalPredictionImpl(V3D& velPos,const V3D& velPre,const V3D& velNoi) const{
+    velPos = velPre + dt_*meas_->acc_ + velNoi;
+  }
+  void jacPrePredictionImpl(MXD& J,const V3D& velPre,const V3D& velNoi) const{
+    J.setZero();
+    setJacBlockPre<0,0>(J,M3D::Identity());
+  }
+  void jacNoiPredictionImpl(MXD& J,const V3D& velPre,const V3D& velNoi) const{
     J.setZero();
     setJacBlockPre<0,0>(J,M3D::Identity());
   }
@@ -181,6 +205,26 @@ TEST_F(NewStateTest, constructor) {
 
   f.update();
 
+  // Prediction
+  std::shared_ptr<PredictionAccelerometer> accPre(new PredictionAccelerometer());
+
+  // Test measurements
+  Filter f2;
+  f2.addRes(velRes);
+  f2.addRes(accPre);
+  f2.init(start+fromSec(0.00));
+  f2.addMeas(0,eptMeas,start+fromSec(-0.1));
+  f2.addMeas(0,eptMeas,start+fromSec(0.0));
+  f2.addMeas(0,eptMeas,start+fromSec(0.2));
+  f2.addMeas(0,eptMeas,start+fromSec(0.3));
+  f2.addMeas(0,eptMeas,start+fromSec(0.4));
+  f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(-0.1,0.0,0.0))),start+fromSec(-0.1));
+  f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(0.0,0.0,0.0))),start+fromSec(0.0));
+  f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(0.1,0.0,0.0))),start+fromSec(0.1));
+  f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(0.4,0.0,0.0))),start+fromSec(0.3));
+  f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(0.3,0.0,0.0))),start+fromSec(0.5));
+  f2.update();
+  f2.update();
 }
 
 int main(int argc, char **argv) {
