@@ -28,8 +28,8 @@ class MeasurementTimeline{
   void reset();
   TimePoint getLastTime() const;
   TimePoint getMaximalUpdateTime(const TimePoint& currentTime) const;
-  void addAllInRange(std::set<TimePoint>& times, const TimePoint& start, const TimePoint& end) const;
-  void addLastInRange(std::set<TimePoint>& times, const TimePoint& start, const TimePoint& end) const;
+  void getAllInRange(std::set<TimePoint>& times, const TimePoint& start, const TimePoint& end) const;
+  void getLastInRange(std::set<TimePoint>& times, const TimePoint& start, const TimePoint& end) const;
   void split(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, const std::shared_ptr<const BinaryResidualBase>& res);
   void split(const std::set<TimePoint>& times, const std::shared_ptr<const BinaryResidualBase>& res);
   void merge(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, const std::shared_ptr<const BinaryResidualBase>& res);

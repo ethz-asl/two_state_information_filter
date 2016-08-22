@@ -74,7 +74,7 @@ TimePoint MeasurementTimeline::getMaximalUpdateTime(const TimePoint& currentTime
   return maximalUpdateTime;
 }
 
-void MeasurementTimeline::addAllInRange(std::set<TimePoint>& times, const TimePoint& start, const TimePoint& end) const{
+void MeasurementTimeline::getAllInRange(std::set<TimePoint>& times, const TimePoint& start, const TimePoint& end) const{
   auto it = measMap_.upper_bound(start);
   while (it != measMap_.end() && it->first<= end){
     times.insert(it->first);
@@ -82,7 +82,7 @@ void MeasurementTimeline::addAllInRange(std::set<TimePoint>& times, const TimePo
   }
 }
 
-void MeasurementTimeline::addLastInRange(std::set<TimePoint>& times, const TimePoint& start, const TimePoint& end) const{
+void MeasurementTimeline::getLastInRange(std::set<TimePoint>& times, const TimePoint& start, const TimePoint& end) const{
   auto it = measMap_.upper_bound(end);
   if(it!=measMap_.begin()){
     --it;

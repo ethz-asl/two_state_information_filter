@@ -97,10 +97,10 @@ class Filter{
     for(int i=0;i<residuals_.size();i++){
       if(!residuals_.at(i).res_->isMergeable_){
         // Add all non-mergeable measurement times
-        residuals_.at(i).mt_->addAllInRange(times,time_,maxUpdateTime);
+        residuals_.at(i).mt_->getAllInRange(times,time_,maxUpdateTime);
       } else if(!residuals_.at(i).res_->isSplitable_ && residuals_.at(i).res_->isUnary_){
         // For the special case of unary and mergeable residuals add the last measurement time
-        residuals_.at(i).mt_->addLastInRange(times,time_,maxUpdateTime);
+        residuals_.at(i).mt_->getLastInRange(times,time_,maxUpdateTime);
       }
     }
     if(includeMax){
