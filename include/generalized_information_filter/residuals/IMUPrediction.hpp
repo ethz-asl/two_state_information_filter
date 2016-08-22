@@ -54,7 +54,7 @@ class IMUPrediction: public Prediction<ElementPack<V3D,V3D,V3D,V3D,QPD>,ElementP
     setJacBlockPre<POS,VEL>(J,dt_*MPD(attPre).matrix());
     setJacBlockPre<POS,ATT>(J,dt_*gSM(attPre.rotate(velPre)));
     setJacBlockPre<VEL,VEL>(J,(M3D::Identity() - gSM(dOmega)));
-    setJacBlockPre<VEL,GYB>(J,-dt_*gSM(gyr));
+    setJacBlockPre<VEL,GYB>(J,-dt_*gSM(velPre));
     setJacBlockPre<VEL,ACB>(J,-dt_*M3D::Identity());
     setJacBlockPre<VEL,ATT>(J,-dt_*MPD(attPre).matrix().transpose()*gSM(g_));
     setJacBlockPre<GYB,GYB>(J,M3D::Identity());

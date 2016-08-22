@@ -22,6 +22,7 @@ class ElementTraits{ // Default implementation for zero dimension elements (may 
     return x;
   }
   static void setIdentity(T& x){}
+  static void setRandom(T& x, int& s){}
   static void boxplus(const T& in, const Eigen::Ref<const Eigen::VectorXd>& vec, T& out){
     out = in;
   }
@@ -36,6 +37,7 @@ class ElementBase{
   virtual int getDim() const = 0;
   virtual void print() const = 0;
   virtual void setIdentity() = 0;
+  virtual void setRandom(int& s) = 0;
   virtual void boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec, const std::shared_ptr<ElementBase>& out) const = 0;
   virtual void boxminus(const std::shared_ptr<const ElementBase>& ref, Eigen::Ref<Eigen::VectorXd> vec)  const = 0;
 };
@@ -64,6 +66,9 @@ class Element: public ElementBase{
   }
   void setIdentity(){
     ElementTraits<T>::setIdentity(get());
+  }
+  void setRandom(int& s){
+    ElementTraits<T>::setRandom(get(),s);
   }
   void boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec, const std::shared_ptr<ElementBase>& out) const{
     ElementTraits<T>::boxplus(get(),vec,std::dynamic_pointer_cast<Element<T>>(out)->get());
@@ -97,6 +102,12 @@ class ElementTraits<double>{
   static void setIdentity(double& x){
     x = 0;
   }
+  static void setRandom(double& x, int& s){
+    std::default_random_engine generator (s);
+    std::normal_distribution<double> distribution (0.0,1.0);
+    x = distribution(generator);
+    ++s;
+  }
   static void boxplus(const double& in, const Eigen::Ref<const Eigen::VectorXd>& vec, double& out){
     out = in+vec(0);
   }
@@ -116,6 +127,14 @@ class ElementTraits<Eigen::Matrix<double,N,1>>{
   }
   static void setIdentity(Eigen::Matrix<double,N,1>& x){
     x.setZero();
+  }
+  static void setRandom(Eigen::Matrix<double,N,1>& x, int& s){
+    std::default_random_engine generator (s);
+    std::normal_distribution<double> distribution (0.0,1.0);
+    for(unsigned int i=0;i<N;i++){
+      x(i) = distribution(generator);
+    }
+    ++s;
   }
   static void boxplus(const Eigen::Matrix<double,N,1>& in, const Eigen::Ref<const Eigen::VectorXd>& vec, Eigen::Matrix<double,N,1>& out){
     out = in+vec;
@@ -143,6 +162,11 @@ class ElementTraits<std::array<T,N>>{
       ElementTraits<T>::setIdentity(i);
     }
   }
+  static void setRandom(std::array<T,N>& x, int& s){
+    for(T& i : x){
+      ElementTraits<T>::setRandom(i, s);
+    }
+  }
   static void boxplus(const std::array<T,N>& in, const Eigen::Ref<const Eigen::VectorXd>& vec, std::array<T,N>& out){
     for(int i=0;i<N;i++){
       ElementTraits<T>::boxplus(in[i],vec.block<ElementTraits<T>::d_,1>(i*ElementTraits<T>::d_,0),out[i]);
@@ -167,11 +191,21 @@ class ElementTraits<QPD>{
   static void setIdentity(QPD& x){
     x.setIdentity();
   }
+  static void setRandom(QPD& x, int& s){
+    std::default_random_engine generator (s);
+    std::normal_distribution<double> distribution (0.0,1.0);
+    x.toImplementation().w() = distribution(generator);
+    x.toImplementation().x() = distribution(generator);
+    x.toImplementation().y() = distribution(generator);
+    x.toImplementation().z() = distribution(generator);
+    x.fix();
+    ++s;
+  }
   static void boxplus(const QPD& in, const Eigen::Ref<const Eigen::VectorXd>& vec, QPD& out){
     out = in.boxPlus(vec);
   }
   static void boxminus(const QPD& in, const QPD& ref, Eigen::Ref<Eigen::VectorXd> vec){
-    vec = ref.boxMinus(in);
+    vec = in.boxMinus(ref);
   }
 };
 

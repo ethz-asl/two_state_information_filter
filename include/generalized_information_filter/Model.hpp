@@ -198,6 +198,17 @@ class Model{
     }
   }
 
+  template<int j>
+  bool _testJacInput(int& s, const double& delta = 1e-6, const double& th = 1e-6) const{
+    std::array<std::shared_ptr<const StateBase>,N_> ins;
+    for(int i=0;i<N_;i++){
+      std::shared_ptr<StateBase> randomState(new State(inDefinitions_[i]));
+      randomState->setRandom(s);
+      ins[i] = randomState;
+    }
+    _testJacInput<j>(ins,delta,th);
+  }
+
   template<int j, int n, int m>
   void _setJacBlock(MXD& J, const Eigen::Matrix<double,OutPack::template getDim<n>(),std::tuple_element<j,std::tuple<InPacks...>>::type::template getDim<m>()>& B) const{
     J.block<OutPack::template getDim<n>(),std::tuple_element<j,std::tuple<InPacks...>>::type::template getDim<m>()>(

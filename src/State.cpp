@@ -37,6 +37,12 @@ void StateBase::setIdentity(){
   }
 }
 
+void StateBase::setRandom(int& s){
+  for(int i=0;i<getNumElement();i++){
+    getElement(i)->setRandom(s);
+  }
+}
+
 void StateBase::boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec, const std::shared_ptr<StateBase>& out) const{
   for(int i=0;i<getNumElement();i++){
     getElement(i)->boxplus(vec.block(getStart(i),0,getElement(i)->getDim(),1),out->getElement(i));

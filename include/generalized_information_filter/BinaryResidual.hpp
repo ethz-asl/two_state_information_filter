@@ -147,6 +147,11 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
            this->template _testJacInput<1>(ins,delta,th) &
            this->template _testJacInput<2>(ins,delta,th);
   }
+  bool testJacs(int& s, const double& delta = 1e-6, const double& th = 1e-6) const{
+    return this->template _testJacInput<0>(s,delta,th) &
+           this->template _testJacInput<1>(s,delta,th) &
+           this->template _testJacInput<2>(s,delta,th);
+  }
 
   // Access to definitions
   std::shared_ptr<StateDefinition> resDefinition() const{

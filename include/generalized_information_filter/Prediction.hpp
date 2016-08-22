@@ -54,6 +54,8 @@ class Prediction<ElementPack<Sta...>,ElementPack<Noi...>,Meas>:
   template<int i = 0, typename std::enable_if<(i<sizeof...(Sta))>::type* = nullptr>
   inline void computeInnovation(Sta&... res, const Sta&... pos) const{
     typedef typename std::tuple_element<i,typename ElementPack<Sta...>::mtTuple>::type mtElementType;
+    // res = exp(log(pred * pos^-1))*I
+    // dres/dpred = I
     Eigen::Matrix<double,ElementTraits<mtElementType>::d_,1> vec;
     ElementTraits<mtElementType>::boxminus(std::get<i>(std::forward_as_tuple(res...)),std::get<i>(std::forward_as_tuple(pos...)),vec);
     ElementTraits<mtElementType>::boxplus(ElementTraits<mtElementType>::identity(),vec,std::get<i>(std::forward_as_tuple(res...))); // TODO: make more efficient
