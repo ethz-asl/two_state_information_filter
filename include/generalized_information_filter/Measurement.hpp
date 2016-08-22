@@ -17,19 +17,12 @@ namespace GIF{
 
 class BinaryResidualBase;
 
-class MeasurementBase: public State{
- public:
-  MeasurementBase(const std::shared_ptr<const StateDefinition>& def): State(def){
-  }
-  virtual ~MeasurementBase(){};
-};
-
 class MeasurementTimeline{
  public:
   MeasurementTimeline(const bool ignoreFirst, const Duration& maxWaitTime = fromSec(0.1), const Duration& minWaitTime = Duration::zero());
   virtual ~MeasurementTimeline();
-  void addMeas(const std::shared_ptr<const MeasurementBase>& meas, const TimePoint& t);
-  bool getMeas(const TimePoint& t, std::shared_ptr<const MeasurementBase>& meas);
+  void addMeas(const std::shared_ptr<const StateBase>& meas, const TimePoint& t);
+  bool getMeas(const TimePoint& t, std::shared_ptr<const StateBase>& meas);
   void removeProcessedFirst();
   void removeProcessedMeas(const TimePoint& t);
   void reset();
@@ -44,7 +37,7 @@ class MeasurementTimeline{
   void removeOutdated(const TimePoint& time);
   void print(const TimePoint& start = TimePoint::min(), int startOffset = 0, double resolution = 0.01) const;
  protected:
-  std::map<TimePoint,std::shared_ptr<const MeasurementBase>> measMap_;
+  std::map<TimePoint,std::shared_ptr<const StateBase>> measMap_;
   Duration maxWaitTime_;
   Duration minWaitTime_;
   TimePoint lastProcessedTime_;

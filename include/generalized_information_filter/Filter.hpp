@@ -119,7 +119,7 @@ class Filter{
       }
     }
   }
-  void addMeas(const int i, const std::shared_ptr<const MeasurementBase>& meas, const TimePoint& t){
+  void addMeas(const int i, const std::shared_ptr<const StateBase>& meas, const TimePoint& t){
     residuals_.at(i).mt_->addMeas(meas,t);
   }
   void printMeasurementTimelines(const TimePoint& start = TimePoint::min(), int startOffset = 0, double resolution = 0.01){
@@ -164,7 +164,7 @@ class Filter{
     // Eval residual and Jacobians
     int innDim = 0;
     std::vector<bool> hasMeas(residuals_.size(),false);
-    std::shared_ptr<const MeasurementBase> meas;
+    std::shared_ptr<const StateBase> meas;
     for(int i=0;i<residuals_.size();i++){
       hasMeas.at(i) = residuals_.at(i).mt_->getMeas(t,meas);
       if(hasMeas.at(i)){

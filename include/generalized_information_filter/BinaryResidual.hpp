@@ -27,11 +27,11 @@ class BinaryResidualBase{
   virtual std::shared_ptr<StateDefinition> preDefinition() const = 0;
   virtual std::shared_ptr<StateDefinition> posDefinition() const = 0;
   virtual std::shared_ptr<StateDefinition> noiDefinition() const = 0;
-  virtual void splitMeasurements(const std::shared_ptr<const MeasurementBase>& in, const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
-                                std::shared_ptr<const MeasurementBase>& out1, std::shared_ptr<const MeasurementBase>& out2) const = 0;
-  virtual void mergeMeasurements(const std::shared_ptr<const MeasurementBase>& in1, const std::shared_ptr<const MeasurementBase>& in2,
-                                const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, std::shared_ptr<const MeasurementBase>& out) const = 0;
-  virtual void setMeas(const std::shared_ptr<const MeasurementBase>& meas) = 0;
+  virtual void splitMeasurements(const std::shared_ptr<const StateBase>& in, const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
+                                std::shared_ptr<const StateBase>& out1, std::shared_ptr<const StateBase>& out2) const = 0;
+  virtual void mergeMeasurements(const std::shared_ptr<const StateBase>& in1, const std::shared_ptr<const StateBase>& in2,
+                                const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, std::shared_ptr<const StateBase>& out) const = 0;
+  virtual void setMeas(const std::shared_ptr<const StateBase>& meas) = 0;
   virtual const MXD& getR() const = 0;
 
   const bool isUnary_;
@@ -63,15 +63,15 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
   virtual ~BinaryResidual(){};
 
   // Set measurement
-  void setMeas(const std::shared_ptr<const MeasurementBase>& meas){
+  void setMeas(const std::shared_ptr<const StateBase>& meas){
     meas_ = std::dynamic_pointer_cast<const Meas>(meas);
     if(!meas_){
       std::cout << "ERROR: Passing wrong measurement type" << std::endl;
     }
   }
 
-  void splitMeasurements(const std::shared_ptr<const MeasurementBase>& in, const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
-                                std::shared_ptr<const MeasurementBase>& out1, std::shared_ptr<const MeasurementBase>& out2) const{
+  void splitMeasurements(const std::shared_ptr<const StateBase>& in, const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
+                                std::shared_ptr<const StateBase>& out1, std::shared_ptr<const StateBase>& out2) const{
     // carefull: in/out1/out2 may point to the same elements
     if(isSplitable_){
       out1 = in;
@@ -81,10 +81,10 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
     }
   }
 
-  void mergeMeasurements(const std::shared_ptr<const MeasurementBase>& in1, const std::shared_ptr<const MeasurementBase>& in2,
-                                const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, std::shared_ptr<const MeasurementBase>& out) const{
+  void mergeMeasurements(const std::shared_ptr<const StateBase>& in1, const std::shared_ptr<const StateBase>& in2,
+                                const TimePoint& t0, const TimePoint& t1, const TimePoint& t2, std::shared_ptr<const StateBase>& out) const{
     if(isMergeable_){
-      std::shared_ptr<MeasurementBase> newMeas(new Meas());
+      std::shared_ptr<StateBase> newMeas(new Meas());
       VXD diff(in1->getDim());
       in1->boxminus(in2,diff);
       in2->boxplus(toSec(t1-t0)/toSec(t2-t0)*diff,newMeas);
