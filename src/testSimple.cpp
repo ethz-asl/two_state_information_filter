@@ -36,19 +36,19 @@ class BinaryRedidualVelocity: public BinaryResidual<ElementPack<V3D>,ElementPack
     dt_ = 0.1;
   };
   virtual ~BinaryRedidualVelocity(){};
-  void evalResidual(V3D& posRes,const V3D& posPre,const V3D& velPre,const V3D& posPos,const V3D& posNoi) const{
+  void evalResidualImpl(V3D& posRes,const V3D& posPre,const V3D& velPre,const V3D& posPos,const V3D& posNoi) const{
     posRes = posPre + dt_*velPre - posPos + posNoi;
   }
-  void jacPre(MXD& J,const V3D& posPre,const V3D& velPre,const V3D& posPos,const V3D& posNoi) const{
+  void jacPreImpl(MXD& J,const V3D& posPre,const V3D& velPre,const V3D& posPos,const V3D& posNoi) const{
     J.setZero();
     setJacBlockPre<0,0>(J,M3D::Identity());
     setJacBlockPre<0,1>(J,dt_*M3D::Identity());
   }
-  void jacPos(MXD& J,const V3D& posPre,const V3D& velPre,const V3D& posPos,const V3D& posNoi) const{
+  void jacPosImpl(MXD& J,const V3D& posPre,const V3D& velPre,const V3D& posPos,const V3D& posNoi) const{
     J.setZero();
     setJacBlockPre<0,0>(J,-M3D::Identity());
   }
-  void jacNoi(MXD& J,const V3D& posPre,const V3D& velPre,const V3D& posPos,const V3D& posNoi) const{
+  void jacNoiImpl(MXD& J,const V3D& posPre,const V3D& velPre,const V3D& posPos,const V3D& posNoi) const{
     J.setZero();
     setJacBlockPre<0,0>(J,M3D::Identity());
   }
@@ -73,18 +73,18 @@ class BinaryRedidualAccelerometer: public BinaryResidual<ElementPack<V3D>,Elemen
     meas_.reset(new AccelerometerMeas());
   };
   virtual ~BinaryRedidualAccelerometer(){};
-  void evalResidual(V3D& velRes,const V3D& velPre,const V3D& velPos,const V3D& velNoi) const{
+  void evalResidualImpl(V3D& velRes,const V3D& velPre,const V3D& velPos,const V3D& velNoi) const{
     velRes = velPre + dt_*meas_->acc_ - velPos + velNoi;
   }
-  void jacPre(MXD& J,const V3D& velPre,const V3D& velPos,const V3D& velNoi) const{
+  void jacPreImpl(MXD& J,const V3D& velPre,const V3D& velPos,const V3D& velNoi) const{
     J.setZero();
     setJacBlockPre<0,0>(J,M3D::Identity());
   }
-  void jacPos(MXD& J,const V3D& velPre,const V3D& velPos,const V3D& velNoi) const{
+  void jacPosImpl(MXD& J,const V3D& velPre,const V3D& velPos,const V3D& velNoi) const{
     J.setZero();
     setJacBlockPre<0,0>(J,-M3D::Identity());
   }
-  void jacNoi(MXD& J,const V3D& velPre,const V3D& velPos,const V3D& velNoi) const{
+  void jacNoiImpl(MXD& J,const V3D& velPre,const V3D& velPos,const V3D& velNoi) const{
     J.setZero();
     setJacBlockPre<0,0>(J,M3D::Identity());
   }

@@ -95,10 +95,10 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
   }
 
   // User implementations
-  virtual void evalResidual(Res&... res, const Pre&... pre, const Pos&... pos, const Noi&... noi) const = 0;
-  virtual void jacPre(MXD& J, const Pre&... pre, const Pos&... pos, const Noi&... noi) const  = 0;
-  virtual void jacPos(MXD& J, const Pre&... pre, const Pos&... pos, const Noi&... noi) const  = 0;
-  virtual void jacNoi(MXD& J, const Pre&... pre, const Pos&... pos, const Noi&... noi) const  = 0;
+  virtual void evalResidualImpl(Res&... res, const Pre&... pre, const Pos&... pos, const Noi&... noi) const = 0;
+  virtual void jacPreImpl(MXD& J, const Pre&... pre, const Pos&... pos, const Noi&... noi) const  = 0;
+  virtual void jacPosImpl(MXD& J, const Pre&... pre, const Pos&... pos, const Noi&... noi) const  = 0;
+  virtual void jacNoiImpl(MXD& J, const Pre&... pre, const Pos&... pos, const Noi&... noi) const  = 0;
 
   // Wrapping from user interface to base
   void evalResidual(const std::shared_ptr<StateBase>& res, const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi) const{
@@ -174,19 +174,19 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
 
   // Wrapping from base to user implementation
   void eval(Res&... res, const Pre&... pre, const Pos&... pos, const Noi&... noi) const{
-    evalResidual(res...,pre...,pos...,noi...);
+    evalResidualImpl(res...,pre...,pos...,noi...);
   }
   template<int j, typename std::enable_if<(j==0)>::type* = nullptr>
   void jac(MXD& J, const Pre&... pre, const Pos&... pos, const Noi&... noi) const{
-    jacPre(J,pre...,pos...,noi...);
+    jacPreImpl(J,pre...,pos...,noi...);
   }
   template<int j, typename std::enable_if<(j==1)>::type* = nullptr>
   void jac(MXD& J, const Pre&... pre, const Pos&... pos, const Noi&... noi) const{
-    jacPos(J,pre...,pos...,noi...);
+    jacPosImpl(J,pre...,pos...,noi...);
   }
   template<int j, typename std::enable_if<(j==2)>::type* = nullptr>
   void jac(MXD& J, const Pre&... pre, const Pos&... pos, const Noi&... noi) const{
-    jacNoi(J,pre...,pos...,noi...);
+    jacNoiImpl(J,pre...,pos...,noi...);
   }
 
 };

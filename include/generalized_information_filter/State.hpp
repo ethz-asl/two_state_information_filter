@@ -81,12 +81,12 @@ class StateWrapper: public StateBase{
 
 // ==================== Implementation ==================== //
 template<typename T>
-inline T& StateBase::getValue(int i){
+T& StateBase::getValue(int i){
   return std::dynamic_pointer_cast<Element<T>>(getElement(i))->get();
 }
 
 template<typename T>
-inline T& StateBase::getValue(int i) const{
+T& StateBase::getValue(int i) const{
   return std::dynamic_pointer_cast<const Element<T>>(getElement(i))->get();
 }
 
