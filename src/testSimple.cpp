@@ -5,6 +5,7 @@
 #include "generalized_information_filter/Transformation.hpp"
 #include "generalized_information_filter/BinaryResidual.hpp"
 #include "generalized_information_filter/Prediction.hpp"
+#include "generalized_information_filter/residuals/IMUPrediction.hpp"
 #include "generalized_information_filter/Filter.hpp"
 
 using namespace GIF;
@@ -47,11 +48,11 @@ class BinaryRedidualVelocity: public BinaryResidual<ElementPack<V3D>,ElementPack
   }
   void jacPosImpl(MXD& J,const V3D& posPre,const V3D& velPre,const V3D& posPos,const V3D& posNoi) const{
     J.setZero();
-    setJacBlockPre<0,0>(J,-M3D::Identity());
+    setJacBlockPos<0,0>(J,-M3D::Identity());
   }
   void jacNoiImpl(MXD& J,const V3D& posPre,const V3D& velPre,const V3D& posPos,const V3D& posNoi) const{
     J.setZero();
-    setJacBlockPre<0,0>(J,M3D::Identity());
+    setJacBlockNoi<0,0>(J,M3D::Identity());
   }
 
  protected:
@@ -83,11 +84,11 @@ class BinaryRedidualAccelerometer: public BinaryResidual<ElementPack<V3D>,Elemen
   }
   void jacPosImpl(MXD& J,const V3D& velPre,const V3D& velPos,const V3D& velNoi) const{
     J.setZero();
-    setJacBlockPre<0,0>(J,-M3D::Identity());
+    setJacBlockPos<0,0>(J,-M3D::Identity());
   }
   void jacNoiImpl(MXD& J,const V3D& velPre,const V3D& velPos,const V3D& velNoi) const{
     J.setZero();
-    setJacBlockPre<0,0>(J,M3D::Identity());
+    setJacBlockNoi<0,0>(J,M3D::Identity());
   }
 
  protected:
@@ -110,7 +111,7 @@ class PredictionAccelerometer: public Prediction<ElementPack<V3D>,ElementPack<V3
   }
   void jacNoiPredictionImpl(MXD& J,const V3D& velPre,const V3D& velNoi) const{
     J.setZero();
-    setJacBlockPre<0,0>(J,M3D::Identity());
+    setJacBlockNoi<0,0>(J,M3D::Identity());
   }
 
  protected:
@@ -205,8 +206,15 @@ TEST_F(NewStateTest, constructor) {
 
   f.update();
 
-  // Prediction
+  // Prediction Accelerometer
   std::shared_ptr<PredictionAccelerometer> accPre(new PredictionAccelerometer());
+  std::shared_ptr<State> preAcc(new State(accPre->preDefinition()));
+  std::shared_ptr<State> posAcc(new State(accPre->preDefinition()));
+  std::shared_ptr<State> noiAcc(new State(accPre->noiDefinition()));
+  preAcc->setIdentity();
+  posAcc->setIdentity();
+  noiAcc->setIdentity();
+  accPre->testJacs(preAcc,posAcc,noiAcc);
 
   // Test measurements
   Filter f2;
@@ -225,6 +233,16 @@ TEST_F(NewStateTest, constructor) {
   f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(0.3,0.0,0.0))),start+fromSec(0.5));
   f2.update();
   f2.update();
+
+  // Prediction IMU
+  std::shared_ptr<IMUPrediction> imuPre(new IMUPrediction());
+  std::shared_ptr<State> preIMU(new State(imuPre->preDefinition()));
+  std::shared_ptr<State> posIMU(new State(imuPre->preDefinition()));
+  std::shared_ptr<State> noiIMU(new State(imuPre->noiDefinition()));
+  preIMU->setIdentity();
+  posIMU->setIdentity();
+  noiIMU->setIdentity();
+  imuPre->testJacs(preIMU,posIMU,noiIMU);
 }
 
 int main(int argc, char **argv) {

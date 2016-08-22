@@ -51,21 +51,16 @@ class Prediction<ElementPack<Sta...>,ElementPack<Noi...>,Meas>:
     jacNoiPredictionImpl(J,pre...,noi...);
   }
 
-  template<typename... Ts>
-  inline void computeInnovation(Ts&... res, const Ts&... pos) const;
-
-  template<typename T>
-  inline void computeInnovation(T& r, const T& p) const{
-    Eigen::Matrix<double,ElementTraits<T>::d_,1> vec;
-    ElementTraits<T>::boxminus(r,p,vec);
-    ElementTraits<T>::boxplus(ElementTraits<T>::identity(),vec,r); // TODO: make more efficient
+  template<int i = 0, typename std::enable_if<(i<sizeof...(Sta))>::type* = nullptr>
+  inline void computeInnovation(Sta&... res, const Sta&... pos) const{
+    typedef typename std::tuple_element<i,typename ElementPack<Sta...>::mtTuple>::type mtElementType;
+    Eigen::Matrix<double,ElementTraits<mtElementType>::d_,1> vec;
+    ElementTraits<mtElementType>::boxminus(std::get<i>(std::forward_as_tuple(res...)),std::get<i>(std::forward_as_tuple(pos...)),vec);
+    ElementTraits<mtElementType>::boxplus(ElementTraits<mtElementType>::identity(),vec,std::get<i>(std::forward_as_tuple(res...))); // TODO: make more efficient
+    computeInnovation<i+1>(res...,pos...);
   }
-
-  template<typename T, typename... Ts>
-  inline void computeInnovation(T& r, Ts&... res, const T& p, const Ts&... pos) const{
-    computeInnovation(r,p);
-    computeInnovation(res...,pos...);
-  }
+  template<int i = 0, typename std::enable_if<(i>=sizeof...(Sta))>::type* = nullptr>
+  inline void computeInnovation(Sta&... res, const Sta&... pos) const{}
 };
 
 }
