@@ -15,7 +15,6 @@ class PoseMeas : public State {
     pos_ = pos;
     att_ = att;
   }
-  ;
   V3D& pos_;
   QPD& att_;
 };
