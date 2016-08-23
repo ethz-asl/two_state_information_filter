@@ -1,5 +1,5 @@
-#include "generalized_information_filter/Measurement.hpp"
-#include "generalized_information_filter/BinaryResidual.hpp"
+#include "generalized_information_filter/measurement.hpp"
+#include "generalized_information_filter/binary-residual.h"
 
 namespace GIF {
 

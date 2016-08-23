@@ -4,8 +4,8 @@
 #include <list>
 #include <initializer_list>
 
-#include "generalized_information_filter/common.hpp"
-#include "generalized_information_filter/StateDefinition.hpp"
+#include "generalized_information_filter/common.h"
+#include "generalized_information_filter/state-definition.h"
 
 namespace GIF {
 

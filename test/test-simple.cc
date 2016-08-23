@@ -1,14 +1,14 @@
 #include "gtest/gtest.h"
 
-#include "generalized_information_filter/common.hpp"
-#include "generalized_information_filter/State.hpp"
-#include "generalized_information_filter/Transformation.hpp"
-#include "generalized_information_filter/BinaryResidual.hpp"
-#include "generalized_information_filter/Prediction.hpp"
-#include "generalized_information_filter/residuals/IMUPrediction.hpp"
-#include "generalized_information_filter/UnaryUpdate.hpp"
-#include "generalized_information_filter/residuals/PoseUpdate.hpp"
-#include "generalized_information_filter/Filter.hpp"
+#include "generalized_information_filter/binary-residual.h"
+#include "generalized_information_filter/common.h"
+#include "generalized_information_filter/filter.h"
+#include "generalized_information_filter/prediction.h"
+#include "generalized_information_filter/residuals/imu-prediction.h"
+#include "generalized_information_filter/residuals/pose-update.h"
+#include "generalized_information_filter/state.hpp"
+#include "generalized_information_filter/transformation.h"
+#include "generalized_information_filter/unary-update.hpp"
 
 using namespace GIF;
 

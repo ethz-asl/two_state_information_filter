@@ -3,8 +3,8 @@
 
 #include <unordered_map>
 
-#include "generalized_information_filter/common.hpp"
-#include "generalized_information_filter/ElementDefinition.hpp"
+#include "generalized_information_filter/common.h"
+#include "generalized_information_filter/element-definition.h"
 
 namespace GIF {
 

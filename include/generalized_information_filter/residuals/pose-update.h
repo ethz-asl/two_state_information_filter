@@ -1,8 +1,8 @@
 #ifndef GIF_POSEUPDATE_HPP_
 #define GIF_POSEUPDATE_HPP_
 
-#include "generalized_information_filter/common.hpp"
-#include "generalized_information_filter/UnaryUpdate.hpp"
+#include "generalized_information_filter/common.h"
+#include "generalized_information_filter/unary-update.h"
 
 namespace GIF {
 

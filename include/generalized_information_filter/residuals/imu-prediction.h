@@ -1,8 +1,8 @@
 #ifndef GIF_IMUPREDICTION_HPP_
 #define GIF_IMUPREDICTION_HPP_
 
-#include "generalized_information_filter/common.hpp"
-#include "generalized_information_filter/Prediction.hpp"
+#include "generalized_information_filter/common.h"
+#include "generalized_information_filter/prediction.hpp"
 
 namespace GIF {
 
