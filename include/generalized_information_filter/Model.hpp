@@ -26,6 +26,10 @@ template<typename T>
 struct TH_pack_dim<T>{
   static constexpr int d_ = ElementTraits<T>::d_;
 };
+template<>
+struct TH_pack_dim<>{
+  static constexpr int d_ = 0;
+};
 
 template<typename... Ts>
 class ElementPack{

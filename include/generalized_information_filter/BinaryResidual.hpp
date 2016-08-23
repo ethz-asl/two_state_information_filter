@@ -56,7 +56,8 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
                  const std::array<std::string,ElementPack<Noi...>::n_>& namesNoi,
                  bool isUnary = false, bool isSplitable = false, bool isMergeable = false):
       mtBase(namesRes, std::forward_as_tuple(namesPre,namesPos,namesNoi)),
-      BinaryResidualBase(isUnary,isSplitable,isMergeable){
+      BinaryResidualBase(isUnary,isSplitable,isMergeable),
+      meas_(new Meas()){
     R_.resize(noiDefinition()->getDim(),noiDefinition()->getDim());
     R_.setIdentity();
   };
@@ -143,14 +144,24 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
   }
   bool testJacs(const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi, const double& delta = 1e-6, const double& th = 1e-6) const{
     const std::array<std::shared_ptr<const StateBase>,3> ins = {pre, pos, noi};
-    return this->template _testJacInput<0>(ins,delta,th) &
-           this->template _testJacInput<1>(ins,delta,th) &
-           this->template _testJacInput<2>(ins,delta,th);
+    return (preDefinition()->getDim() == 0 || this->template _testJacInput<0>(ins,delta,th)) &
+           (posDefinition()->getDim() == 0 || this->template _testJacInput<1>(ins,delta,th)) &
+           (noiDefinition()->getDim() == 0 || this->template _testJacInput<2>(ins,delta,th));
   }
-  bool testJacs(int& s, const double& delta = 1e-6, const double& th = 1e-6) const{
-    return this->template _testJacInput<0>(s,delta,th) &
-           this->template _testJacInput<1>(s,delta,th) &
-           this->template _testJacInput<2>(s,delta,th);
+  bool testJacs(int& s, const double& delta = 1e-6, const double& th = 1e-6){
+    std::shared_ptr<Meas> meas(new Meas());
+    meas->setRandom(s);
+    meas_ = meas;
+    std::shared_ptr<StateBase> pre(new State(preDefinition()));
+    pre->setRandom(s);
+    std::shared_ptr<StateBase> pos(new State(posDefinition()));
+    pos->setRandom(s);
+    std::shared_ptr<StateBase> noi(new State(noiDefinition()));
+    noi->setIdentity();
+    const std::array<std::shared_ptr<const StateBase>,3> ins = {pre, pos, noi};
+    return (preDefinition()->getDim() == 0 || this->template _testJacInput<0>(ins,delta,th)) &
+           (posDefinition()->getDim() == 0 || this->template _testJacInput<1>(ins,delta,th)) &
+           (noiDefinition()->getDim() == 0 || this->template _testJacInput<2>(ins,delta,th));
   }
 
   // Access to definitions

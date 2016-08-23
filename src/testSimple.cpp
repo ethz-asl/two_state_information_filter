@@ -6,6 +6,8 @@
 #include "generalized_information_filter/BinaryResidual.hpp"
 #include "generalized_information_filter/Prediction.hpp"
 #include "generalized_information_filter/residuals/IMUPrediction.hpp"
+#include "generalized_information_filter/UnaryUpdate.hpp"
+#include "generalized_information_filter/residuals/PoseUpdate.hpp"
 #include "generalized_information_filter/Filter.hpp"
 
 using namespace GIF;
@@ -72,7 +74,6 @@ class BinaryRedidualAccelerometer: public BinaryResidual<ElementPack<V3D>,Elemen
  public:
   BinaryRedidualAccelerometer(): mtBinaryRedidual({"vel"},{"vel"},{"vel"},{"vel"},false,true,true){
     dt_ = 0.1;
-    meas_.reset(new AccelerometerMeas());
   };
   virtual ~BinaryRedidualAccelerometer(){};
   void evalResidualImpl(V3D& velRes,const V3D& velPre,const V3D& velPos,const V3D& velNoi) const{
@@ -99,7 +100,6 @@ class PredictionAccelerometer: public Prediction<ElementPack<V3D>,ElementPack<V3
  public:
   PredictionAccelerometer(): mtPrediction({"vel"},{"vel"}){
     dt_ = 0.1;
-    meas_.reset(new AccelerometerMeas());
   };
   virtual ~PredictionAccelerometer(){};
   void evalPredictionImpl(V3D& velPos,const V3D& velPre,const V3D& velNoi) const{
@@ -236,13 +236,12 @@ TEST_F(NewStateTest, constructor) {
 
   // Prediction IMU
   std::shared_ptr<IMUPrediction> imuPre(new IMUPrediction());
-  std::shared_ptr<State> preIMU(new State(imuPre->preDefinition()));
-  std::shared_ptr<State> posIMU(new State(imuPre->preDefinition()));
-  std::shared_ptr<State> noiIMU(new State(imuPre->noiDefinition()));
-  preIMU->setIdentity();
-  posIMU->setIdentity();
-  noiIMU->setIdentity();
-  imuPre->testJacs(preIMU,posIMU,noiIMU);
+  int s = 0;
+  imuPre->testJacs(s);
+
+  // Pose Update
+  std::shared_ptr<PoseUpdate> poseUpd(new PoseUpdate());
+  poseUpd->testJacs(s);
 }
 
 int main(int argc, char **argv) {

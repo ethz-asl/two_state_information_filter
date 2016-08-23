@@ -5,6 +5,9 @@
  *      Author: Bloeschm
  */
 
+#ifndef GIF_IMUPREDICTION_HPP_
+#define GIF_IMUPREDICTION_HPP_
+
 #include "generalized_information_filter/common.hpp"
 #include "generalized_information_filter/Prediction.hpp"
 
@@ -27,7 +30,6 @@ class IMUPrediction: public Prediction<ElementPack<V3D,V3D,V3D,V3D,QPD>,ElementP
  public:
   IMUPrediction(): mtPrediction({"pos","vel","gyb","acb","att"},{"pos","vel","gyb","acb","att"}), g_(0,0,-9.81){
     dt_ = 0.1;
-    meas_.reset(new IMUMeas());
   };
   virtual ~IMUPrediction(){};
   void evalPredictionImpl(        V3D& posPos ,      V3D& velPos  ,      V3D& gybPos  ,      V3D& acbPos  ,      QPD& attPos,
@@ -52,7 +54,7 @@ class IMUPrediction: public Prediction<ElementPack<V3D,V3D,V3D,V3D,QPD>,ElementP
     const V3D dOmega = dt_*gyr;
     setJacBlockPre<POS,POS>(J,M3D::Identity());
     setJacBlockPre<POS,VEL>(J,dt_*MPD(attPre).matrix());
-    setJacBlockPre<POS,ATT>(J,dt_*gSM(attPre.rotate(velPre)));
+    setJacBlockPre<POS,ATT>(J,-dt_*gSM(attPre.rotate(velPre)));
     setJacBlockPre<VEL,VEL>(J,(M3D::Identity() - gSM(dOmega)));
     setJacBlockPre<VEL,GYB>(J,-dt_*gSM(velPre));
     setJacBlockPre<VEL,ACB>(J,-dt_*M3D::Identity());
@@ -63,8 +65,8 @@ class IMUPrediction: public Prediction<ElementPack<V3D,V3D,V3D,V3D,QPD>,ElementP
     setJacBlockPre<ATT,ATT>(J,M3D::Identity());
   }
   void jacNoiPredictionImpl(  MXD& J,
-                              const V3D& posPre ,const V3D& velPre  ,const V3D& acbPre  ,const V3D& gybPre  ,const QPD& attPre,
-                              const V3D& posNoi ,const V3D& velNoi  ,const V3D& acbNoi  ,const V3D& gybNoi  ,const V3D& attNoi) const{
+                              const V3D& posPre ,const V3D& velPre  ,const V3D& gybPre  ,const V3D& acbPre  ,const QPD& attPre,
+                              const V3D& posNoi ,const V3D& velNoi  ,const V3D& gybNoi  ,const V3D& acbNoi  ,const V3D& attNoi) const{
     J.setZero();
     const V3D gyr = meas_->gyr_ - gybPre + attNoi/sqrt(dt_);
     const V3D acc = meas_->acc_ - acbPre + velNoi/sqrt(dt_);
@@ -84,3 +86,5 @@ class IMUPrediction: public Prediction<ElementPack<V3D,V3D,V3D,V3D,QPD>,ElementP
 };
 
 }
+
+#endif /* GIF_IMUPREDICTION_HPP_ */
