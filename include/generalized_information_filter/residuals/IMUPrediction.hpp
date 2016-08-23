@@ -40,7 +40,7 @@ class IMUPrediction: public Prediction<ElementPack<V3D,V3D,V3D,V3D,QPD>,ElementP
     const V3D dOmega = dt_*gyr;
     QPD dQ = dQ.exponentialMap(dOmega);
     posPos = posPre + dt_*(attPre.rotate(velPre) + posNoi/sqrt(dt_));
-    velPos = (M3D::Identity() - gSM(dOmega))*velPre + dt_*(acc-attPre.inverseRotate(g_));
+    velPos = (M3D::Identity() - gSM(dOmega))*velPre + dt_*(acc+attPre.inverseRotate(g_));
     gybPos = gybPre + gybNoi*sqrt(dt_);
     acbPos = acbPre + acbNoi*sqrt(dt_);
     attPos = attPre*dQ;
@@ -58,7 +58,7 @@ class IMUPrediction: public Prediction<ElementPack<V3D,V3D,V3D,V3D,QPD>,ElementP
     setJacBlockPre<VEL,VEL>(J,(M3D::Identity() - gSM(dOmega)));
     setJacBlockPre<VEL,GYB>(J,-dt_*gSM(velPre));
     setJacBlockPre<VEL,ACB>(J,-dt_*M3D::Identity());
-    setJacBlockPre<VEL,ATT>(J,-dt_*MPD(attPre).matrix().transpose()*gSM(g_));
+    setJacBlockPre<VEL,ATT>(J,dt_*MPD(attPre).matrix().transpose()*gSM(g_));
     setJacBlockPre<GYB,GYB>(J,M3D::Identity());
     setJacBlockPre<ACB,ACB>(J,M3D::Identity());
     setJacBlockPre<ATT,GYB>(J,-dt_*MPD(attPre).matrix()*Lmat(dOmega));

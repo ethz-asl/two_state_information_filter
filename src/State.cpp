@@ -27,6 +27,7 @@ StateBase& StateBase::operator=(const StateBase& other){
 
 void StateBase::print() const{
   for(int i=0;i<getNumElement();i++){
+    std::cout << getDef()->getName(i) << ": ";
     getElement(i)->print();
   }
 }

@@ -234,14 +234,25 @@ TEST_F(NewStateTest, constructor) {
   f2.update();
   f2.update();
 
-  // Prediction IMU
-  std::shared_ptr<IMUPrediction> imuPre(new IMUPrediction());
+  // Test IMU + Pose filter
   int s = 0;
+  std::shared_ptr<IMUPrediction> imuPre(new IMUPrediction());
+  imuPre->getR() = 1e-8*imuPre->getR();
   imuPre->testJacs(s);
-
-  // Pose Update
   std::shared_ptr<PoseUpdate> poseUpd(new PoseUpdate());
+  poseUpd->getR() = 1e-8*poseUpd->getR();
   poseUpd->testJacs(s);
+
+  Filter imuPoseFilter;
+  int imuPreInd = imuPoseFilter.addRes(imuPre);
+  int poseUpdInd = imuPoseFilter.addRes(poseUpd);
+  imuPoseFilter.init(start);
+  imuPoseFilter.addMeas(imuPreInd,std::shared_ptr<IMUMeas>(new IMUMeas(V3D(0.0,0.0,0.0),V3D(0.0,0.0,9.81))),start);
+  for(int i=1;i<=10;i++){
+    imuPoseFilter.addMeas(imuPreInd,std::shared_ptr<IMUMeas>(new IMUMeas(V3D(0.3,0.0,0.1),V3D(0.0,0.2,9.81))),start+fromSec(i));
+    imuPoseFilter.addMeas(poseUpdInd,std::shared_ptr<PoseMeas>(new PoseMeas(V3D(0.0,0.0,0.0),QPD(1.0,0.0,0.0,0.0))),start+fromSec(i));
+  }
+  imuPoseFilter.update();
 }
 
 int main(int argc, char **argv) {

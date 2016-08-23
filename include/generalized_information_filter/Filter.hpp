@@ -65,8 +65,9 @@ class Filter{
     cov_.setIdentity();
   }
 
-  void addRes(const std::shared_ptr<BinaryResidualBase>& res, const std::string& name = ""){
+  int addRes(const std::shared_ptr<BinaryResidualBase>& res, const std::string& name = ""){
     residuals_.emplace_back(res,stateDefinition_);
+    return residuals_.size()-1;
   }
   void evalRes(const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos){
     for(int i=0;i<residuals_.size();i++){
@@ -185,6 +186,7 @@ class Filter{
         residuals_.at(i).res_->setMeas(meas);
         residuals_.at(i).preWrap_->setState(state_);
         residuals_.at(i).posWrap_->setState(posLinState_);
+//        residuals_.at(i).res_->testJacs(residuals_.at(i).preWrap_,residuals_.at(i).posWrap_,residuals_.at(i).noi_);
         residuals_.at(i).res_->evalResidual(residuals_.at(i).inn_,residuals_.at(i).preWrap_,residuals_.at(i).posWrap_,residuals_.at(i).noi_);
         residuals_.at(i).innRef_->boxminus(residuals_.at(i).inn_,y.block(count,0,residuals_.at(i).innDim_,1));
 
@@ -201,15 +203,15 @@ class Filter{
       }
     }
     std::cout << "Innovation:\t" << y.transpose() << std::endl;
-    std::cout << jacPre << std::endl;
-    std::cout << jacPos << std::endl;
-    std::cout << Winv << std::endl;
+//    std::cout << jacPre << std::endl;
+//    std::cout << jacPos << std::endl;
+//    std::cout << Winv << std::endl;
 
     // Compute Kalman update // TODO: make more efficient
     MXD D = cov_.inverse() + jacPre.transpose()*Winv*jacPre;
     MXD S = jacPos.transpose()*(Winv-Winv*jacPre*D.inverse()*jacPre.transpose()*Winv);
-    cov_ = S*jacPos;
-    VXD dx = cov_.inverse()*S*y;
+    cov_ = (S*jacPos).inverse();
+    VXD dx = cov_*S*y;
 
     // Apply Kalman update
     posLinState_->boxplus(dx,state_);

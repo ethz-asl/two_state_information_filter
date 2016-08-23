@@ -34,6 +34,9 @@ class BinaryResidualBase{
   virtual void setMeas(const std::shared_ptr<const StateBase>& meas) = 0;
   virtual const MXD& getR() const = 0;
 
+  virtual bool testJacs(const std::shared_ptr<const StateBase>& pre, const std::shared_ptr<const StateBase>& pos, const std::shared_ptr<const StateBase>& noi, const double& delta = 1e-6, const double& th = 1e-6) const = 0;
+  virtual bool testJacs(int& s, const double& delta = 1e-6, const double& th = 1e-6) = 0;
+
   const bool isUnary_;
   const bool isSplitable_;
   const bool isMergeable_;
@@ -180,6 +183,9 @@ class BinaryResidual<ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>
 
   // Get Noise Matrix
   const MXD& getR() const{
+    return R_;
+  }
+  MXD& getR() {
     return R_;
   }
 

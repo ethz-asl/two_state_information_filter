@@ -14,11 +14,11 @@ MeasurementTimeline::~MeasurementTimeline(){};
 
 void MeasurementTimeline::addMeas(const std::shared_ptr<const StateBase>& meas, const TimePoint& t){
   // Discard first measurement in binary case
-  if(!ignoreFirst_ && lastProcessedTime_ == TimePoint::min()){
+  if(ignoreFirst_ && lastProcessedTime_ == TimePoint::min()){
     lastProcessedTime_ = t;
     return;
   }
-  if(!ignoreFirst_ && t<=lastProcessedTime_){
+  if(t<=lastProcessedTime_){
     std::cout << "Error: adding measurements before last processed time (will be discarded)" << std::endl;
   } else {
     std::pair<std::map<TimePoint,std::shared_ptr<const StateBase>>::iterator,bool> ret;
