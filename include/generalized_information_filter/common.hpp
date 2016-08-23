@@ -13,6 +13,7 @@
 #include <memory>
 #include "kindr/Core"
 #include <chrono>
+#include <array>
 
 namespace GIF{
 
