@@ -1,4 +1,4 @@
-#include "generalized_information_filter/measurement.hpp"
+#include "generalized_information_filter/measurement.h"
 #include "generalized_information_filter/binary-residual.h"
 
 namespace GIF {

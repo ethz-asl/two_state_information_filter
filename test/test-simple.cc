@@ -6,9 +6,9 @@
 #include "generalized_information_filter/prediction.h"
 #include "generalized_information_filter/residuals/imu-prediction.h"
 #include "generalized_information_filter/residuals/pose-update.h"
-#include "generalized_information_filter/state.hpp"
+#include "generalized_information_filter/state.h"
 #include "generalized_information_filter/transformation.h"
-#include "generalized_information_filter/unary-update.hpp"
+#include "generalized_information_filter/unary-update.h"
 
 using namespace GIF;
 

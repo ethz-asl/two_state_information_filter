@@ -23,7 +23,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/gtest/" AND (NOT DEFINED CATKIN_DEVEL_PRE
 	 src/state.cc
 	 src/state-definition.cc 
   )
-	target_link_libraries(GIF pthread)
+	target_link_libraries(${PROJECT_NAME} pthread)
 	
 	
 	add_executable(test_simple test/test-simple.cc)
