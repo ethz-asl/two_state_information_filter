@@ -75,13 +75,11 @@ State::State(const std::shared_ptr<const StateDefinition>& def)
     elements_.push_back(def_->GetElementDefinition(i)->newElement());
   }
 }
-;
 
 State::~State() {
 }
-;
 State& State::operator=(const StateBase& other) {
-  dynamic_cast<const StateBase&>(*this) = other;
+  dynamic_cast<StateBase&>(*this) = other;
   return *this;
 }
 
@@ -95,13 +93,11 @@ StateWrapper::StateWrapper(const std::shared_ptr<const StateDefinition>& def,
       in_(in) {
   computeMap();
 }
-;
 
 StateWrapper::~StateWrapper() {
 }
-;
 StateWrapper& StateWrapper::operator=(const StateBase& other) {
-  dynamic_cast<const StateBase&>(*this) = other;
+  dynamic_cast<StateBase&>(*this) = other;
   return *this;
 }
 

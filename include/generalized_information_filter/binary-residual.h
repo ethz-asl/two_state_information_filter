@@ -15,10 +15,8 @@ class BinaryResidualBase {
         isSplitable_(isSplitable),
         isMergeable_(isMergeable) {
   }
-  ;
   virtual ~BinaryResidualBase() {
   }
-  ;
   virtual void evalResidual(
       const std::shared_ptr<StateBase>& res,
       const std::shared_ptr<const StateBase>& pre,
@@ -91,10 +89,8 @@ class BinaryResidual<ElementPack<Res...>, ElementPack<Pre...>,
     R_.resize(noiDefinition()->GetStateDimension(), noiDefinition()->GetStateDimension());
     R_.setIdentity();
   }
-  ;
   virtual ~BinaryResidual() {
   }
-  ;
 
   // Set measurement
   void setMeas(const std::shared_ptr<const StateBase>& meas) {

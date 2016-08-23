@@ -49,10 +49,8 @@ class ElementBase {
  public:
   ElementBase() {
   }
-  ;
   virtual ~ElementBase() {
   }
-  ;
   virtual ElementBase& operator=(const ElementBase& other) = 0;
   virtual int getDim() const = 0;
   virtual void print() const = 0;
@@ -79,10 +77,8 @@ class Element : public ElementBase {
   Element(const ElementDefinition<T>* def)
       : def_(def) {
   }
-  ;
   virtual ~Element() {
   }
-  ;
   Element<T>& operator=(const Element<T>& other) {
     get() = other.get();
     return *this;
