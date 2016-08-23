@@ -1,9 +1,9 @@
 #ifndef GIF_BINARYRESIDUAL_HPP_
 #define GIF_BINARYRESIDUAL_HPP_
 
-#include "generalized_information_filter/common.hpp"
-#include "generalized_information_filter/Model.hpp"
-#include "generalized_information_filter/Measurement.hpp"
+#include "generalized_information_filter/common.h"
+#include "generalized_information_filter/measurement.h"
+#include "generalized_information_filter/model.h"
 
 namespace GIF {
 

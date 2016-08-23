@@ -1,15 +1,8 @@
-/*
- * Transformation.hpp
- *
- *  Created on: Jul 29, 2016
- *      Author: Bloeschm
- */
-
 #ifndef GIF_TRANSFORMATION_HPP_
 #define GIF_TRANSFORMATION_HPP_
 
-#include "generalized_information_filter/common.hpp"
-#include "generalized_information_filter/Model.hpp"
+#include "generalized_information_filter/common.h"
+#include "generalized_information_filter/model.h"
 
 namespace GIF {
 

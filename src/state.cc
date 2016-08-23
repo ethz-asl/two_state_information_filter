@@ -1,4 +1,4 @@
-#include "generalized_information_filter/State.hpp"
+#include "generalized_information_filter/state.h"
 
 namespace GIF {
 

@@ -1,7 +1,7 @@
 #ifndef GIF_ELEMENT_HPP_
 #define GIF_ELEMENT_HPP_
 
-#include "generalized_information_filter/common.hpp"
+#include "generalized_information_filter/common.h"
 
 namespace GIF {
 

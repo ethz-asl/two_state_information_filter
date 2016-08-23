@@ -3,8 +3,8 @@
 #include <map>
 #include <set>
 
-#include "generalized_information_filter/common.hpp"
-#include "generalized_information_filter/State.hpp"
+#include "generalized_information_filter/common.h"
+#include "generalized_information_filter/state.h"
 
 namespace GIF {
 

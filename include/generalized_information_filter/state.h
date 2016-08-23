@@ -1,9 +1,9 @@
 #ifndef GIF_STATE_HPP_
 #define GIF_STATE_HPP_
 
-#include "generalized_information_filter/common.hpp"
-#include "generalized_information_filter/Element.hpp"
-#include "generalized_information_filter/StateDefinition.hpp"
+#include "generalized_information_filter/common.h"
+#include "generalized_information_filter/element.h"
+#include "generalized_information_filter/state-definition.h"
 
 namespace GIF {
 

@@ -8,8 +8,8 @@
 #ifndef GIF_ELEMENTDEFINITION_HPP_
 #define GIF_ELEMENTDEFINITION_HPP_
 
-#include "generalized_information_filter/common.hpp"
-#include "generalized_information_filter/Element.hpp"
+#include "generalized_information_filter/common.h"
+#include "generalized_information_filter/element.h"
 
 namespace GIF {
 

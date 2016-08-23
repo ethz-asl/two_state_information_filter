@@ -1,8 +1,8 @@
 #ifndef GIF_UNARYUPDATE_HPP_
 #define GIF_UNARYUPDATE_HPP_
 
-#include "generalized_information_filter/common.hpp"
-#include "generalized_information_filter/BinaryResidual.hpp"
+#include "generalized_information_filter/binary-residual.h"
+#include "generalized_information_filter/common.h"
 
 namespace GIF {
 
