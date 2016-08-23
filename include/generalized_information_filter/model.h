@@ -15,52 +15,46 @@ template<typename T, typename ... Ts>
 struct TH_pack_dim<T, Ts...> {
   static constexpr int d_ = TH_pack_dim<Ts...>::d_ + ElementTraits<T>::d_;
 };
-template<typename T>
-struct TH_pack_dim<T> {
-  static constexpr int d_ = ElementTraits<T>::d_;
-};
 template<>
 struct TH_pack_dim<> {
   static constexpr int d_ = 0;
 };
 
 template<typename ... Ts>
-class ElementPack {
+class ElementPack : public StateDefinition{
  public:
   static constexpr int n_ = sizeof...(Ts);
   static constexpr int d_ = TH_pack_dim<Ts...>::d_;
   typedef std::tuple<Ts...> mtTuple;
 
-  static std::shared_ptr<StateDefinition> makeStateDefinition(const std::array<std::string,n_>& names) {
-    std::shared_ptr<StateDefinition> def(new StateDefinition());
-    addElementsToDefinition(names,def);
-    return def;
+  ElementPack(const std::array<std::string,n_>& names){
+    addElementsToDefinition(names);
   }
-
-  template<int i = 0, typename std::enable_if<(i<sizeof...(Ts))>::type* = nullptr>
-  static void addElementsToDefinition(const std::array<std::string,n_>& names,
-      const std::shared_ptr<StateDefinition>& def) {
-    typedef typename std::tuple_element<i,mtTuple>::type mtElementType;
-    def->AddElementDefinition<mtElementType>(names.at(i));
-    addElementsToDefinition<i+1>(names,def);
-  }
-  template<int i = 0, typename std::enable_if<(i==sizeof...(Ts))>::type* = nullptr>
-  static void addElementsToDefinition(const std::array<std::string,n_>& names,
-      const std::shared_ptr<StateDefinition>& def) {}
 
   template<int i>
-  static constexpr int getDim() {
+  static constexpr int _GetStateDimension() {
     return ElementTraits<typename std::tuple_element<i,mtTuple>::type>::d_;
   }
 
   template<int i, typename std::enable_if<(i>0)>::type* = nullptr>
-  static constexpr int getStart() {
-    return getStart<i-1>() + getDim<i-1>();
+  static constexpr int _GetStartIndex() {
+    return _GetStartIndex<i-1>() + _GetStateDimension<i-1>();
   }
   template<int i = 0, typename std::enable_if<(i==0)>::type* = nullptr>
-  static constexpr int getStart() {
+  static constexpr int _GetStartIndex() {
     return 0;
   }
+
+ protected:
+  template<int i = 0, typename std::enable_if<(i<sizeof...(Ts))>::type* = nullptr>
+  void addElementsToDefinition(const std::array<std::string,n_>& names) {
+    typedef typename std::tuple_element<i,mtTuple>::type mtElementType;
+    AddElementDefinition<mtElementType>(names.at(i));
+    addElementsToDefinition<i+1>(names);
+  }
+  template<int i = 0, typename std::enable_if<(i==sizeof...(Ts))>::type* = nullptr>
+  void addElementsToDefinition(const std::array<std::string,n_>& names) {}
+
 };
 
 template<typename ... InPacks>
@@ -93,7 +87,6 @@ struct TH_pack_index<i, ElementPack<Ts...>, Packs...> {
     return i;
   }
 };
-
 template<int i, typename ... Ts>
 struct TH_pack_index<i, ElementPack<Ts...>> {
   template<typename std::enable_if<(i < sizeof...(Ts))>::type* = nullptr>
@@ -112,16 +105,16 @@ class Model {
 
   Model(const std::array<std::string,n_>& namesOut,
         const std::tuple<std::array<std::string,InPacks::n_>...>& namesIn) {
-    outDefinition_ = OutPack::makeStateDefinition(namesOut);
+    outDefinition_.reset(new OutPack(namesOut));
     makeInDefinitons(namesIn);
   }
 
   template<int i = 0, typename std::enable_if<(i<N_)>::type* = nullptr>
   void makeInDefinitons(
       const std::tuple<std::array<std::string,InPacks::n_>...>& namesIn) {
-    inDefinitions_[i] =
-        std::tuple_element<i,std::tuple<InPacks...>>::type::makeStateDefinition(
-            std::get<i>(namesIn));
+    inDefinitions_[i].reset(
+        new typename std::tuple_element<i,std::tuple<InPacks...>>::type(
+            std::get<i>(namesIn)));
     makeInDefinitons<i+1>(namesIn);
   }
 
@@ -254,11 +247,11 @@ class Model {
 
   template<int j, int n, int m>
   void _setJacBlock(
-      MXD& J, const Eigen::Matrix<double,OutPack::template getDim<n>(),
-      std::tuple_element<j,std::tuple<InPacks...>>::type::template getDim<m>()>& B) const {
-    J.block<OutPack::template getDim<n>(),
-        std::tuple_element<j,std::tuple<InPacks...>>::type::template getDim<m>()>(OutPack::template getStart<n>(),
-            std::tuple_element<j,std::tuple<InPacks...>>::type::template getStart<m>()) = B;
+      MXD& J, const Eigen::Matrix<double,OutPack::template _GetStateDimension<n>(),
+      std::tuple_element<j,std::tuple<InPacks...>>::type::template _GetStateDimension<m>()>& B) const {
+    J.block<OutPack::template _GetStateDimension<n>(),
+        std::tuple_element<j,std::tuple<InPacks...>>::type::template _GetStateDimension<m>()>(OutPack::template _GetStartIndex<n>(),
+            std::tuple_element<j,std::tuple<InPacks...>>::type::template _GetStartIndex<m>()) = B;
   }
 
  protected:

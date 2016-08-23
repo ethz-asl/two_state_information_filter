@@ -9,7 +9,7 @@ namespace GIF {
 class PoseMeas : public State {
  public:
   PoseMeas(const V3D& pos = V3D(0, 0, 0), const QPD& att = QPD())
-      : State(ElementPack<V3D, QPD>::makeStateDefinition( { "pos", "att" })),
+      : State(std::shared_ptr<StateDefinition>(new ElementPack<V3D, QPD>({ "pos", "att" }))),
         pos_(State::getValue<V3D>("pos")),
         att_(State::getValue<QPD>("att")) {
     pos_ = pos;

@@ -54,8 +54,8 @@ class Transformation<ElementPack<Out...>, ElementPack<In...>> : public Model<
   template<int n, int m>
   void setJacBlock(
       MXD& J,
-      const Eigen::Matrix<double, ElementPack<Out...>::template getDim<n>(),
-          ElementPack<In...>::template getDim<m>()>& B) const {
+      const Eigen::Matrix<double, ElementPack<Out...>::template _GetStateDimension<n>(),
+          ElementPack<In...>::template _GetStateDimension<m>()>& B) const {
     this->template _setJacBlock<0, n, m>(J, B);
   }
 

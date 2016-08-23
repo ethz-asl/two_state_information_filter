@@ -9,7 +9,7 @@ namespace GIF {
 class IMUMeas : public State {
  public:
   IMUMeas(const V3D& gyr = V3D(0, 0, 0), const V3D& acc = V3D(0, 0, 0))
-      : State(ElementPack<V3D, V3D>::makeStateDefinition( { "gyr", "acc" })),
+      : State(std::shared_ptr<StateDefinition>(new ElementPack<V3D, V3D>({ "gyr", "acc" }))),
         gyr_(State::getValue<V3D>("gyr")),
         acc_(State::getValue<V3D>("acc")) {
     gyr_ = gyr;

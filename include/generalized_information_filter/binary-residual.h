@@ -205,24 +205,24 @@ class BinaryResidual<ElementPack<Res...>, ElementPack<Pre...>,
   template<int n, int m>
   void setJacBlockPre(
       MXD& J,
-      const Eigen::Matrix<double, ElementPack<Res...>::template getDim<n>(),
-          ElementPack<Pre...>::template getDim<m>()>& B) const {
+      const Eigen::Matrix<double, ElementPack<Res...>::template _GetStateDimension<n>(),
+          ElementPack<Pre...>::template _GetStateDimension<m>()>& B) const {
     this->template _setJacBlock<0, n, m>(J, B);
   }
 
   template<int n, int m>
   void setJacBlockPos(
       MXD& J,
-      const Eigen::Matrix<double, ElementPack<Res...>::template getDim<n>(),
-          ElementPack<Pos...>::template getDim<m>()>& B) const {
+      const Eigen::Matrix<double, ElementPack<Res...>::template _GetStateDimension<n>(),
+          ElementPack<Pos...>::template _GetStateDimension<m>()>& B) const {
     this->template _setJacBlock<1, n, m>(J, B);
   }
 
   template<int n, int m>
   void setJacBlockNoi(
       MXD& J,
-      const Eigen::Matrix<double, ElementPack<Res...>::template getDim<n>(),
-          ElementPack<Noi...>::template getDim<m>()>& B) const {
+      const Eigen::Matrix<double, ElementPack<Res...>::template _GetStateDimension<n>(),
+          ElementPack<Noi...>::template _GetStateDimension<m>()>& B) const {
     this->template _setJacBlock<2, n, m>(J, B);
   }
 

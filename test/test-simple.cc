@@ -83,7 +83,7 @@ class BinaryRedidualVelocity : public BinaryResidual<ElementPack<V3D>,
 class AccelerometerMeas : public State {
  public:
   AccelerometerMeas(const V3D& acc = V3D(0, 0, 0))
-      : State(ElementPack<V3D>::makeStateDefinition( { "acc" })),
+      : State(std::shared_ptr<StateDefinition>(new ElementPack<V3D>( { "acc" }))),
         acc_(State::getValue<V3D>("acc")) {
     acc_ = acc;
   }
