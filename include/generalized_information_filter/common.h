@@ -1,6 +1,7 @@
 #ifndef GIF_COMMON_HPP_
 #define GIF_COMMON_HPP_
 
+#include <array>
 #include <Eigen/Dense>
 #include <iostream>
 #include <memory>
