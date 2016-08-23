@@ -31,10 +31,8 @@ class ElementDefinition : public ElementDefinitionBase {
  public:
   ElementDefinition() {
   }
-  ;
   ~ElementDefinition() {
   }
-  ;
   std::shared_ptr<ElementBase> newElement() const {
     return std::shared_ptr < Element < T >> (new Element<T>(this));
   }

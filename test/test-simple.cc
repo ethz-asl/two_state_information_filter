@@ -87,7 +87,6 @@ class AccelerometerMeas : public State {
         acc_(State::getValue<V3D>("acc")) {
     acc_ = acc;
   }
-  ;
   V3D& acc_;
 };
 

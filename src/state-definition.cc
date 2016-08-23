@@ -46,7 +46,6 @@ std::shared_ptr<const ElementDefinitionBase> StateDefinition::getElementDefiniti
     int i) const {
   return elementDefinitions_.at(i).first;
 }
-;
 
 int StateDefinition::addElementDefinition(
     const std::string& name,

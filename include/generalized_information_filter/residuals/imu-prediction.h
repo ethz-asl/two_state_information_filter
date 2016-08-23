@@ -15,7 +15,6 @@ class IMUMeas : public State {
     gyr_ = gyr;
     acc_ = acc;
   }
-  ;
   V3D& gyr_;
   V3D& acc_;
 };
@@ -29,10 +28,8 @@ class IMUPrediction : public Prediction<ElementPack<V3D, V3D, V3D, V3D, QPD>,
         g_(0, 0, -9.81) {
     dt_ = 0.1;
   }
-  ;
   virtual ~IMUPrediction() {
   }
-  ;
   void evalPredictionImpl(V3D& posPos, V3D& velPos, V3D& gybPos, V3D& acbPos,
                           QPD& attPos, const V3D& posPre, const V3D& velPre,
                           const V3D& gybPre, const V3D& acbPre,
