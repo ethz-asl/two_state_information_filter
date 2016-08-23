@@ -10,11 +10,11 @@ StateBase::~StateBase() {}
 
 bool StateBase::matchesDef(
     const std::shared_ptr<const StateDefinition>& def) const {
-  if (getNumElement() != def->getNumElement()) {
+  if (getNumElement() != def->GetNumElements()) {
     return false;
   }
   for (int i = 0; i < getNumElement(); i++) {
-    if (!def->getElementDefinition(i)->isOfDef(getElement(i))) {
+    if (!def->GetElementDefinition(i)->isOfDef(getElement(i))) {
       return false;
     }
   }
@@ -30,7 +30,7 @@ StateBase& StateBase::operator=(const StateBase& other) {
 
 void StateBase::print() const {
   for (int i = 0; i < getNumElement(); i++) {
-    std::cout << getDef()->getName(i) << ": ";
+    std::cout << getDef()->GetName(i) << ": ";
     getElement(i)->print();
   }
 }
@@ -71,8 +71,8 @@ std::shared_ptr<const StateDefinition> StateBase::getDef() const {
 
 State::State(const std::shared_ptr<const StateDefinition>& def)
     : StateBase(def) {
-  for (int i = 0; i < def_->getNumElement(); i++) {
-    elements_.push_back(def_->getElementDefinition(i)->newElement());
+  for (int i = 0; i < def_->GetNumElements(); i++) {
+    elements_.push_back(def_->GetElementDefinition(i)->newElement());
   }
 }
 ;
@@ -110,9 +110,9 @@ int StateWrapper::getNumElement() const {
 }
 
 void StateWrapper::computeMap() {
-  indexMap_.resize(def_->getNumElement());
-  for (int i = 0; i < def_->getNumElement(); i++) {
-    indexMap_[i] = in_->findName(def_->getName(i));
+  indexMap_.resize(def_->GetNumElements());
+  for (int i = 0; i < def_->GetNumElements(); i++) {
+    indexMap_[i] = in_->FindName(def_->GetName(i));
     assert(indexMap_.at(i) != -1);
   }
 }

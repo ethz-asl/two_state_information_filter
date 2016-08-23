@@ -14,61 +14,61 @@ class StateDefinition {
  public:
   StateDefinition();
   ~StateDefinition();
-  bool isSameDef(const std::shared_ptr<const StateDefinition>& in) const;
-  inline int getDim() const;
-  inline int getNumElement() const;
-  inline int getStart(int i) const;
-  inline int getOuter(int i) const;  // TODO: make more efficient
-  inline int getInner(int i) const;
-  std::string getName(int i) const;
-  int findName(const std::string& name) const;
-  std::shared_ptr<const ElementDefinitionBase> getElementDefinition(
-      int i) const;
-  int addElementDefinition(
+  bool operator ==(const std::shared_ptr<const StateDefinition>& other) const;
+  inline int GetStateDimension() const;
+  inline int GetNumElements() const;
+  inline int GetStartIndex(int outer_index) const;
+  inline int GetOuterIndex(int i) const;
+  inline int GetInnerIndex(int i) const;
+  std::string GetName(int outer_index) const;
+  int FindName(const std::string& name) const;
+  std::shared_ptr<const ElementDefinitionBase> GetElementDefinition(
+      int outer_index) const;
+  int AddElementDefinition(
       const std::string& name,
-      const std::shared_ptr<const ElementDefinitionBase>& elementDefinition);
+      const std::shared_ptr<const ElementDefinitionBase>& new_element_definition);
   template<typename T>
-  int addElementDefinition(const std::string& name);
-  void extend(const std::shared_ptr<const StateDefinition>& stateDefinition,
-              const std::string& name = "");
+  int AddElementDefinition(const std::string& name);
+  void ExtendWithStateDefinition(const std::shared_ptr<const StateDefinition>& state_definition,
+              const std::string& sub_name = "");
 
  protected:
-  std::vector<std::pair<std::shared_ptr<const ElementDefinitionBase>, int>> elementDefinitions_;
-  std::unordered_map<std::string, int> namesMap_;
+  std::vector<std::pair<std::shared_ptr<const ElementDefinitionBase>, int>> element_definitions_;
+  std::unordered_map<std::string, int> names_map_;
   int d_;
 };
 
 // ==================== Implementation ==================== //
-int StateDefinition::getDim() const {
+int StateDefinition::GetStateDimension() const {
   return d_;
 }
 
-int StateDefinition::getNumElement() const {
-  return namesMap_.size();
+int StateDefinition::GetNumElements() const {
+  return names_map_.size();
 }
 
-int StateDefinition::getStart(int i) const {
-  return elementDefinitions_.at(i).second;
+int StateDefinition::GetStartIndex(int outer_index) const {
+  return element_definitions_.at(outer_index).second;
 }
 
-int StateDefinition::getOuter(int i) const {  // TODO: make more efficient
-  int j = 0;
-  while (i >= getElementDefinition(j)->getDim()) {
-    i -= getElementDefinition(j)->getDim();
-    ++j;
+int StateDefinition::GetOuterIndex(int i) const {
+  assert(i >= 0 && i < GetStateDimension());
+  int outer_index = GetNumElements()-1;
+  while (element_definitions_.at(outer_index).second > i) {
+    --outer_index;
   }
-  return j;
+  return outer_index;
 }
 
-int StateDefinition::getInner(int i) const {
-  return i - getStart(getOuter(i));
+int StateDefinition::GetInnerIndex(int i) const {
+  return i - GetStartIndex(GetOuterIndex(i));
 }
 
 template<typename T>
-int StateDefinition::addElementDefinition(const std::string& name) {
-  const std::shared_ptr<const ElementDefinitionBase> elementDefinition(
+int StateDefinition::AddElementDefinition(const std::string& name) {
+  const std::shared_ptr<const ElementDefinitionBase> new_element_definition(
       new ElementDefinition<T>());
-  addElementDefinition(name, elementDefinition);
+  AddElementDefinition(name, new_element_definition);
 }
 
 }

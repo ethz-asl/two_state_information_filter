@@ -41,7 +41,7 @@ class ElementPack {
   static void addElementsToDefinition(const std::array<std::string,n_>& names,
       const std::shared_ptr<StateDefinition>& def) {
     typedef typename std::tuple_element<i,mtTuple>::type mtElementType;
-    def->addElementDefinition<mtElementType>(names.at(i));
+    def->AddElementDefinition<mtElementType>(names.at(i));
     addElementsToDefinition<i+1>(names,def);
   }
   template<int i = 0, typename std::enable_if<(i==sizeof...(Ts))>::type* = nullptr>
@@ -225,8 +225,8 @@ class Model {
     typename Eigen::MatrixXd::Index maxRow, maxCol = 0;
     const double r = (J-J_FD).array().abs().maxCoeff(&maxRow, &maxCol);
     if(r>th){
-      std::string outName = outDefinition_->getName(output->getOuter(maxRow));
-      std::string inName = inDefinitions_[j]->getName(ins[j]->getOuter(maxCol));
+      std::string outName = outDefinition_->GetName(output->getOuter(maxRow));
+      std::string inName = inDefinitions_[j]->GetName(ins[j]->getOuter(maxCol));
       std::cout << "==== Model jacInput (" << j << ") Test failed: " << r
                 << " is larger than " << th << " at row "
                 << maxRow << "("<< outName << "." << output->getInner(maxRow)

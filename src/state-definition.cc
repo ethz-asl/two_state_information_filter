@@ -9,27 +9,27 @@ StateDefinition::StateDefinition() {
 
 StateDefinition::~StateDefinition() {}
 
-bool StateDefinition::isSameDef(
-    const std::shared_ptr<const StateDefinition>& in) const {
-  if (getDim() != in->getDim()) {
+bool StateDefinition::operator ==(
+    const std::shared_ptr<const StateDefinition>& other) const {
+  if (GetStateDimension() != other->GetStateDimension()) {
     return false;
   }
-  for (auto name : namesMap_) {
-    int indexIn = in->findName(name.first);
-    if (indexIn == -1) {
+  for (auto name : names_map_) {
+    int other_outer_index = other->FindName(name.first);
+    if (other_outer_index == -1) {
       return false;
     }
-    if (!getElementDefinition(name.second)->isSameDef(
-        in->getElementDefinition(indexIn))) {
+    if (!GetElementDefinition(name.second)->isSameDef(
+        other->GetElementDefinition(other_outer_index))) {
       return false;
     }
   }
   return true;
 }
 
-std::string StateDefinition::getName(int i) const {
-  for (auto e : namesMap_) {
-    if (e.second == i) {
+std::string StateDefinition::GetName(int outer_index) const {
+  for (auto e : names_map_) {
+    if (e.second == outer_index) {
       return e.first;
     }
   }
@@ -37,44 +37,44 @@ std::string StateDefinition::getName(int i) const {
   return "";
 }
 
-int StateDefinition::findName(const std::string& name) const {
-  auto query = namesMap_.find(name);
-  return (query != namesMap_.end()) ? query->second : -1;
+int StateDefinition::FindName(const std::string& name) const {
+  auto query = names_map_.find(name);
+  return (query != names_map_.end()) ? query->second : -1;
 }
 
-std::shared_ptr<const ElementDefinitionBase> StateDefinition::getElementDefinition(
-    int i) const {
-  return elementDefinitions_.at(i).first;
+std::shared_ptr<const ElementDefinitionBase> StateDefinition::GetElementDefinition(
+    int outer_index) const {
+  return element_definitions_.at(outer_index).first;
 }
 ;
 
-int StateDefinition::addElementDefinition(
+int StateDefinition::AddElementDefinition(
     const std::string& name,
-    const std::shared_ptr<const ElementDefinitionBase>& elementDefinition) {
-  int foundIndex = findName(name);
-  if (foundIndex != -1) {
-    if (!getElementDefinition(foundIndex)->isSameDef(elementDefinition)) {
+    const std::shared_ptr<const ElementDefinitionBase>& new_element_definition) {
+  int outer_index = FindName(name);
+  if (outer_index != -1) {
+    if (!GetElementDefinition(outer_index)->isSameDef(new_element_definition)) {
       assert("ERROR: invalid extention of state definition" == 0);
     }
-    return foundIndex;
+    return outer_index;
   } else {
-    elementDefinitions_.push_back(
+    element_definitions_.push_back(
         std::pair<std::shared_ptr<const ElementDefinitionBase>, int>(
-            elementDefinition, d_));
-    d_ += elementDefinition->getDim();
-    namesMap_.insert(
-        std::pair<std::string, int>(name, elementDefinitions_.size() - 1));
-    return elementDefinitions_.size() - 1;
+            new_element_definition, d_));
+    d_ += new_element_definition->getDim();
+    names_map_.insert(
+        std::pair<std::string, int>(name, element_definitions_.size() - 1));
+    return element_definitions_.size() - 1;
   }
 }
 
-void StateDefinition::extend(
-    const std::shared_ptr<const StateDefinition>& stateDefinition,
-    const std::string& name) {
-  for (auto nameEntry : stateDefinition->namesMap_) {
-    addElementDefinition(
-        name + nameEntry.first,
-        stateDefinition->getElementDefinition(nameEntry.second));
+void StateDefinition::ExtendWithStateDefinition(
+    const std::shared_ptr<const StateDefinition>& state_definition,
+    const std::string& sub_name) {
+  for (auto entry : state_definition->names_map_) {
+    AddElementDefinition(
+        sub_name + entry.first,
+        state_definition->GetElementDefinition(entry.second));
   }
 }
 

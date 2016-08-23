@@ -88,7 +88,7 @@ class BinaryResidual<ElementPack<Res...>, ElementPack<Pre...>,
       : mtBase(namesRes, std::forward_as_tuple(namesPre, namesPos, namesNoi)),
         BinaryResidualBase(isUnary, isSplitable, isMergeable),
         meas_(new Meas()) {
-    R_.resize(noiDefinition()->getDim(), noiDefinition()->getDim());
+    R_.resize(noiDefinition()->GetStateDimension(), noiDefinition()->GetStateDimension());
     R_.setIdentity();
   }
   ;
@@ -236,11 +236,11 @@ class BinaryResidual<ElementPack<Res...>, ElementPack<Pre...>,
                 const double& delta = 1e-6, const double& th = 1e-6) const {
     const std::array<std::shared_ptr<const StateBase>, 3> ins =
         { pre, pos, noi };
-    return (preDefinition()->getDim() == 0
+    return (preDefinition()->GetStateDimension() == 0
         || this->template _testJacInput<0>(ins, delta, th))
-        & (posDefinition()->getDim() == 0
+        & (posDefinition()->GetStateDimension() == 0
             || this->template _testJacInput<1>(ins, delta, th))
-        & (noiDefinition()->getDim() == 0
+        & (noiDefinition()->GetStateDimension() == 0
             || this->template _testJacInput<2>(ins, delta, th));
   }
 
@@ -256,11 +256,11 @@ class BinaryResidual<ElementPack<Res...>, ElementPack<Pre...>,
     noi->setIdentity();
     const std::array<std::shared_ptr<const StateBase>, 3> ins =
         { pre, pos, noi };
-    return (preDefinition()->getDim() == 0
+    return (preDefinition()->GetStateDimension() == 0
         || this->template _testJacInput<0>(ins, delta, th))
-        & (posDefinition()->getDim() == 0
+        & (posDefinition()->GetStateDimension() == 0
             || this->template _testJacInput<1>(ins, delta, th))
-        & (noiDefinition()->getDim() == 0
+        & (noiDefinition()->GetStateDimension() == 0
             || this->template _testJacInput<2>(ins, delta, th));
   }
 

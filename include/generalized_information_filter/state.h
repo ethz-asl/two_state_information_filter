@@ -90,7 +90,7 @@ T& StateBase::getValue(int i) const {
 template<typename T>
 T& StateBase::getValue(const std::string& name) {
   assert(matchesDef(def_));
-  int i = def_->findName(name);
+  int i = def_->FindName(name);
   assert(i != -1);
   return getValue<T>(i);
 }
@@ -98,29 +98,29 @@ T& StateBase::getValue(const std::string& name) {
 template<typename T>
 T& StateBase::getValue(const std::string& name) const {
   assert(matchesDef(def_));
-  int i = def_->findName(name);
+  int i = def_->FindName(name);
   assert(i != -1);
   return getValue<T>(i);
 }
 
 int StateBase::getDim() const {
   assert(matchesDef(def_));
-  return def_->getDim();
+  return def_->GetStateDimension();
 }
 
 int StateBase::getStart(int i) const {
   assert(matchesDef(def_));
-  return def_->getStart(i);
+  return def_->GetStartIndex(i);
 }
 
 int StateBase::getOuter(int i) const {
   assert(matchesDef(def_));
-  return def_->getOuter(i);
+  return def_->GetOuterIndex(i);
 }
 
 int StateBase::getInner(int i) const {
   assert(matchesDef(def_));
-  return def_->getInner(i);
+  return def_->GetInnerIndex(i);
 }
 
 std::shared_ptr<ElementBase> State::getElement(int i) {

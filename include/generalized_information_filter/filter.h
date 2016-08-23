@@ -10,8 +10,8 @@ class ResidualStruct {
  public:
   ResidualStruct(const std::shared_ptr<BinaryResidualBase>& res,
                  const std::shared_ptr<StateDefinition>& stateDefinition) {
-    stateDefinition->extend(res->preDefinition());
-    stateDefinition->extend(res->posDefinition());
+    stateDefinition->ExtendWithStateDefinition(res->preDefinition());
+    stateDefinition->ExtendWithStateDefinition(res->posDefinition());
     res_ = res;
     mt_.reset(new MeasurementTimeline(!res->isUnary_));
     preWrap_.reset(new StateWrapper(res->preDefinition(), stateDefinition));
@@ -21,10 +21,10 @@ class ResidualStruct {
     innRef_->setIdentity();
     noi_.reset(new State(res->noiDefinition()));
     noi_->setIdentity();
-    innDim_ = res->resDefinition()->getDim();
-    jacPre_.resize(innDim_, res->preDefinition()->getDim());
-    jacPos_.resize(innDim_, res->posDefinition()->getDim());
-    jacNoi_.resize(innDim_, res->noiDefinition()->getDim());
+    innDim_ = res->resDefinition()->GetStateDimension();
+    jacPre_.resize(innDim_, res->preDefinition()->GetStateDimension());
+    jacPos_.resize(innDim_, res->posDefinition()->GetStateDimension());
+    jacNoi_.resize(innDim_, res->noiDefinition()->GetStateDimension());
   }
   ;
   ~ResidualStruct() {
@@ -61,7 +61,7 @@ class Filter {
     state_.reset(new State(stateDefinition_));
     state_->setIdentity();
     posLinState_.reset(new State(stateDefinition_));
-    cov_.resize(stateDefinition_->getDim(), stateDefinition_->getDim());
+    cov_.resize(stateDefinition_->GetStateDimension(), stateDefinition_->GetStateDimension());
     cov_.setIdentity();
   }
 
@@ -185,12 +185,12 @@ class Filter {
     for (int i = 0; i < residuals_.size(); i++) {
       hasMeas.at(i) = residuals_.at(i).mt_->getMeas(t, meas);
       if (hasMeas.at(i)) {
-        innDim += residuals_.at(i).res_->resDefinition()->getDim();
+        innDim += residuals_.at(i).res_->resDefinition()->GetStateDimension();
       }
     }
     VXD y(innDim);
-    MXD jacPre(innDim, stateDefinition_->getDim());
-    MXD jacPos(innDim, stateDefinition_->getDim());
+    MXD jacPre(innDim, stateDefinition_->GetStateDimension());
+    MXD jacPos(innDim, stateDefinition_->GetStateDimension());
     jacPre.setZero();
     jacPos.setZero();
     MXD Winv(innDim, innDim);
