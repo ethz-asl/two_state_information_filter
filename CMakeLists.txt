@@ -17,9 +17,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/gtest/" AND (NOT DEFINED CATKIN_DEVEL_PRE
 	add_subdirectory(gtest gtest)
 	enable_testing()
 	include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
-	add_executable(testSimple src/testSimple.cpp src/StateDefinition.cpp src/State.cpp src/Measurement.cpp)
-	target_link_libraries(testSimple gtest_main gtest pthread )
-	add_test(testSimple testSimple)
+	
+	add_library(${PROJECT_NAME}  
+	 src/measurement.cc 
+	 src/state.cc
+	 src/state-definition.cc 
+  )
+	target_link_libraries(GIF pthread)
+	
+	
+	add_executable(test_simple test/test-simple.cc)
+	target_link_libraries(test_simple ${PROJECT_NAME} gtest_main gtest pthread)
+	add_test(test_simple test_simple)
 endif()
 
 # Generate FindGIF.cmake file
