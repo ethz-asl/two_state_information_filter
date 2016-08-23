@@ -11,33 +11,41 @@
 #include "generalized_information_filter/common.hpp"
 #include "generalized_information_filter/Element.hpp"
 
-namespace GIF{
+namespace GIF {
 
-class ElementDefinitionBase{
+class ElementDefinitionBase {
  public:
-  ElementDefinitionBase(){};
-  virtual ~ElementDefinitionBase(){};
+  ElementDefinitionBase() {}
+
+  virtual ~ElementDefinitionBase() {}
+
   virtual std::shared_ptr<ElementBase> newElement() const = 0;
-  virtual bool isSameDef(const std::shared_ptr<const ElementDefinitionBase>& in) const = 0;
+  virtual bool isSameDef(
+      const std::shared_ptr<const ElementDefinitionBase>& in) const = 0;
   virtual bool isOfDef(const std::shared_ptr<const ElementBase>& in) const = 0;
   virtual int getDim() const = 0;
 };
 
 template<typename T>
-class ElementDefinition: public ElementDefinitionBase{
+class ElementDefinition : public ElementDefinitionBase {
  public:
-  ElementDefinition(){};
-  ~ElementDefinition(){};
-  std::shared_ptr<ElementBase> newElement() const{
-    return std::shared_ptr<Element<T>>(new Element<T>(this));
+  ElementDefinition() {
   }
-  bool isSameDef(const std::shared_ptr<const ElementDefinitionBase>& in) const{
-    return std::dynamic_pointer_cast<const ElementDefinition<T>>(in).get() != nullptr;
+  ;
+  ~ElementDefinition() {
   }
-  bool isOfDef(const std::shared_ptr<const ElementBase>& in) const{
+  ;
+  std::shared_ptr<ElementBase> newElement() const {
+    return std::shared_ptr < Element < T >> (new Element<T>(this));
+  }
+  bool isSameDef(const std::shared_ptr<const ElementDefinitionBase>& in) const {
+    return std::dynamic_pointer_cast<const ElementDefinition<T>>(in).get()
+        != nullptr;
+  }
+  bool isOfDef(const std::shared_ptr<const ElementBase>& in) const {
     return std::dynamic_pointer_cast<const Element<T>>(in).get() != nullptr;
   }
-  inline int getDim() const{
+  inline int getDim() const {
     return ElementTraits<T>::d_;
   }
 };

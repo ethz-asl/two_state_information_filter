@@ -12,106 +12,144 @@
 
 using namespace GIF;
 
-class TransformationExample: public Transformation<ElementPack<V3D>,ElementPack<double, std::array<V3D,4>>>{
+class TransformationExample : public Transformation<ElementPack<V3D>,
+    ElementPack<double, std::array<V3D, 4>>> {
  public:
-  TransformationExample(): mtTransformation({"pos"},{"tim","sta"}){};
-  virtual ~TransformationExample(){};
-  void evalTransform(V3D& posOut,const double& timeIn,const std::array<V3D,4>& posIn) const{
-    posOut = (timeIn+1.0)*(posIn[2]+V3D(1,2,3));
+  TransformationExample()
+      : mtTransformation({"pos"}, {"tim", "sta"}) {
   }
-  void jacTransform(MXD& J,const double& timeIn,const std::array<V3D,4>& posIn) const{
+
+  virtual ~TransformationExample() {}
+
+  void evalTransform(V3D& posOut, const double& timeIn,
+                     const std::array<V3D, 4>& posIn) const {
+    posOut = (timeIn + 1.0) * (posIn[2] + V3D(1, 2, 3));
+  }
+  void jacTransform(MXD& J, const double& timeIn,
+                    const std::array<V3D, 4>& posIn) const {
     J.setZero();
-    setJacBlock<0,0>(J,V3D(1,2,3));
-    Eigen::Matrix<double,3,12> J2;
+    setJacBlock<0, 0>(J, V3D(1, 2, 3));
+    Eigen::Matrix<double, 3, 12> J2;
     J2.setZero();
-    J2.block<3,3>(0,6) = M3D::Identity();
-    setJacBlock<0,1>(J,J2);
+    J2.block<3, 3>(0, 6) = M3D::Identity();
+    setJacBlock<0, 1>(J, J2);
   }
 };
 
-class EmptyMeas: public State{
+class EmptyMeas : public State {
  public:
   EmptyMeas(): State(std::shared_ptr<StateDefinition>(new StateDefinition())){};
 };
 
-class BinaryRedidualVelocity: public BinaryResidual<ElementPack<V3D>,ElementPack<V3D,V3D>,ElementPack<V3D>,ElementPack<V3D>,EmptyMeas>{
+class BinaryRedidualVelocity : public BinaryResidual<ElementPack<V3D>,
+    ElementPack<V3D, V3D>, ElementPack<V3D>, ElementPack<V3D>, EmptyMeas> {
  public:
-  BinaryRedidualVelocity(): mtBinaryRedidual({"pos"},{"pos","vel"},{"pos"},{"pos"},false,false,false){
+  BinaryRedidualVelocity()
+      : mtBinaryRedidual( { "pos" }, { "pos", "vel" }, { "pos" }, { "pos" },
+                         false, false, false) {
     dt_ = 0.1;
-  };
-  virtual ~BinaryRedidualVelocity(){};
-  void evalResidualImpl(V3D& posRes,const V3D& posPre,const V3D& velPre,const V3D& posPos,const V3D& posNoi) const{
-    posRes = posPre + dt_*velPre - posPos + posNoi;
   }
-  void jacPreImpl(MXD& J,const V3D& posPre,const V3D& velPre,const V3D& posPos,const V3D& posNoi) const{
-    J.setZero();
-    setJacBlockPre<0,0>(J,M3D::Identity());
-    setJacBlockPre<0,1>(J,dt_*M3D::Identity());
+
+  virtual ~BinaryRedidualVelocity() {}
+
+  void evalResidualImpl(V3D& posRes, const V3D& posPre, const V3D& velPre,
+                        const V3D& posPos, const V3D& posNoi) const {
+    posRes = posPre + dt_ * velPre - posPos + posNoi;
   }
-  void jacPosImpl(MXD& J,const V3D& posPre,const V3D& velPre,const V3D& posPos,const V3D& posNoi) const{
+
+  void jacPreImpl(MXD& J, const V3D& posPre, const V3D& velPre,
+                  const V3D& posPos, const V3D& posNoi) const {
     J.setZero();
-    setJacBlockPos<0,0>(J,-M3D::Identity());
+    setJacBlockPre<0, 0>(J, M3D::Identity());
+    setJacBlockPre<0, 1>(J, dt_ * M3D::Identity());
   }
-  void jacNoiImpl(MXD& J,const V3D& posPre,const V3D& velPre,const V3D& posPos,const V3D& posNoi) const{
+
+  void jacPosImpl(MXD& J, const V3D& posPre, const V3D& velPre,
+                  const V3D& posPos, const V3D& posNoi) const {
     J.setZero();
-    setJacBlockNoi<0,0>(J,M3D::Identity());
+    setJacBlockPos<0, 0>(J, -M3D::Identity());
+  }
+
+  void jacNoiImpl(MXD& J, const V3D& posPre, const V3D& velPre,
+                  const V3D& posPos, const V3D& posNoi) const {
+    J.setZero();
+    setJacBlockNoi<0, 0>(J, M3D::Identity());
   }
 
  protected:
   double dt_;
 };
 
-class AccelerometerMeas: public State{
+class AccelerometerMeas : public State {
  public:
-  AccelerometerMeas(const V3D& acc = V3D(0,0,0)): State(ElementPack<V3D>::makeStateDefinition({"acc"})),
-      acc_(State::getValue<V3D>("acc")){
+  AccelerometerMeas(const V3D& acc = V3D(0, 0, 0))
+      : State(ElementPack<V3D>::makeStateDefinition( { "acc" })),
+        acc_(State::getValue<V3D>("acc")) {
     acc_ = acc;
-  };
+  }
+  ;
   V3D& acc_;
 };
 
-class BinaryRedidualAccelerometer: public BinaryResidual<ElementPack<V3D>,ElementPack<V3D>,ElementPack<V3D>,ElementPack<V3D>,AccelerometerMeas>{
+class BinaryRedidualAccelerometer : public BinaryResidual<ElementPack<V3D>,
+    ElementPack<V3D>, ElementPack<V3D>, ElementPack<V3D>, AccelerometerMeas> {
  public:
-  BinaryRedidualAccelerometer(): mtBinaryRedidual({"vel"},{"vel"},{"vel"},{"vel"},false,true,true){
+  BinaryRedidualAccelerometer()
+      : mtBinaryRedidual( { "vel" }, { "vel" }, { "vel" }, { "vel" }, false,
+                         true, true) {
     dt_ = 0.1;
-  };
-  virtual ~BinaryRedidualAccelerometer(){};
-  void evalResidualImpl(V3D& velRes,const V3D& velPre,const V3D& velPos,const V3D& velNoi) const{
-    velRes = velPre + dt_*meas_->acc_ - velPos + velNoi;
   }
-  void jacPreImpl(MXD& J,const V3D& velPre,const V3D& velPos,const V3D& velNoi) const{
-    J.setZero();
-    setJacBlockPre<0,0>(J,M3D::Identity());
+
+  virtual ~BinaryRedidualAccelerometer() {
   }
-  void jacPosImpl(MXD& J,const V3D& velPre,const V3D& velPos,const V3D& velNoi) const{
-    J.setZero();
-    setJacBlockPos<0,0>(J,-M3D::Identity());
+
+  void evalResidualImpl(V3D& velRes, const V3D& velPre, const V3D& velPos,
+                        const V3D& velNoi) const {
+    velRes = velPre + dt_ * meas_->acc_ - velPos + velNoi;
   }
-  void jacNoiImpl(MXD& J,const V3D& velPre,const V3D& velPos,const V3D& velNoi) const{
+  void jacPreImpl(MXD& J, const V3D& velPre, const V3D& velPos,
+                  const V3D& velNoi) const {
     J.setZero();
-    setJacBlockNoi<0,0>(J,M3D::Identity());
+    setJacBlockPre<0, 0>(J, M3D::Identity());
+  }
+  void jacPosImpl(MXD& J, const V3D& velPre, const V3D& velPos,
+                  const V3D& velNoi) const {
+    J.setZero();
+    setJacBlockPos<0, 0>(J, -M3D::Identity());
+  }
+  void jacNoiImpl(MXD& J, const V3D& velPre, const V3D& velPos,
+                  const V3D& velNoi) const {
+    J.setZero();
+    setJacBlockNoi<0, 0>(J, M3D::Identity());
   }
 
  protected:
   double dt_;
 };
 
-class PredictionAccelerometer: public Prediction<ElementPack<V3D>,ElementPack<V3D>,AccelerometerMeas>{
+class PredictionAccelerometer : public Prediction<ElementPack<V3D>,
+    ElementPack<V3D>, AccelerometerMeas> {
  public:
-  PredictionAccelerometer(): mtPrediction({"vel"},{"vel"}){
+  PredictionAccelerometer()
+      : mtPrediction( { "vel" }, { "vel" }) {
     dt_ = 0.1;
-  };
-  virtual ~PredictionAccelerometer(){};
-  void evalPredictionImpl(V3D& velPos,const V3D& velPre,const V3D& velNoi) const{
-    velPos = velPre + dt_*meas_->acc_ + velNoi;
   }
-  void jacPrePredictionImpl(MXD& J,const V3D& velPre,const V3D& velNoi) const{
-    J.setZero();
-    setJacBlockPre<0,0>(J,M3D::Identity());
+
+  virtual ~PredictionAccelerometer() {}
+
+  void evalPredictionImpl(V3D& velPos, const V3D& velPre,
+                          const V3D& velNoi) const {
+    velPos = velPre + dt_ * meas_->acc_ + velNoi;
   }
-  void jacNoiPredictionImpl(MXD& J,const V3D& velPre,const V3D& velNoi) const{
+  void jacPrePredictionImpl(MXD& J, const V3D& velPre,
+                            const V3D& velNoi) const {
     J.setZero();
-    setJacBlockNoi<0,0>(J,M3D::Identity());
+    setJacBlockPre<0, 0>(J, M3D::Identity());
+  }
+  void jacNoiPredictionImpl(MXD& J, const V3D& velPre,
+                            const V3D& velNoi) const {
+    J.setZero();
+    setJacBlockNoi<0, 0>(J, M3D::Identity());
   }
 
  protected:
@@ -121,10 +159,9 @@ class PredictionAccelerometer: public Prediction<ElementPack<V3D>,ElementPack<V3
 // The fixture for testing class ScalarState
 class NewStateTest : public virtual ::testing::Test {
  protected:
-  NewStateTest():covMat_(1,1) {
-  }
-  virtual ~NewStateTest() {
-  }
+  NewStateTest()
+      : covMat_(1, 1) {}
+  virtual ~NewStateTest() {}
   MXD covMat_;
 };
 
@@ -139,25 +176,25 @@ TEST_F(NewStateTest, constructor) {
   // Boxplus and boxminus
   Eigen::VectorXd v(s1a->getDim());
   v.setZero();
-  for(int i = 0; i < s1a->getDim(); i++){
+  for (int i = 0; i < s1a->getDim(); i++) {
     v(i) = i;
   }
-  s1a->boxplus(v,s1b);
+  s1a->boxplus(v, s1b);
   s1b->print();
-  s1a->boxminus(s1b,v);
+  s1a->boxminus(s1b, v);
   std::cout << v.transpose() << std::endl;
 
   // Jacobian
   MXD J;
-  t.jacFD(J,s1a);
+  t.jacFD(J, s1a);
   std::cout << J << std::endl;
 
   // Transformation
   std::shared_ptr<State> s2(new State(t.outputDefinition()));
-  MXD P1(s1a->getDim(),s1a->getDim());
-  MXD P2(s2->getDim(),s2->getDim());
-  t.transformState(s2,s1a);
-  t.transformCovMat(P2,s1a,P1);
+  MXD P1(s1a->getDim(), s1a->getDim());
+  MXD P2(s2->getDim(), s2->getDim());
+  t.transformState(s2, s1a);
+  t.transformCovMat(P2, s1a, P1);
   t.testJac(s1a);
 
   // Velocity Residual
@@ -168,10 +205,11 @@ TEST_F(NewStateTest, constructor) {
   pos->setIdentity();
   std::shared_ptr<State> noi(new State(velRes->noiDefinition()));
   noi->setIdentity();
-  velRes->testJacs(pre,pos,noi);
+  velRes->testJacs(pre, pos, noi);
 
   // Accelerometer Residual
-  std::shared_ptr<BinaryRedidualAccelerometer> accRes(new BinaryRedidualAccelerometer());
+  std::shared_ptr<BinaryRedidualAccelerometer> accRes(
+      new BinaryRedidualAccelerometer());
 
   // Filter
   Filter f;
@@ -179,42 +217,48 @@ TEST_F(NewStateTest, constructor) {
   f.addRes(accRes);
   std::shared_ptr<State> preState(new State(f.stateDefinition()));
   preState->setIdentity();
-  preState->getValue<V3D>("pos") = V3D(1,2,3);
+  preState->getValue < V3D > ("pos") = V3D(1, 2, 3);
   preState->print();
   std::shared_ptr<State> posState(new State(f.stateDefinition()));
   posState->setIdentity();
   posState->print();
-  f.evalRes(preState,posState);
+  f.evalRes(preState, posState);
 
 
   // Test measurements
   std::shared_ptr<EmptyMeas> eptMeas(new EmptyMeas);
   TimePoint start = Clock::now();
   f.init(start+fromSec(0.00));
-  f.addMeas(0,eptMeas,start+fromSec(-0.1));
-  f.addMeas(0,eptMeas,start+fromSec(0.0));
-  f.addMeas(0,eptMeas,start+fromSec(0.2));
-  f.addMeas(0,eptMeas,start+fromSec(0.3));
-  f.addMeas(0,eptMeas,start+fromSec(0.4));
-  f.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(-0.1,0.0,0.0))),start+fromSec(-0.1));
-  f.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(0.0,0.0,0.0))),start+fromSec(0.0));
-  f.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(0.1,0.0,0.0))),start+fromSec(0.1));
-  f.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(0.4,0.0,0.0))),start+fromSec(0.3));
-  f.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(0.3,0.0,0.0))),start+fromSec(0.5));
+  f.addMeas(0, eptMeas,start+fromSec(-0.1));
+  f.addMeas(0, eptMeas,start+fromSec(0.0));
+  f.addMeas(0, eptMeas,start+fromSec(0.2));
+  f.addMeas(0, eptMeas,start+fromSec(0.3));
+  f.addMeas(0, eptMeas,start+fromSec(0.4));
+  f.addMeas(1, std::shared_ptr<AccelerometerMeas>(
+      new AccelerometerMeas(V3D(-0.1,0.0,0.0))),start+fromSec(-0.1));
+  f.addMeas(1, std::shared_ptr<AccelerometerMeas>(
+      new AccelerometerMeas(V3D(0.0,0.0,0.0))),start+fromSec(0.0));
+  f.addMeas(1, std::shared_ptr<AccelerometerMeas>(
+      new AccelerometerMeas(V3D(0.1,0.0,0.0))),start+fromSec(0.1));
+  f.addMeas(1, std::shared_ptr<AccelerometerMeas>(
+      new AccelerometerMeas(V3D(0.4,0.0,0.0))),start+fromSec(0.3));
+  f.addMeas(1, std::shared_ptr<AccelerometerMeas>(
+      new AccelerometerMeas(V3D(0.3,0.0,0.0))),start+fromSec(0.5));
 
   f.update();
 
   f.update();
 
   // Prediction Accelerometer
-  std::shared_ptr<PredictionAccelerometer> accPre(new PredictionAccelerometer());
+  std::shared_ptr<PredictionAccelerometer> accPre(
+      new PredictionAccelerometer());
   std::shared_ptr<State> preAcc(new State(accPre->preDefinition()));
   std::shared_ptr<State> posAcc(new State(accPre->preDefinition()));
   std::shared_ptr<State> noiAcc(new State(accPre->noiDefinition()));
   preAcc->setIdentity();
   posAcc->setIdentity();
   noiAcc->setIdentity();
-  accPre->testJacs(preAcc,posAcc,noiAcc);
+  accPre->testJacs(preAcc, posAcc, noiAcc);
 
   // Test measurements
   Filter f2;
@@ -226,33 +270,44 @@ TEST_F(NewStateTest, constructor) {
   f2.addMeas(0,eptMeas,start+fromSec(0.2));
   f2.addMeas(0,eptMeas,start+fromSec(0.3));
   f2.addMeas(0,eptMeas,start+fromSec(0.4));
-  f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(-0.1,0.0,0.0))),start+fromSec(-0.1));
-  f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(0.0,0.0,0.0))),start+fromSec(0.0));
-  f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(0.1,0.0,0.0))),start+fromSec(0.1));
-  f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(0.4,0.0,0.0))),start+fromSec(0.3));
-  f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(new AccelerometerMeas(V3D(0.3,0.0,0.0))),start+fromSec(0.5));
+  f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(
+      new AccelerometerMeas(V3D(-0.1,0.0,0.0))),start+fromSec(-0.1));
+  f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(
+      new AccelerometerMeas(V3D(0.0,0.0,0.0))),start+fromSec(0.0));
+  f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(
+      new AccelerometerMeas(V3D(0.1,0.0,0.0))),start+fromSec(0.1));
+  f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(
+      new AccelerometerMeas(V3D(0.4,0.0,0.0))),start+fromSec(0.3));
+  f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(
+      new AccelerometerMeas(V3D(0.3,0.0,0.0))),start+fromSec(0.5));
   f2.update();
   f2.update();
 
   // Test IMU + Pose filter
   int s = 0;
   std::shared_ptr<IMUPrediction> imuPre(new IMUPrediction());
-  imuPre->getR() = 1e-8*imuPre->getR();
+  imuPre->getR() = 1e-8 * imuPre->getR();
   imuPre->testJacs(s);
   std::shared_ptr<PoseUpdate> poseUpd(new PoseUpdate());
-  poseUpd->getR() = 1e-8*poseUpd->getR();
+  poseUpd->getR() = 1e-8 * poseUpd->getR();
   poseUpd->testJacs(s);
 
   Filter imuPoseFilter;
   int imuPreInd = imuPoseFilter.addRes(imuPre);
   int poseUpdInd = imuPoseFilter.addRes(poseUpd);
   imuPoseFilter.init(start);
-  imuPoseFilter.addMeas(imuPreInd,std::shared_ptr<IMUMeas>(new IMUMeas(V3D(0.0,0.0,0.0),V3D(0.0,0.0,9.81))),start);
-  for(int i=1;i<=10;i++){
-    imuPoseFilter.addMeas(imuPreInd,std::shared_ptr<IMUMeas>(new IMUMeas(V3D(0.3,0.0,0.1),V3D(0.0,0.2,9.81))),start+fromSec(i));
-    imuPoseFilter.addMeas(poseUpdInd,std::shared_ptr<PoseMeas>(new PoseMeas(V3D(0.0,0.0,0.0),QPD(1.0,0.0,0.0,0.0))),start+fromSec(i));
+  imuPoseFilter.addMeas(imuPreInd, std::shared_ptr<IMUMeas>(
+      new IMUMeas(V3D(0.0, 0.0, 0.0), V3D(0.0, 0.0, 9.81))), start);
+  for (int i = 1; i <= 10; i++) {
+    imuPoseFilter.addMeas(imuPreInd, std::shared_ptr<IMUMeas>(
+        new IMUMeas(V3D(0.3, 0.0, 0.1), V3D(0.0, 0.2, 9.81))),
+        start + fromSec(i));
+    imuPoseFilter.addMeas(poseUpdInd, std::shared_ptr<PoseMeas>(
+        new PoseMeas(V3D(0.0, 0.0, 0.0), QPD(1.0, 0.0, 0.0, 0.0))),
+        start + fromSec(i));
   }
   imuPoseFilter.update();
+
 }
 
 int main(int argc, char **argv) {
