@@ -1,43 +1,36 @@
-/*
- * ElementDefinition.hpp
- *
- *  Created on: Jul 29, 2016
- *      Author: Bloeschm
- */
-
-#ifndef GIF_ELEMENTDEFINITION_HPP_
-#define GIF_ELEMENTDEFINITION_HPP_
+#ifndef GIF_ELEMENTDESCRIPTION_HPP_
+#define GIF_ELEMENTDESCRIPTION_HPP_
 
 #include "generalized_information_filter/common.h"
 #include "generalized_information_filter/element.h"
 
 namespace GIF {
 
-class ElementDefinitionBase {
+class ElementDescriptionBase {
  public:
-  ElementDefinitionBase() {}
+  ElementDescriptionBase() {}
 
-  virtual ~ElementDefinitionBase() {}
+  virtual ~ElementDescriptionBase() {}
 
   virtual std::shared_ptr<ElementBase> newElement() const = 0;
   virtual bool isSameDef(
-      const std::shared_ptr<const ElementDefinitionBase>& in) const = 0;
+      const std::shared_ptr<const ElementDescriptionBase>& in) const = 0;
   virtual bool isOfDef(const std::shared_ptr<const ElementBase>& in) const = 0;
   virtual int getDim() const = 0;
 };
 
 template<typename T>
-class ElementDefinition : public ElementDefinitionBase {
+class ElementDescription : public ElementDescriptionBase {
  public:
-  ElementDefinition() {
+  ElementDescription() {
   }
-  ~ElementDefinition() {
+  ~ElementDescription() {
   }
   std::shared_ptr<ElementBase> newElement() const {
     return std::shared_ptr < Element < T >> (new Element<T>(this));
   }
-  bool isSameDef(const std::shared_ptr<const ElementDefinitionBase>& in) const {
-    return std::dynamic_pointer_cast<const ElementDefinition<T>>(in).get()
+  bool isSameDef(const std::shared_ptr<const ElementDescriptionBase>& in) const {
+    return std::dynamic_pointer_cast<const ElementDescription<T>>(in).get()
         != nullptr;
   }
   bool isOfDef(const std::shared_ptr<const ElementBase>& in) const {
@@ -50,4 +43,4 @@ class ElementDefinition : public ElementDefinitionBase {
 
 }
 
-#endif /* GIF_ELEMENTDEFINITION_HPP_ */
+#endif /* GIF_ELEMENTDESCRIPTION_HPP_ */

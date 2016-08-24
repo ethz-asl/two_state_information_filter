@@ -3,8 +3,8 @@
 
 #include <unordered_map>
 
+#include "element-description.h"
 #include "generalized_information_filter/common.h"
-#include "generalized_information_filter/element-definition.h"
 
 namespace GIF {
 
@@ -22,18 +22,18 @@ class StateDefinition {
   inline int GetInnerIndex(int i) const;
   std::string GetName(int outer_index) const;
   int FindName(const std::string& name) const;
-  std::shared_ptr<const ElementDefinitionBase> GetElementDefinition(
+  std::shared_ptr<const ElementDescriptionBase> GetElementDefinition(
       int outer_index) const;
   int AddElementDefinition(
       const std::string& name,
-      const std::shared_ptr<const ElementDefinitionBase>& new_element_definition);
+      const std::shared_ptr<const ElementDescriptionBase>& new_element_definition);
   template<typename T>
   int AddElementDefinition(const std::string& name);
   void ExtendWithStateDefinition(const std::shared_ptr<const StateDefinition>& state_definition,
               const std::string& sub_name = "");
 
  protected:
-  std::vector<std::pair<std::shared_ptr<const ElementDefinitionBase>, int>> element_definitions_;
+  std::vector<std::pair<std::shared_ptr<const ElementDescriptionBase>, int>> element_definitions_;
   std::unordered_map<std::string, int> names_map_;
   int d_;
 };
@@ -95,8 +95,8 @@ int StateDefinition::GetInnerIndex(int i) const {
 
 template<typename T>
 int StateDefinition::AddElementDefinition(const std::string& name) {
-  const std::shared_ptr<const ElementDefinitionBase> new_element_definition(
-      new ElementDefinition<T>());
+  const std::shared_ptr<const ElementDescriptionBase> new_element_definition(
+      new ElementDescription<T>());
   AddElementDefinition(name, new_element_definition);
 }
 

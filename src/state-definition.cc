@@ -42,14 +42,14 @@ int StateDefinition::FindName(const std::string& name) const {
   return (query != names_map_.end()) ? query->second : -1;
 }
 
-std::shared_ptr<const ElementDefinitionBase> StateDefinition::GetElementDefinition(
+std::shared_ptr<const ElementDescriptionBase> StateDefinition::GetElementDefinition(
     int outer_index) const {
   return element_definitions_.at(outer_index).first;
 }
 
 int StateDefinition::AddElementDefinition(
     const std::string& name,
-    const std::shared_ptr<const ElementDefinitionBase>& new_element_definition) {
+    const std::shared_ptr<const ElementDescriptionBase>& new_element_definition) {
   int outer_index = FindName(name);
   if (outer_index != -1) {
     if (!GetElementDefinition(outer_index)->isSameDef(new_element_definition)) {
@@ -58,7 +58,7 @@ int StateDefinition::AddElementDefinition(
     return outer_index;
   } else {
     element_definitions_.push_back(
-        std::pair<std::shared_ptr<const ElementDefinitionBase>, int>(
+        std::pair<std::shared_ptr<const ElementDescriptionBase>, int>(
             new_element_definition, d_));
     d_ += new_element_definition->getDim();
     names_map_.insert(
