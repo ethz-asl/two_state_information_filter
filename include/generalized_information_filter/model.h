@@ -9,91 +9,11 @@
 
 namespace GIF {
 
-template<typename ... Ts>
-struct TH_pack_dim;
-template<typename T, typename ... Ts>
-struct TH_pack_dim<T, Ts...> {
-  static constexpr int d_ = TH_pack_dim<Ts...>::d_ + ElementTraits<T>::d_;
-};
-template<>
-struct TH_pack_dim<> {
-  static constexpr int d_ = 0;
-};
-
-template<typename ... Ts>
-class ElementPack : public StateDefinition{
- public:
-  static constexpr int n_ = sizeof...(Ts);
-  static constexpr int d_ = TH_pack_dim<Ts...>::d_;
-  typedef std::tuple<Ts...> mtTuple;
-
-  ElementPack(const std::array<std::string,n_>& names){
-    addElementsToDefinition(names);
-  }
-
-  template<int i>
-  static constexpr int _GetStateDimension() {
-    return ElementTraits<typename std::tuple_element<i,mtTuple>::type>::d_;
-  }
-
-  template<int i, typename std::enable_if<(i>0)>::type* = nullptr>
-  static constexpr int _GetStartIndex() {
-    return _GetStartIndex<i-1>() + _GetStateDimension<i-1>();
-  }
-  template<int i = 0, typename std::enable_if<(i==0)>::type* = nullptr>
-  static constexpr int _GetStartIndex() {
-    return 0;
-  }
-
- protected:
-  template<int i = 0, typename std::enable_if<(i<sizeof...(Ts))>::type* = nullptr>
-  void addElementsToDefinition(const std::array<std::string,n_>& names) {
-    typedef typename std::tuple_element<i,mtTuple>::type mtElementType;
-    AddElementDefinition<mtElementType>(names.at(i));
-    addElementsToDefinition<i+1>(names);
-  }
-  template<int i = 0, typename std::enable_if<(i==sizeof...(Ts))>::type* = nullptr>
-  void addElementsToDefinition(const std::array<std::string,n_>& names) {}
-
-};
-
 template<typename ... InPacks>
 struct TH_pack_size;
-template<typename ... Ts, typename ... InPacks>
-struct TH_pack_size<ElementPack<Ts...>, InPacks...> {
-  static constexpr int n_ = TH_pack_size<InPacks...>::n_ + sizeof...(Ts);
-};
-template<typename ... Ts>
-struct TH_pack_size<ElementPack<Ts...>> {
-  static constexpr int n_ = sizeof...(Ts);
-};
 
 template<int i, typename ... Packs>
 struct TH_pack_index;
-template<int i, typename ... Ts, typename ... Packs>
-struct TH_pack_index<i, ElementPack<Ts...>, Packs...> {
-  template<int j = i, typename std::enable_if<(j >= sizeof...(Ts))>::type* = nullptr>
-  static constexpr int getOuter() {
-    return TH_pack_index<i-sizeof...(Ts),Packs...>::getOuter()+1;
-  }
-  template<int j=i, typename std::enable_if<(j<sizeof...(Ts))>::type* = nullptr>
-  static constexpr int getOuter() {
-    return 0;}
-  template<int j=i, typename std::enable_if<(j>=sizeof...(Ts))>::type* = nullptr>
-  static constexpr int getInner() {
-    return TH_pack_index<i-sizeof...(Ts),Packs...>::getInner();}
-  template<int j=i, typename std::enable_if<(j<sizeof...(Ts))>::type* = nullptr>
-  static constexpr int getInner() {
-    return i;
-  }
-};
-template<int i, typename ... Ts>
-struct TH_pack_index<i, ElementPack<Ts...>> {
-  template<typename std::enable_if<(i < sizeof...(Ts))>::type* = nullptr>
-  static constexpr int getOuter() {return 0;};
-  template<typename std::enable_if<(i<sizeof...(Ts))>::type* = nullptr>
-  static constexpr int getInner() {return i;};
-};
 
 template<typename Derived, typename OutPack, typename ... InPacks>
 class Model {
@@ -257,6 +177,41 @@ class Model {
  protected:
   std::shared_ptr<StateDefinition> outDefinition_;
   std::array<std::shared_ptr<StateDefinition>,N_> inDefinitions_;
+};
+
+// ==================== Implementation ==================== //
+template<typename ... Ts, typename ... InPacks>
+struct TH_pack_size<ElementPack<Ts...>, InPacks...> {
+  static constexpr int n_ = TH_pack_size<InPacks...>::n_ + sizeof...(Ts);
+};
+template<typename ... Ts>
+struct TH_pack_size<ElementPack<Ts...>> {
+  static constexpr int n_ = sizeof...(Ts);
+};
+
+template<int i, typename ... Ts, typename ... Packs>
+struct TH_pack_index<i, ElementPack<Ts...>, Packs...> {
+  template<int j = i, typename std::enable_if<(j >= sizeof...(Ts))>::type* = nullptr>
+  static constexpr int getOuter() {
+    return TH_pack_index<i-sizeof...(Ts),Packs...>::getOuter()+1;
+  }
+  template<int j=i, typename std::enable_if<(j<sizeof...(Ts))>::type* = nullptr>
+  static constexpr int getOuter() {
+    return 0;}
+  template<int j=i, typename std::enable_if<(j>=sizeof...(Ts))>::type* = nullptr>
+  static constexpr int getInner() {
+    return TH_pack_index<i-sizeof...(Ts),Packs...>::getInner();}
+  template<int j=i, typename std::enable_if<(j<sizeof...(Ts))>::type* = nullptr>
+  static constexpr int getInner() {
+    return i;
+  }
+};
+template<int i, typename ... Ts>
+struct TH_pack_index<i, ElementPack<Ts...>> {
+  template<typename std::enable_if<(i < sizeof...(Ts))>::type* = nullptr>
+  static constexpr int getOuter() {return 0;};
+  template<typename std::enable_if<(i<sizeof...(Ts))>::type* = nullptr>
+  static constexpr int getInner() {return i;};
 };
 
 }
