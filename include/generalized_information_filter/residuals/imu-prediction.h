@@ -6,12 +6,12 @@
 
 namespace GIF {
 
-class IMUMeas : public State {
+class IMUMeas : public ElementVector {
  public:
   IMUMeas(const V3D& gyr = V3D(0, 0, 0), const V3D& acc = V3D(0, 0, 0))
-      : State(std::shared_ptr<StateDefinition>(new ElementPack<V3D, V3D>({"gyr", "acc"}))),
-        gyr_(State::getValue<V3D>("gyr")),
-        acc_(State::getValue<V3D>("acc")) {
+      : ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementVectorPack<V3D, V3D>({"gyr", "acc"}))),
+        gyr_(ElementVector::getValue<V3D>("gyr")),
+        acc_(ElementVector::getValue<V3D>("acc")) {
     gyr_ = gyr;
     acc_ = acc;
   }
@@ -19,8 +19,8 @@ class IMUMeas : public State {
   V3D& acc_;
 };
 
-class IMUPrediction : public Prediction<ElementPack<V3D, V3D, V3D, V3D, QPD>,
-                                        ElementPack<V3D, V3D, V3D, V3D, V3D>,
+class IMUPrediction : public Prediction<ElementVectorPack<V3D, V3D, V3D, V3D, QPD>,
+                                        ElementVectorPack<V3D, V3D, V3D, V3D, V3D>,
                                         IMUMeas> {
  public:
   IMUPrediction()

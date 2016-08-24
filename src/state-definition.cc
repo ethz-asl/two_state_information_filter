@@ -1,16 +1,16 @@
-#include "generalized_information_filter/state-definition.h"
-#include "generalized_information_filter/state.h"
+#include "../include/generalized_information_filter/element-vector.h"
+#include "../include/generalized_information_filter/element-vector-definition.h"
 
 namespace GIF {
 
-StateDefinition::StateDefinition() {
+ElementVectorDefinition::ElementVectorDefinition() {
   d_ = 0;
 }
 
-StateDefinition::~StateDefinition() {}
+ElementVectorDefinition::~ElementVectorDefinition() {}
 
-bool StateDefinition::operator ==(
-    const std::shared_ptr<const StateDefinition>& other) const {
+bool ElementVectorDefinition::operator ==(
+    const std::shared_ptr<const ElementVectorDefinition>& other) const {
   if (GetStateDimension() != other->GetStateDimension()) {
     return false;
   }
@@ -27,7 +27,7 @@ bool StateDefinition::operator ==(
   return true;
 }
 
-std::string StateDefinition::GetName(int outer_index) const {
+std::string ElementVectorDefinition::GetName(int outer_index) const {
   for (auto e : names_map_) {
     if (e.second == outer_index) {
       return e.first;
@@ -37,17 +37,17 @@ std::string StateDefinition::GetName(int outer_index) const {
   return "";
 }
 
-int StateDefinition::FindName(const std::string& name) const {
+int ElementVectorDefinition::FindName(const std::string& name) const {
   auto query = names_map_.find(name);
   return (query != names_map_.end()) ? query->second : -1;
 }
 
-std::shared_ptr<const ElementDescriptionBase> StateDefinition::GetElementDefinition(
+std::shared_ptr<const ElementDescriptionBase> ElementVectorDefinition::GetElementDefinition(
     int outer_index) const {
   return element_definitions_.at(outer_index).first;
 }
 
-int StateDefinition::AddElementDefinition(
+int ElementVectorDefinition::AddElementDefinition(
     const std::string& name,
     const std::shared_ptr<const ElementDescriptionBase>& new_element_definition) {
   int outer_index = FindName(name);
@@ -67,8 +67,8 @@ int StateDefinition::AddElementDefinition(
   }
 }
 
-void StateDefinition::ExtendWithStateDefinition(
-    const std::shared_ptr<const StateDefinition>& state_definition,
+void ElementVectorDefinition::ExtendWithStateDefinition(
+    const std::shared_ptr<const ElementVectorDefinition>& state_definition,
     const std::string& sub_name) {
   for (auto entry : state_definition->names_map_) {
     AddElementDefinition(

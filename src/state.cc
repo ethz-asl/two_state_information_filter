@@ -1,15 +1,15 @@
-#include "generalized_information_filter/state.h"
+#include "../include/generalized_information_filter/element-vector.h"
 
 namespace GIF {
 
-StateBase::StateBase(const std::shared_ptr<const StateDefinition>& def)
+ElementVectorBase::ElementVectorBase(const std::shared_ptr<const ElementVectorDefinition>& def)
     : def_(def) {
 }
 
-StateBase::~StateBase() {}
+ElementVectorBase::~ElementVectorBase() {}
 
-bool StateBase::matchesDef(
-    const std::shared_ptr<const StateDefinition>& def) const {
+bool ElementVectorBase::matchesDef(
+    const std::shared_ptr<const ElementVectorDefinition>& def) const {
   if (getNumElement() != def->GetNumElements()) {
     return false;
   }
@@ -21,34 +21,34 @@ bool StateBase::matchesDef(
   return true;
 }
 
-StateBase& StateBase::operator=(const StateBase& other) {
+ElementVectorBase& ElementVectorBase::operator=(const ElementVectorBase& other) {
   for (int i = 0; i < getNumElement(); i++) {
     *getElement(i) = *other.getElement(i);
   }
   return *this;
 }
 
-void StateBase::print() const {
+void ElementVectorBase::print() const {
   for (int i = 0; i < getNumElement(); i++) {
     std::cout << getDef()->GetName(i) << ": ";
     getElement(i)->print();
   }
 }
 
-void StateBase::setIdentity() {
+void ElementVectorBase::setIdentity() {
   for (int i = 0; i < getNumElement(); i++) {
     getElement(i)->setIdentity();
   }
 }
 
-void StateBase::setRandom(int& s) {
+void ElementVectorBase::setRandom(int& s) {
   for (int i = 0; i < getNumElement(); i++) {
     getElement(i)->setRandom(s);
   }
 }
 
-void StateBase::boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec,
-                        const std::shared_ptr<StateBase>& out) const {
+void ElementVectorBase::boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec,
+                        const std::shared_ptr<ElementVectorBase>& out) const {
   for (int i = 0; i < getNumElement(); i++) {
     getElement(i)->boxplus(
         vec.block(getStart(i), 0, getElement(i)->getDim(), 1),
@@ -56,7 +56,7 @@ void StateBase::boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec,
   }
 }
 
-void StateBase::boxminus(const std::shared_ptr<const StateBase>& ref,
+void ElementVectorBase::boxminus(const std::shared_ptr<const ElementVectorBase>& ref,
                          Eigen::Ref<Eigen::VectorXd> vec) const {
   for (int i = 0; i < getNumElement(); i++) {
     getElement(i)->boxminus(
@@ -65,47 +65,47 @@ void StateBase::boxminus(const std::shared_ptr<const StateBase>& ref,
   }
 }
 
-std::shared_ptr<const StateDefinition> StateBase::getDef() const {
+std::shared_ptr<const ElementVectorDefinition> ElementVectorBase::getDef() const {
   return def_;
 }
 
-State::State(const std::shared_ptr<const StateDefinition>& def)
-    : StateBase(def) {
+ElementVector::ElementVector(const std::shared_ptr<const ElementVectorDefinition>& def)
+    : ElementVectorBase(def) {
   for (int i = 0; i < def_->GetNumElements(); i++) {
     elements_.push_back(def_->GetElementDefinition(i)->newElement());
   }
 }
 
-State::~State() {
+ElementVector::~ElementVector() {
 }
-State& State::operator=(const StateBase& other) {
-  dynamic_cast<StateBase&>(*this) = other;
+ElementVector& ElementVector::operator=(const ElementVectorBase& other) {
+  dynamic_cast<ElementVectorBase&>(*this) = other;
   return *this;
 }
 
-int State::getNumElement() const {
+int ElementVector::getNumElement() const {
   return elements_.size();
 }
 
-StateWrapper::StateWrapper(const std::shared_ptr<const StateDefinition>& def,
-                           const std::shared_ptr<const StateDefinition>& in)
-    : StateBase(def),
+ElementVectorWrapper::ElementVectorWrapper(const std::shared_ptr<const ElementVectorDefinition>& def,
+                           const std::shared_ptr<const ElementVectorDefinition>& in)
+    : ElementVectorBase(def),
       in_(in) {
   computeMap();
 }
 
-StateWrapper::~StateWrapper() {
+ElementVectorWrapper::~ElementVectorWrapper() {
 }
-StateWrapper& StateWrapper::operator=(const StateBase& other) {
-  dynamic_cast<StateBase&>(*this) = other;
+ElementVectorWrapper& ElementVectorWrapper::operator=(const ElementVectorBase& other) {
+  dynamic_cast<ElementVectorBase&>(*this) = other;
   return *this;
 }
 
-int StateWrapper::getNumElement() const {
+int ElementVectorWrapper::getNumElement() const {
   return indexMap_.size();
 }
 
-void StateWrapper::computeMap() {
+void ElementVectorWrapper::computeMap() {
   indexMap_.resize(def_->GetNumElements());
   for (int i = 0; i < def_->GetNumElements(); i++) {
     indexMap_[i] = in_->FindName(def_->GetName(i));
@@ -113,19 +113,19 @@ void StateWrapper::computeMap() {
   }
 }
 
-void StateWrapper::setState(const std::shared_ptr<StateBase>& state) {
+void ElementVectorWrapper::setState(const std::shared_ptr<ElementVectorBase>& state) {
   state->matchesDef(in_);
   state_ = state;
   constState_ = state;
 }
 
-void StateWrapper::setState(
-    const std::shared_ptr<const StateBase>& state) const {
+void ElementVectorWrapper::setState(
+    const std::shared_ptr<const ElementVectorBase>& state) const {
   state->matchesDef(in_);
   constState_ = state;
 }
 
-void StateWrapper::wrapJacobian(Eigen::Ref<MXD> out,
+void ElementVectorWrapper::wrapJacobian(Eigen::Ref<MXD> out,
                                 const Eigen::Ref<const MXD>& in,
                                 int rowOffset) const {
   const int rows = in.rows();

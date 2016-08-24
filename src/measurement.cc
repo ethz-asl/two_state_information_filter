@@ -15,7 +15,7 @@ MeasurementTimeline::MeasurementTimeline(const bool ignoreFirst,
 MeasurementTimeline::~MeasurementTimeline() {
 }
 
-void MeasurementTimeline::addMeas(const std::shared_ptr<const StateBase>& meas,
+void MeasurementTimeline::addMeas(const std::shared_ptr<const ElementVectorBase>& meas,
                                   const TimePoint& t) {
   // Discard first measurement in binary case
   if (ignoreFirst_ && lastProcessedTime_ == TimePoint::min()) {
@@ -27,10 +27,10 @@ void MeasurementTimeline::addMeas(const std::shared_ptr<const StateBase>& meas,
         << "Error: adding measurements before last processed time (will be "
         << "discarded)" << std::endl;
   } else {
-    std::pair<std::map<TimePoint, std::shared_ptr<const StateBase>>::iterator,
+    std::pair<std::map<TimePoint, std::shared_ptr<const ElementVectorBase>>::iterator,
         bool> ret;
     ret = measMap_.insert(
-        std::pair<TimePoint, std::shared_ptr<const StateBase>>(t, meas));
+        std::pair<TimePoint, std::shared_ptr<const ElementVectorBase>>(t, meas));
     if (!ret.second) {
       std::cout << "Error: measurement already exists!" << std::endl;
     }
@@ -38,7 +38,7 @@ void MeasurementTimeline::addMeas(const std::shared_ptr<const StateBase>& meas,
 }
 
 bool MeasurementTimeline::getMeas(const TimePoint& t,
-                                  std::shared_ptr<const StateBase>& meas) {
+                                  std::shared_ptr<const ElementVectorBase>& meas) {
   auto it = measMap_.find(t);
   if (it == measMap_.end()) {
     return false;
@@ -112,7 +112,7 @@ void MeasurementTimeline::split(
     const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
     const std::shared_ptr<const BinaryResidualBase>& res) {
   assert(t0 <= t1 && t1 <= t2);
-  addMeas(std::shared_ptr<const StateBase>(), t1);
+  addMeas(std::shared_ptr<const ElementVectorBase>(), t1);
   res->splitMeasurements(measMap_.at(t2), t0, t1, t2, measMap_.at(t1),
                          measMap_.at(t2));
 }

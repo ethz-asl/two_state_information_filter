@@ -1,5 +1,5 @@
-#ifndef GIF_STATEDEFINITION_HPP_
-#define GIF_STATEDEFINITION_HPP_
+#ifndef GIF_ELEMENTVECTORDEFINITION_HPP_
+#define GIF_ELEMENTVECTORDEFINITION_HPP_
 
 #include <unordered_map>
 
@@ -8,13 +8,13 @@
 
 namespace GIF {
 
-class StateBase;
+class ElementVectorBase;
 
-class StateDefinition {
+class ElementVectorDefinition {
  public:
-  StateDefinition();
-  ~StateDefinition();
-  bool operator ==(const std::shared_ptr<const StateDefinition>& other) const;
+  ElementVectorDefinition();
+  ~ElementVectorDefinition();
+  bool operator ==(const std::shared_ptr<const ElementVectorDefinition>& other) const;
   inline int GetStateDimension() const;
   inline int GetNumElements() const;
   inline int GetStartIndex(int outer_index) const;
@@ -29,7 +29,7 @@ class StateDefinition {
       const std::shared_ptr<const ElementDescriptionBase>& new_element_definition);
   template<typename T>
   int AddElementDefinition(const std::string& name);
-  void ExtendWithStateDefinition(const std::shared_ptr<const StateDefinition>& state_definition,
+  void ExtendWithStateDefinition(const std::shared_ptr<const ElementVectorDefinition>& state_definition,
               const std::string& sub_name = "");
 
  protected:
@@ -43,13 +43,13 @@ template<typename ... Ts>
 struct TH_pack_dim;
 
 template<typename ... Ts>
-class ElementPack : public StateDefinition{
+class ElementVectorPack : public ElementVectorDefinition{
  public:
   static constexpr int n_ = sizeof...(Ts);
   static constexpr int d_ = TH_pack_dim<Ts...>::d_;
   typedef std::tuple<Ts...> mtTuple;
 
-  ElementPack(const std::array<std::string,n_>& names);
+  ElementVectorPack(const std::array<std::string,n_>& names);
 
   template<int i>
   static constexpr int _GetStateDimension();
@@ -68,19 +68,19 @@ class ElementPack : public StateDefinition{
 };
 
 // ==================== Implementation ==================== //
-int StateDefinition::GetStateDimension() const {
+int ElementVectorDefinition::GetStateDimension() const {
   return d_;
 }
 
-int StateDefinition::GetNumElements() const {
+int ElementVectorDefinition::GetNumElements() const {
   return names_map_.size();
 }
 
-int StateDefinition::GetStartIndex(int outer_index) const {
+int ElementVectorDefinition::GetStartIndex(int outer_index) const {
   return element_definitions_.at(outer_index).second;
 }
 
-int StateDefinition::GetOuterIndex(int i) const {
+int ElementVectorDefinition::GetOuterIndex(int i) const {
   assert(i >= 0 && i < GetStateDimension());
   int outer_index = GetNumElements()-1;
   while (element_definitions_.at(outer_index).second > i) {
@@ -89,12 +89,12 @@ int StateDefinition::GetOuterIndex(int i) const {
   return outer_index;
 }
 
-int StateDefinition::GetInnerIndex(int i) const {
+int ElementVectorDefinition::GetInnerIndex(int i) const {
   return i - GetStartIndex(GetOuterIndex(i));
 }
 
 template<typename T>
-int StateDefinition::AddElementDefinition(const std::string& name) {
+int ElementVectorDefinition::AddElementDefinition(const std::string& name) {
   const std::shared_ptr<const ElementDescriptionBase> new_element_definition(
       new ElementDescription<T>());
   AddElementDefinition(name, new_element_definition);
@@ -110,38 +110,38 @@ struct TH_pack_dim<> {
 };
 
 template<typename ... Ts>
-ElementPack<Ts...>::ElementPack(const std::array<std::string,n_>& names){
+ElementVectorPack<Ts...>::ElementVectorPack(const std::array<std::string,n_>& names){
   addElementsToDefinition(names);
 }
 
 template<typename ... Ts>
 template<int i>
-constexpr int ElementPack<Ts...>::_GetStateDimension() {
+constexpr int ElementVectorPack<Ts...>::_GetStateDimension() {
   return ElementTraits<typename std::tuple_element<i,mtTuple>::type>::d_;
 }
 
 template<typename ... Ts>
 template<int i, typename std::enable_if<(i>0)>::type*>
-constexpr int ElementPack<Ts...>::_GetStartIndex() {
+constexpr int ElementVectorPack<Ts...>::_GetStartIndex() {
   return _GetStartIndex<i-1>() + _GetStateDimension<i-1>();
 }
 template<typename ... Ts>
 template<int i, typename std::enable_if<(i==0)>::type*>
-constexpr int ElementPack<Ts...>::_GetStartIndex() {
+constexpr int ElementVectorPack<Ts...>::_GetStartIndex() {
   return 0;
 }
 
 template<typename ... Ts>
 template<int i, typename std::enable_if<(i<sizeof...(Ts))>::type*>
-void ElementPack<Ts...>::addElementsToDefinition(const std::array<std::string,n_>& names) {
+void ElementVectorPack<Ts...>::addElementsToDefinition(const std::array<std::string,n_>& names) {
   typedef typename std::tuple_element<i,mtTuple>::type mtElementType;
   AddElementDefinition<mtElementType>(names.at(i));
   addElementsToDefinition<i+1>(names);
 }
 template<typename ... Ts>
 template<int i, typename std::enable_if<(i==sizeof...(Ts))>::type*>
-void ElementPack<Ts...>::addElementsToDefinition(const std::array<std::string,n_>& names) {}
+void ElementVectorPack<Ts...>::addElementsToDefinition(const std::array<std::string,n_>& names) {}
 
 }
 
-#endif /* GIF_STATEDEFINITION_HPP_ */
+#endif /* GIF_ELEMENTVECTORDEFINITION_HPP_ */

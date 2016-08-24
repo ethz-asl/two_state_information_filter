@@ -6,12 +6,12 @@
 
 namespace GIF {
 
-class PoseMeas : public State {
+class PoseMeas : public ElementVector {
  public:
   PoseMeas(const V3D& pos = V3D(0, 0, 0), const QPD& att = QPD())
-      : State(std::shared_ptr<StateDefinition>(new ElementPack<V3D, QPD>({ "pos", "att" }))),
-        pos_(State::getValue<V3D>("pos")),
-        att_(State::getValue<QPD>("att")) {
+      : ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementVectorPack<V3D, QPD>({ "pos", "att" }))),
+        pos_(ElementVector::getValue<V3D>("pos")),
+        att_(ElementVector::getValue<QPD>("att")) {
     pos_ = pos;
     att_ = att;
   }
@@ -19,8 +19,8 @@ class PoseMeas : public State {
   QPD& att_;
 };
 
-class PoseUpdate : public UnaryUpdate<ElementPack<V3D, QPD>,
-    ElementPack<V3D, QPD>, ElementPack<V3D, V3D>, PoseMeas> {
+class PoseUpdate : public UnaryUpdate<ElementVectorPack<V3D, QPD>,
+    ElementVectorPack<V3D, QPD>, ElementVectorPack<V3D, V3D>, PoseMeas> {
  public:
   PoseUpdate()
       : mtUnaryUpdate( { "pos", "att" }, { "pos", "att" }, { "pos", "att" }) {

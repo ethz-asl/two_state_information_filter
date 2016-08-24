@@ -3,8 +3,8 @@
 #include <map>
 #include <set>
 
+#include "element-vector.h"
 #include "generalized_information_filter/common.h"
-#include "generalized_information_filter/state.h"
 
 namespace GIF {
 
@@ -16,9 +16,9 @@ class MeasurementTimeline {
                           fromSec(0.1),
                       const Duration& minWaitTime = Duration::zero());
   virtual ~MeasurementTimeline();
-  void addMeas(const std::shared_ptr<const StateBase>& meas,
+  void addMeas(const std::shared_ptr<const ElementVectorBase>& meas,
                const TimePoint& t);
-  bool getMeas(const TimePoint& t, std::shared_ptr<const StateBase>& meas);
+  bool getMeas(const TimePoint& t, std::shared_ptr<const ElementVectorBase>& meas);
   void removeProcessedFirst();
   void removeProcessedMeas(const TimePoint& t);
   void reset();
@@ -40,7 +40,7 @@ class MeasurementTimeline {
   void print(const TimePoint& start = TimePoint::min(), int startOffset = 0,
              double resolution = 0.01) const;
  protected:
-  std::map<TimePoint, std::shared_ptr<const StateBase>> measMap_;
+  std::map<TimePoint, std::shared_ptr<const ElementVectorBase>> measMap_;
   Duration maxWaitTime_;
   Duration minWaitTime_;
   TimePoint lastProcessedTime_;
