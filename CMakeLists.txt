@@ -20,8 +20,8 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/gtest/" AND (NOT DEFINED CATKIN_DEVEL_PRE
 	
 	add_library(${PROJECT_NAME}  
 	 src/measurement.cc 
-	 src/state.cc
-	 src/state-definition.cc 
+	 src/element-vector.cc
+	 src/element-vector-definition.cc
   )
 	target_link_libraries(${PROJECT_NAME} pthread)
 	
