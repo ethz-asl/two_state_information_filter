@@ -28,7 +28,13 @@
 *.out
 *.app
 
+# Folders
 /build
 /gtest
 /cmake
+/html
+/latex
+
+# Random
 .*
+*~

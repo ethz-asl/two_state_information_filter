@@ -19,7 +19,7 @@ bool ElementVectorDefinition::operator ==(
     if (other_outer_index == -1) {
       return false;
     }
-    if (!GetElementDefinition(name.second)->isSameDef(
+    if (!GetElementDefinition(name.second)->MatchesDescription(
         other->GetElementDefinition(other_outer_index))) {
       return false;
     }
@@ -52,7 +52,7 @@ int ElementVectorDefinition::AddElementDefinition(
     const std::shared_ptr<const ElementDescriptionBase>& new_element_definition) {
   int outer_index = FindName(name);
   if (outer_index != -1) {
-    if (!GetElementDefinition(outer_index)->isSameDef(new_element_definition)) {
+    if (!GetElementDefinition(outer_index)->MatchesDescription(new_element_definition)) {
       assert("ERROR: invalid extention of state definition" == 0);
     }
     return outer_index;
@@ -60,7 +60,7 @@ int ElementVectorDefinition::AddElementDefinition(
     element_definitions_.push_back(
         std::pair<std::shared_ptr<const ElementDescriptionBase>, int>(
             new_element_definition, d_));
-    d_ += new_element_definition->getDim();
+    d_ += new_element_definition->GetDimension();
     names_map_.insert(
         std::pair<std::string, int>(name, element_definitions_.size() - 1));
     return element_definitions_.size() - 1;

@@ -14,7 +14,7 @@ bool ElementVectorBase::matchesDef(
     return false;
   }
   for (int i = 0; i < getNumElement(); i++) {
-    if (!def->GetElementDefinition(i)->isOfDef(getElement(i))) {
+    if (!def->GetElementDefinition(i)->MatchesDescription(getElement(i))) {
       return false;
     }
   }
@@ -72,7 +72,7 @@ std::shared_ptr<const ElementVectorDefinition> ElementVectorBase::getDef() const
 ElementVector::ElementVector(const std::shared_ptr<const ElementVectorDefinition>& def)
     : ElementVectorBase(def) {
   for (int i = 0; i < def_->GetNumElements(); i++) {
-    elements_.push_back(def_->GetElementDefinition(i)->newElement());
+    elements_.push_back(def_->GetElementDefinition(i)->MakeElement());
   }
 }
 

@@ -16,6 +16,24 @@ typedef Eigen::Vector3d V3D;
 typedef Eigen::Matrix3d M3D;
 typedef Eigen::VectorXd VXD;
 typedef Eigen::MatrixXd MXD;
+
+template<int N = -1>
+using Vec = Eigen::Matrix<double,N,1>;
+template<int N = -1>
+using VecR = Eigen::Ref<Vec<N>>;
+template<int N = -1>
+using VecRC = Eigen::Ref<const Vec<N>>;
+
+template<int N = -1, int M = N>
+using Mat = Eigen::Matrix<double,N,M>;
+template<int N = -1, int M = N>
+using MatR = Eigen::Ref<Mat<N,M>>;
+template<int N = -1, int M = N>
+using MatRC = Eigen::Ref<const Mat<N,M>>;
+
+template<typename T>
+using SP = std::shared_ptr<T>;
+
 typedef std::chrono::high_resolution_clock Clock;
 typedef Clock::time_point TimePoint;
 typedef Clock::duration Duration;
