@@ -1,19 +1,19 @@
 #include "gtest/gtest.h"
 
+#include "../include/generalized_information_filter/element-vector.h"
 #include "generalized_information_filter/binary-residual.h"
 #include "generalized_information_filter/common.h"
 #include "generalized_information_filter/filter.h"
 #include "generalized_information_filter/prediction.h"
 #include "generalized_information_filter/residuals/imu-prediction.h"
 #include "generalized_information_filter/residuals/pose-update.h"
-#include "generalized_information_filter/state.h"
 #include "generalized_information_filter/transformation.h"
 #include "generalized_information_filter/unary-update.h"
 
 using namespace GIF;
 
-class TransformationExample : public Transformation<ElementPack<V3D>,
-    ElementPack<double, std::array<V3D, 4>>> {
+class TransformationExample : public Transformation<ElementVectorPack<V3D>,
+    ElementVectorPack<double, std::array<V3D, 4>>> {
  public:
   TransformationExample()
       : mtTransformation({"pos"}, {"tim", "sta"}) {
@@ -36,13 +36,13 @@ class TransformationExample : public Transformation<ElementPack<V3D>,
   }
 };
 
-class EmptyMeas : public State {
+class EmptyMeas : public ElementVector {
  public:
-  EmptyMeas(): State(std::shared_ptr<StateDefinition>(new StateDefinition())){};
+  EmptyMeas(): ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementVectorDefinition())){};
 };
 
-class BinaryRedidualVelocity : public BinaryResidual<ElementPack<V3D>,
-    ElementPack<V3D, V3D>, ElementPack<V3D>, ElementPack<V3D>, EmptyMeas> {
+class BinaryRedidualVelocity : public BinaryResidual<ElementVectorPack<V3D>,
+    ElementVectorPack<V3D, V3D>, ElementVectorPack<V3D>, ElementVectorPack<V3D>, EmptyMeas> {
  public:
   BinaryRedidualVelocity()
       : mtBinaryRedidual( { "pos" }, { "pos", "vel" }, { "pos" }, { "pos" },
@@ -80,18 +80,18 @@ class BinaryRedidualVelocity : public BinaryResidual<ElementPack<V3D>,
   double dt_;
 };
 
-class AccelerometerMeas : public State {
+class AccelerometerMeas : public ElementVector {
  public:
   AccelerometerMeas(const V3D& acc = V3D(0, 0, 0))
-      : State(ElementPack<V3D>::makeStateDefinition( { "acc" })),
-        acc_(State::getValue<V3D>("acc")) {
+      : ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementVectorPack<V3D>( { "acc" }))),
+        acc_(ElementVector::getValue<V3D>("acc")) {
     acc_ = acc;
   }
   V3D& acc_;
 };
 
-class BinaryRedidualAccelerometer : public BinaryResidual<ElementPack<V3D>,
-    ElementPack<V3D>, ElementPack<V3D>, ElementPack<V3D>, AccelerometerMeas> {
+class BinaryRedidualAccelerometer : public BinaryResidual<ElementVectorPack<V3D>,
+    ElementVectorPack<V3D>, ElementVectorPack<V3D>, ElementVectorPack<V3D>, AccelerometerMeas> {
  public:
   BinaryRedidualAccelerometer()
       : mtBinaryRedidual( { "vel" }, { "vel" }, { "vel" }, { "vel" }, false,
@@ -126,8 +126,8 @@ class BinaryRedidualAccelerometer : public BinaryResidual<ElementPack<V3D>,
   double dt_;
 };
 
-class PredictionAccelerometer : public Prediction<ElementPack<V3D>,
-    ElementPack<V3D>, AccelerometerMeas> {
+class PredictionAccelerometer : public Prediction<ElementVectorPack<V3D>,
+    ElementVectorPack<V3D>, AccelerometerMeas> {
  public:
   PredictionAccelerometer()
       : mtPrediction( { "vel" }, { "vel" }) {
@@ -167,8 +167,8 @@ class NewStateTest : public virtual ::testing::Test {
 // Test constructors
 TEST_F(NewStateTest, constructor) {
   TransformationExample t;
-  std::shared_ptr<State> s1a(new State(t.inputDefinition()));
-  std::shared_ptr<State> s1b(new State(t.inputDefinition()));
+  std::shared_ptr<ElementVector> s1a(new ElementVector(t.inputDefinition()));
+  std::shared_ptr<ElementVector> s1b(new ElementVector(t.inputDefinition()));
   s1a->setIdentity();
   s1a->print();
 
@@ -189,7 +189,7 @@ TEST_F(NewStateTest, constructor) {
   std::cout << J << std::endl;
 
   // Transformation
-  std::shared_ptr<State> s2(new State(t.outputDefinition()));
+  std::shared_ptr<ElementVector> s2(new ElementVector(t.outputDefinition()));
   MXD P1(s1a->getDim(), s1a->getDim());
   MXD P2(s2->getDim(), s2->getDim());
   t.transformState(s2, s1a);
@@ -198,11 +198,11 @@ TEST_F(NewStateTest, constructor) {
 
   // Velocity Residual
   std::shared_ptr<BinaryRedidualVelocity> velRes(new BinaryRedidualVelocity());
-  std::shared_ptr<State> pre(new State(velRes->preDefinition()));
+  std::shared_ptr<ElementVector> pre(new ElementVector(velRes->preDefinition()));
   pre->setIdentity();
-  std::shared_ptr<State> pos(new State(velRes->posDefinition()));
+  std::shared_ptr<ElementVector> pos(new ElementVector(velRes->posDefinition()));
   pos->setIdentity();
-  std::shared_ptr<State> noi(new State(velRes->noiDefinition()));
+  std::shared_ptr<ElementVector> noi(new ElementVector(velRes->noiDefinition()));
   noi->setIdentity();
   velRes->testJacs(pre, pos, noi);
 
@@ -214,11 +214,11 @@ TEST_F(NewStateTest, constructor) {
   Filter f;
   f.addRes(velRes);
   f.addRes(accRes);
-  std::shared_ptr<State> preState(new State(f.stateDefinition()));
+  std::shared_ptr<ElementVector> preState(new ElementVector(f.stateDefinition()));
   preState->setIdentity();
   preState->getValue < V3D > ("pos") = V3D(1, 2, 3);
   preState->print();
-  std::shared_ptr<State> posState(new State(f.stateDefinition()));
+  std::shared_ptr<ElementVector> posState(new ElementVector(f.stateDefinition()));
   posState->setIdentity();
   posState->print();
   f.evalRes(preState, posState);
@@ -251,9 +251,9 @@ TEST_F(NewStateTest, constructor) {
   // Prediction Accelerometer
   std::shared_ptr<PredictionAccelerometer> accPre(
       new PredictionAccelerometer());
-  std::shared_ptr<State> preAcc(new State(accPre->preDefinition()));
-  std::shared_ptr<State> posAcc(new State(accPre->preDefinition()));
-  std::shared_ptr<State> noiAcc(new State(accPre->noiDefinition()));
+  std::shared_ptr<ElementVector> preAcc(new ElementVector(accPre->preDefinition()));
+  std::shared_ptr<ElementVector> posAcc(new ElementVector(accPre->preDefinition()));
+  std::shared_ptr<ElementVector> noiAcc(new ElementVector(accPre->noiDefinition()));
   preAcc->setIdentity();
   posAcc->setIdentity();
   noiAcc->setIdentity();

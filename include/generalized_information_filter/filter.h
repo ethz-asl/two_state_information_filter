@@ -9,22 +9,22 @@ namespace GIF {
 class ResidualStruct {
  public:
   ResidualStruct(const std::shared_ptr<BinaryResidualBase>& res,
-                 const std::shared_ptr<StateDefinition>& stateDefinition) {
-    stateDefinition->extend(res->preDefinition());
-    stateDefinition->extend(res->posDefinition());
+                 const std::shared_ptr<ElementVectorDefinition>& stateDefinition) {
+    stateDefinition->ExtendWithStateDefinition(res->preDefinition());
+    stateDefinition->ExtendWithStateDefinition(res->posDefinition());
     res_ = res;
     mt_.reset(new MeasurementTimeline(!res->isUnary_));
-    preWrap_.reset(new StateWrapper(res->preDefinition(), stateDefinition));
-    posWrap_.reset(new StateWrapper(res->posDefinition(), stateDefinition));
-    inn_.reset(new State(res->resDefinition()));
-    innRef_.reset(new State(res->resDefinition()));
+    preWrap_.reset(new ElementVectorWrapper(res->preDefinition(), stateDefinition));
+    posWrap_.reset(new ElementVectorWrapper(res->posDefinition(), stateDefinition));
+    inn_.reset(new ElementVector(res->resDefinition()));
+    innRef_.reset(new ElementVector(res->resDefinition()));
     innRef_->setIdentity();
-    noi_.reset(new State(res->noiDefinition()));
+    noi_.reset(new ElementVector(res->noiDefinition()));
     noi_->setIdentity();
-    innDim_ = res->resDefinition()->getDim();
-    jacPre_.resize(innDim_, res->preDefinition()->getDim());
-    jacPos_.resize(innDim_, res->posDefinition()->getDim());
-    jacNoi_.resize(innDim_, res->noiDefinition()->getDim());
+    innDim_ = res->resDefinition()->GetStateDimension();
+    jacPre_.resize(innDim_, res->preDefinition()->GetStateDimension());
+    jacPos_.resize(innDim_, res->posDefinition()->GetStateDimension());
+    jacNoi_.resize(innDim_, res->noiDefinition()->GetStateDimension());
   }
   ;
   ~ResidualStruct() {
@@ -33,11 +33,11 @@ class ResidualStruct {
 
   std::shared_ptr<BinaryResidualBase> res_;
   std::shared_ptr<MeasurementTimeline> mt_;
-  std::shared_ptr<StateWrapper> preWrap_;
-  std::shared_ptr<StateWrapper> posWrap_;
-  std::shared_ptr<State> inn_;
-  std::shared_ptr<State> innRef_;
-  std::shared_ptr<State> noi_;
+  std::shared_ptr<ElementVectorWrapper> preWrap_;
+  std::shared_ptr<ElementVectorWrapper> posWrap_;
+  std::shared_ptr<ElementVector> inn_;
+  std::shared_ptr<ElementVector> innRef_;
+  std::shared_ptr<ElementVector> noi_;
   MXD jacPre_;
   MXD jacPos_;
   MXD jacNoi_;
@@ -47,7 +47,7 @@ class ResidualStruct {
 class Filter {
  public:
   Filter()
-      : stateDefinition_(new StateDefinition()) {
+      : stateDefinition_(new ElementVectorDefinition()) {
     init();
   }
   ;
@@ -58,10 +58,10 @@ class Filter {
   void init(const TimePoint& t = TimePoint::min()) {  // TODO: pass optional State
     startTime_ = t;
     time_ = t;
-    state_.reset(new State(stateDefinition_));
+    state_.reset(new ElementVector(stateDefinition_));
     state_->setIdentity();
-    posLinState_.reset(new State(stateDefinition_));
-    cov_.resize(stateDefinition_->getDim(), stateDefinition_->getDim());
+    posLinState_.reset(new ElementVector(stateDefinition_));
+    cov_.resize(stateDefinition_->GetStateDimension(), stateDefinition_->GetStateDimension());
     cov_.setIdentity();
   }
 
@@ -70,8 +70,8 @@ class Filter {
     residuals_.emplace_back(res, stateDefinition_);
     return residuals_.size() - 1;
   }
-  void evalRes(const std::shared_ptr<const StateBase>& pre,
-               const std::shared_ptr<const StateBase>& pos) {
+  void evalRes(const std::shared_ptr<const ElementVectorBase>& pre,
+               const std::shared_ptr<const ElementVectorBase>& pos) {
     for (int i = 0; i < residuals_.size(); i++) {
       residuals_.at(i).preWrap_->setState(pre);
       residuals_.at(i).posWrap_->setState(pos);
@@ -82,7 +82,7 @@ class Filter {
       residuals_.at(i).inn_->print();
     }
   }
-  std::shared_ptr<StateDefinition> stateDefinition() const {
+  std::shared_ptr<ElementVectorDefinition> stateDefinition() const {
     return stateDefinition_;
   }
   TimePoint getCurrentTimeFromMeasurements() const {
@@ -131,7 +131,7 @@ class Filter {
       }
     }
   }
-  void addMeas(const int i, const std::shared_ptr<const StateBase>& meas,
+  void addMeas(const int i, const std::shared_ptr<const ElementVectorBase>& meas,
                const TimePoint& t) {
     residuals_.at(i).mt_->addMeas(meas, t);
   }
@@ -181,16 +181,16 @@ class Filter {
     // Eval residual and Jacobians
     int innDim = 0;
     std::vector<bool> hasMeas(residuals_.size(), false);
-    std::shared_ptr<const StateBase> meas;
+    std::shared_ptr<const ElementVectorBase> meas;
     for (int i = 0; i < residuals_.size(); i++) {
       hasMeas.at(i) = residuals_.at(i).mt_->getMeas(t, meas);
       if (hasMeas.at(i)) {
-        innDim += residuals_.at(i).res_->resDefinition()->getDim();
+        innDim += residuals_.at(i).res_->resDefinition()->GetStateDimension();
       }
     }
     VXD y(innDim);
-    MXD jacPre(innDim, stateDefinition_->getDim());
-    MXD jacPos(innDim, stateDefinition_->getDim());
+    MXD jacPre(innDim, stateDefinition_->GetStateDimension());
+    MXD jacPos(innDim, stateDefinition_->GetStateDimension());
     jacPre.setZero();
     jacPos.setZero();
     MXD Winv(innDim, innDim);
@@ -263,11 +263,11 @@ class Filter {
  protected:
   TimePoint time_;
   TimePoint startTime_;
-  std::shared_ptr<State> state_;
-  std::shared_ptr<State> posLinState_;
+  std::shared_ptr<ElementVector> state_;
+  std::shared_ptr<ElementVector> posLinState_;
   MXD cov_;
 
-  std::shared_ptr<StateDefinition> stateDefinition_;
+  std::shared_ptr<ElementVectorDefinition> stateDefinition_;
   std::vector<ResidualStruct> residuals_;
 };
 

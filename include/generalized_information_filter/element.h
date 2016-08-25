@@ -69,12 +69,12 @@ class ElementBase {
 };
 
 template<typename T>
-class ElementDefinition;
+class ElementDescription;
 
 template<typename T>
 class Element : public ElementBase {
  public:
-  Element(const ElementDefinition<T>* def)
+  Element(const ElementDescription<T>* def)
       : def_(def) {
   }
   virtual ~Element() {
@@ -131,7 +131,7 @@ class Element : public ElementBase {
   }
  protected:
   T x_;
-  const ElementDefinition<T>* def_;
+  const ElementDescription<T>* def_;
 };
 
 // ==================== Traits Implementation ==================== //
