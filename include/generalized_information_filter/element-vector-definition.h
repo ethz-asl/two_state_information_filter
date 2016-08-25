@@ -57,7 +57,7 @@ class ElementPack : public ElementVectorDefinition{
  public:
   static constexpr int n_ = sizeof...(Ts);
   static constexpr int d_ = TH_pack_dim<Ts...>::d_;
-  typedef std::tuple<Ts...> mtTuple;
+  typedef std::tuple<Ts...> Tuple;
 
   ElementPack(const std::array<std::string,n_>& names);
 
@@ -127,7 +127,7 @@ ElementPack<Ts...>::ElementPack(const std::array<std::string,n_>& names){
 template<typename ... Ts>
 template<int i>
 constexpr int ElementPack<Ts...>::_GetStateDimension() {
-  typedef typename std::tuple_element<i,mtTuple>::type mtElementType;
+  typedef typename std::tuple_element<i,Tuple>::type mtElementType;
   return ElementTraits<mtElementType>::d_;
 }
 
@@ -146,7 +146,7 @@ template<typename ... Ts>
 template<int i, typename std::enable_if<(i<sizeof...(Ts))>::type*>
 void ElementPack<Ts...>::addElementsToDefinition(
       const std::array<std::string,n_>& names) {
-  typedef typename std::tuple_element<i,mtTuple>::type mtElementType;
+  typedef typename std::tuple_element<i,Tuple>::type mtElementType;
   AddElement<mtElementType>(names.at(i));
   addElementsToDefinition<i+1>(names);
 }

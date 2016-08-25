@@ -18,6 +18,8 @@ struct TH_pack_index;
 template<typename Derived, typename OutPack, typename ... InPacks>
 class Model {
  public:
+  template<int j>
+  using InPack = typename std::tuple_element<j,std::tuple<InPacks...>>::type;
   static constexpr int n_ = OutPack::n_;
   static constexpr int m_ = TH_pack_size<InPacks...>::n_;
   static constexpr int N_ = sizeof...(InPacks);
@@ -26,98 +28,94 @@ class Model {
   Model(const std::array<std::string,n_>& namesOut,
         const std::tuple<std::array<std::string,InPacks::n_>...>& namesIn) {
     outDefinition_.reset(new OutPack(namesOut));
-    makeInDefinitons(namesIn);
-  }
-
-  template<int i = 0, typename std::enable_if<(i<N_)>::type* = nullptr>
-  void makeInDefinitons(
-      const std::tuple<std::array<std::string,InPacks::n_>...>& namesIn) {
-    inDefinitions_[i].reset(
-        new typename std::tuple_element<i,std::tuple<InPacks...>>::type(
-            std::get<i>(namesIn)));
-    makeInDefinitons<i+1>(namesIn);
-  }
-
-  template<int i = 0, typename std::enable_if<(i==N_)>::type* = nullptr>
-  void makeInDefinitons(
-      const std::tuple<std::array<std::string,InPacks::n_>...>& namesIn) {}
-
-  template<typename... Ps, typename std::enable_if<(sizeof...(Ps)<n_)>::type* = nullptr>
-  void _eval(const std::shared_ptr<ElementVectorBase>& out,
-             const std::array<std::shared_ptr<const ElementVectorBase>,N_>& ins,
-             Ps&... elements) const{
-    assert(out->MatchesDefinition(outDefinition_));
-    static constexpr int innerIndex = sizeof...(Ps);
-    typedef typename OutPack::mtTuple mtTuple;
-    typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
-    _eval(out, ins, elements...,
-          std::dynamic_pointer_cast<Element<mtElementType>>(
-              out->GetElement(innerIndex))->get());
+    MakeInDefinitons(namesIn);
   }
 
   template<typename... Ps,
-           typename std::enable_if<(sizeof...(Ps)>=n_ & sizeof...(Ps)<n_+m_)>::type* = nullptr>
-  void _eval(const std::shared_ptr<ElementVectorBase>& out,
-             const std::array<std::shared_ptr<const ElementVectorBase>,N_>& ins,
-             Ps&... elements) const{
+           typename std::enable_if<(sizeof...(Ps)<n_)>::type* = nullptr>
+  inline void _eval(const SP<ElementVectorBase>& out,
+                    const std::array<SP<const ElementVectorBase>,N_>& ins,
+                    Ps&... elements) const{
+    assert(out->MatchesDefinition(outDefinition_));
+    static constexpr int inner_index = sizeof...(Ps);
+    typedef typename OutPack::Tuple Tuple;
+    typedef typename std::tuple_element<inner_index,Tuple>::type ElementType;
+    _eval(out, ins, elements...,
+          std::dynamic_pointer_cast<Element<ElementType>>(
+              out->GetElement(inner_index))->get());
+  }
+
+  template<typename... Ps,
+           typename std::enable_if<(sizeof...(Ps)>=n_
+                                   & sizeof...(Ps)<n_+m_)>::type* = nullptr>
+  inline void _eval(const SP<ElementVectorBase>& out,
+                    const std::array<SP<const ElementVectorBase>,N_>& ins,
+                    Ps&... elements) const{
     static constexpr int outerIndex =
         TH_pack_index<sizeof...(Ps)-n_,InPacks...>::GetOuter();
     static constexpr int innerIndex =
         TH_pack_index<sizeof...(Ps)-n_,InPacks...>::GetInner();
 
     assert(ins.at(outerIndex)->MatchesDefinition(inDefinitions_[outerIndex]));
-    typedef typename std::tuple_element<outerIndex,std::tuple<InPacks...>>::type::mtTuple mtTuple;
-    typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
+    typedef typename InPack<outerIndex>::Tuple Tuple;
+    typedef typename std::tuple_element<innerIndex,Tuple>::type ElementType;
     _eval(out, ins, elements...,
-          std::dynamic_pointer_cast<const Element<mtElementType>>(
+          std::dynamic_pointer_cast<const Element<ElementType>>(
               ins.at(outerIndex)->GetElement(innerIndex))->get());
   }
 
-  template<typename... Ps, typename std::enable_if<(sizeof...(Ps)==m_+n_)>::type* = nullptr>
-  void _eval(const std::shared_ptr<ElementVectorBase>& out,
-             const std::array<std::shared_ptr<const ElementVectorBase>,N_>& ins,
-             Ps&... elements) const{
+  template<typename... Ps,
+           typename std::enable_if<(sizeof...(Ps)==m_+n_)>::type* = nullptr>
+  inline void _eval(const SP<ElementVectorBase>& out,
+                    const std::array<SP<const ElementVectorBase>,N_>& ins,
+                    Ps&... elements) const{
     static_cast<const Derived&>(*this).eval(elements...);
   }
 
-  template<int j, typename... Ps, typename std::enable_if<(sizeof...(Ps)<m_)>::type* = nullptr>
-  void _jac(MXD& J, const std::array<std::shared_ptr<const ElementVectorBase>,N_>& ins,
-            Ps&... elements) const{
+  template<int j,
+           typename... Ps,
+           typename std::enable_if<(sizeof...(Ps)<m_)>::type* = nullptr>
+  inline void _jac(Mat<>& J,
+                   const std::array<SP<const ElementVectorBase>,N_>& ins,
+                   Ps&... elements) const{
     static constexpr int outerIndex =
         TH_pack_index<sizeof...(Ps),InPacks...>::GetOuter();
     static constexpr int innerIndex =
         TH_pack_index<sizeof...(Ps),InPacks...>::GetInner();
     assert(ins.at(outerIndex)->MatchesDefinition(inDefinitions_[outerIndex]));
-    typedef typename std::tuple_element<outerIndex,std::tuple<InPacks...>>::type::mtTuple mtTuple;
-    typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
+    typedef typename InPack<outerIndex>::Tuple Tuple;
+    typedef typename std::tuple_element<innerIndex,Tuple>::type mtElementType;
     _jac<j>(J, ins, elements...,
             std::dynamic_pointer_cast<const Element<mtElementType>>(
                 ins.at(outerIndex)->GetElement(innerIndex))->get());
   }
 
-  template<int j, typename... Ps, typename std::enable_if<(sizeof...(Ps)==m_)>::type* = nullptr>
-  void _jac(MXD& J, const std::array<std::shared_ptr<const ElementVectorBase>,N_>& ins,
-            Ps&... elements) const{
+  template<int j,
+           typename... Ps,
+           typename std::enable_if<(sizeof...(Ps)==m_)>::type* = nullptr>
+  inline void _jac(Mat<>& J,
+                   const std::array<SP<const ElementVectorBase>,N_>& ins,
+                   Ps&... elements) const{
     static_assert(j<N_,"No such Jacobian!");
     static_cast<const Derived&>(*this).template jac<j>(J,elements...);
   }
 
   template<int j>
-  void _jacFD(MXD& J,
-              const std::array<std::shared_ptr<const ElementVectorBase>,N_>& ins,
+  void _jacFD(Mat<>& J,
+              const std::array<SP<const ElementVectorBase>,N_>& ins,
               const double& delta = 1e-8) const{
-    std::shared_ptr<ElementVector> stateDis(new ElementVector(inDefinitions_[j]));
-    std::shared_ptr<ElementVector> outRef(new ElementVector(outDefinition_));
-    std::shared_ptr<ElementVector> outDis(new ElementVector(outDefinition_));
-    J.resize(outRef->GetDimention(),stateDis->GetDimention());
+    SP<ElementVector> stateDis(new ElementVector(inDefinitions_[j]));
+    SP<ElementVector> outRef(new ElementVector(outDefinition_));
+    SP<ElementVector> outDis(new ElementVector(outDefinition_));
+    J.resize(outRef->GetDimension(),stateDis->GetDimension());
     J.setZero();
     *stateDis = *ins[j];
-    std::array<std::shared_ptr<const ElementVectorBase>,N_> inDis = ins;
+    std::array<SP<const ElementVectorBase>,N_> inDis = ins;
     inDis[j] = stateDis;
     _eval(outRef,inDis);
-    VXD difIn(stateDis->GetDimention());
-    VXD difOut(outRef->GetDimention());
-    for(int i=0; i<stateDis->GetDimention(); i++){
+    Vec<> difIn(stateDis->GetDimension());
+    Vec<> difOut(outRef->GetDimension());
+    for(int i=0; i<stateDis->GetDimension(); i++){
       difIn.setZero();
       difIn(i) = delta;
       ins[j]->BoxPlus(difIn,stateDis);
@@ -128,14 +126,15 @@ class Model {
   }
 
   template<int j>
-  bool _testJacInput(const std::array<std::shared_ptr<const ElementVectorBase>,N_>& ins,
-      const double& delta = 1e-6, const double& th = 1e-6) const {
-    Eigen::MatrixXd J((int)OutPack::d_,(int)std::tuple_element<j,std::tuple<InPacks...>>::type::d_);
-    Eigen::MatrixXd J_FD((int)OutPack::d_,(int)std::tuple_element<j,std::tuple<InPacks...>>::type::d_);
-    std::shared_ptr<ElementVector> output(new ElementVector(outDefinition_));
+  bool _testJacInput(const std::array<SP<const ElementVectorBase>,N_>& ins,
+                     const double& delta = 1e-6,
+                     const double& th = 1e-6) const {
+    Mat<> J((int)OutPack::d_,(int)InPack<j>::d_);
+    Mat<> J_FD((int)OutPack::d_,(int)InPack<j>::d_);
+    SP<ElementVector> output(new ElementVector(outDefinition_));
     _jac<j>(J,ins);
     _jacFD<j>(J_FD,ins,delta);
-    typename Eigen::MatrixXd::Index maxRow, maxCol = 0;
+    typename Mat<>::Index maxRow, maxCol = 0;
     const double r = (J-J_FD).array().abs().maxCoeff(&maxRow, &maxCol);
     if(r>th){
       std::string outName = outDefinition_->GetName(output->GetOuter(maxRow));
@@ -155,10 +154,11 @@ class Model {
   }
 
   template<int j>
-  bool _testJacInput(int& s, const double& delta = 1e-6, const double& th = 1e-6) const{
-    std::array<std::shared_ptr<const ElementVectorBase>,N_> ins;
+  bool _testJacInput(int& s, const double& delta = 1e-6,
+                     const double& th = 1e-6) const{
+    std::array<SP<const ElementVectorBase>,N_> ins;
     for(int i=0;i<N_;i++){
-      std::shared_ptr<ElementVectorBase> randomState(new ElementVector(inDefinitions_[i]));
+      SP<ElementVectorBase> randomState(new ElementVector(inDefinitions_[i]));
       randomState->SetRandom(s);
       ins[i] = randomState;
     }
@@ -166,17 +166,32 @@ class Model {
   }
 
   template<int j, int n, int m>
-  void _setJacBlock(
-      MXD& J, const Eigen::Matrix<double,OutPack::template _GetStateDimension<n>(),
-      std::tuple_element<j,std::tuple<InPacks...>>::type::template _GetStateDimension<m>()>& B) const {
+  void _setJacBlock(Mat<>& J,
+                    const Mat<OutPack::template _GetStateDimension<n>(),
+                    std::tuple_element<j,std::tuple<InPacks...>>::type::
+                        template _GetStateDimension<m>()>& B) const {
     J.block<OutPack::template _GetStateDimension<n>(),
-        std::tuple_element<j,std::tuple<InPacks...>>::type::template _GetStateDimension<m>()>(OutPack::template _GetStartIndex<n>(),
-            std::tuple_element<j,std::tuple<InPacks...>>::type::template _GetStartIndex<m>()) = B;
+            InPack<j>::template _GetStateDimension<m>()>(
+                OutPack::template _GetStartIndex<n>(),
+                InPack<j>::template _GetStartIndex<m>()) = B;
   }
 
  protected:
-  std::shared_ptr<ElementVectorDefinition> outDefinition_;
-  std::array<std::shared_ptr<ElementVectorDefinition>,N_> inDefinitions_;
+  SP<ElementVectorDefinition> outDefinition_;
+  std::array<SP<ElementVectorDefinition>,N_> inDefinitions_;
+
+  template<int i = 0, typename std::enable_if<(i<N_)>::type* = nullptr>
+  void MakeInDefinitons(
+      const std::tuple<std::array<std::string,InPacks::n_>...>& namesIn) {
+    inDefinitions_[i].reset(
+        new typename std::tuple_element<i,std::tuple<InPacks...>>::type(
+            std::get<i>(namesIn)));
+    MakeInDefinitons<i+1>(namesIn);
+  }
+
+  template<int i = 0, typename std::enable_if<(i==N_)>::type* = nullptr>
+  void MakeInDefinitons(
+      const std::tuple<std::array<std::string,InPacks::n_>...>& namesIn) {}
 };
 
 // ==================== Implementation ==================== //
@@ -191,17 +206,21 @@ struct TH_pack_size<ElementPack<Ts...>> {
 
 template<int i, typename ... Ts, typename ... Packs>
 struct TH_pack_index<i, ElementPack<Ts...>, Packs...> {
-  template<int j = i, typename std::enable_if<(j >= sizeof...(Ts))>::type* = nullptr>
+  template<int j = i,
+           typename std::enable_if<(j >= sizeof...(Ts))>::type* = nullptr>
   static constexpr int GetOuter() {
     return TH_pack_index<i-sizeof...(Ts),Packs...>::GetOuter()+1;
   }
-  template<int j=i, typename std::enable_if<(j<sizeof...(Ts))>::type* = nullptr>
+  template<int j=i,
+           typename std::enable_if<(j<sizeof...(Ts))>::type* = nullptr>
   static constexpr int GetOuter() {
     return 0;}
-  template<int j=i, typename std::enable_if<(j>=sizeof...(Ts))>::type* = nullptr>
+  template<int j=i,
+           typename std::enable_if<(j>=sizeof...(Ts))>::type* = nullptr>
   static constexpr int GetInner() {
     return TH_pack_index<i-sizeof...(Ts),Packs...>::GetInner();}
-  template<int j=i, typename std::enable_if<(j<sizeof...(Ts))>::type* = nullptr>
+  template<int j=i,
+           typename std::enable_if<(j<sizeof...(Ts))>::type* = nullptr>
   static constexpr int GetInner() {
     return i;
   }

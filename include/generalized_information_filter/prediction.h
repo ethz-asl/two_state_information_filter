@@ -42,8 +42,8 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
                            Ts&... elements) const {
     assert(pos->MatchesDefinition(this->posDefinition()));
     static constexpr int innerIndex = sizeof...(Ts);
-    typedef typename ElementPack<Sta...>::mtTuple mtTuple;
-    typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
+    typedef typename ElementPack<Sta...>::Tuple Tuple;
+    typedef typename std::tuple_element<innerIndex,Tuple>::type mtElementType;
     _evalPredictionImpl(pos, pre..., noi..., elements...,
                         std::dynamic_pointer_cast<Element<mtElementType>>(
                             pos->GetElement(innerIndex))->get());
@@ -83,7 +83,7 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
   inline void computeInnovation(Sta&... res, const Sta&... pos,
       const std::shared_ptr<const ElementVectorBase>& prediction) const {
     typedef typename std::tuple_element<i,
-        typename ElementPack<Sta...>::mtTuple>::type mtElementType;
+        typename ElementPack<Sta...>::Tuple>::type mtElementType;
 
     // res = I+(pred-pos)
     Eigen::Matrix<double,ElementTraits<mtElementType>::d_,1> vec;
@@ -107,7 +107,7 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
                           const Sta&... pos) const{
     assert(prediction->MatchesDefinition(this->posDefinition()));
     typedef typename std::tuple_element<i,typename
-        ElementPack<Sta...>::mtTuple>::type mtElementType;
+        ElementPack<Sta...>::Tuple>::type mtElementType;
     Eigen::Matrix<double,ElementTraits<mtElementType>::d_,1> vec;
     ElementTraits<mtElementType>::boxminus(
         std::dynamic_pointer_cast<const Element<mtElementType>>(

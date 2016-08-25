@@ -173,9 +173,9 @@ TEST_F(NewStateTest, constructor) {
   s1a->Print();
 
   // Boxplus and BoxMinus
-  Eigen::VectorXd v(s1a->GetDimention());
+  Eigen::VectorXd v(s1a->GetDimension());
   v.setZero();
-  for (int i = 0; i < s1a->GetDimention(); i++) {
+  for (int i = 0; i < s1a->GetDimension(); i++) {
     v(i) = i;
   }
   s1a->BoxPlus(v, s1b);
@@ -190,8 +190,8 @@ TEST_F(NewStateTest, constructor) {
 
   // Transformation
   std::shared_ptr<ElementVector> s2(new ElementVector(t.outputDefinition()));
-  MXD P1(s1a->GetDimention(), s1a->GetDimention());
-  MXD P2(s2->GetDimention(), s2->GetDimention());
+  MXD P1(s1a->GetDimension(), s1a->GetDimension());
+  MXD P2(s2->GetDimension(), s2->GetDimension());
   t.transformState(s2, s1a);
   t.transformCovMat(P2, s1a, P1);
   t.testJac(s1a);

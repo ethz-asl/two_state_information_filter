@@ -123,7 +123,7 @@ class BinaryResidual<ElementPack<Res...>, ElementPack<Pre...>,
                          std::shared_ptr<const ElementVectorBase>& out) const {
     if (isMergeable_) {
       std::shared_ptr < ElementVectorBase > newMeas(new Meas());
-      VXD diff(in1->GetDimention());
+      VXD diff(in1->GetDimension());
       in1->BoxMinus(in2, diff);
       in2->BoxPlus(toSec(t1 - t0) / toSec(t2 - t0) * diff, newMeas);
       out = newMeas;

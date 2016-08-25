@@ -28,7 +28,7 @@ class ElementVectorBase {
   T& GetValue(const std::string& name);
   template<typename T>
   T& GetValue(const std::string& name) const;
-  inline int GetDimention() const;
+  inline int GetDimension() const;
   virtual int GetNumElement() const = 0;
   inline int GetStart(int i) const;
   inline int GetOuter(int i) const;
@@ -113,7 +113,7 @@ T& ElementVectorBase::GetValue(const std::string& name) const {
   return GetValue<T>(i);
 }
 
-int ElementVectorBase::GetDimention() const {
+int ElementVectorBase::GetDimension() const {
   assert(MatchesDefinition(def_));
   return def_->GetStateDimension();
 }
