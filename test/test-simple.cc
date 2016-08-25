@@ -84,7 +84,7 @@ class AccelerometerMeas : public ElementVector {
  public:
   AccelerometerMeas(const V3D& acc = V3D(0, 0, 0))
       : ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementPack<V3D>( { "acc" }))),
-        acc_(ElementVector::getValue<V3D>("acc")) {
+        acc_(ElementVector::GetValue<V3D>("acc")) {
     acc_ = acc;
   }
   V3D& acc_;
@@ -169,18 +169,18 @@ TEST_F(NewStateTest, constructor) {
   TransformationExample t;
   std::shared_ptr<ElementVector> s1a(new ElementVector(t.inputDefinition()));
   std::shared_ptr<ElementVector> s1b(new ElementVector(t.inputDefinition()));
-  s1a->setIdentity();
-  s1a->print();
+  s1a->SetIdentity();
+  s1a->Print();
 
-  // Boxplus and boxminus
-  Eigen::VectorXd v(s1a->getDim());
+  // Boxplus and BoxMinus
+  Eigen::VectorXd v(s1a->GetDimention());
   v.setZero();
-  for (int i = 0; i < s1a->getDim(); i++) {
+  for (int i = 0; i < s1a->GetDimention(); i++) {
     v(i) = i;
   }
-  s1a->boxplus(v, s1b);
-  s1b->print();
-  s1a->boxminus(s1b, v);
+  s1a->BoxPlus(v, s1b);
+  s1b->Print();
+  s1a->BoxMinus(s1b, v);
   std::cout << v.transpose() << std::endl;
 
   // Jacobian
@@ -190,8 +190,8 @@ TEST_F(NewStateTest, constructor) {
 
   // Transformation
   std::shared_ptr<ElementVector> s2(new ElementVector(t.outputDefinition()));
-  MXD P1(s1a->getDim(), s1a->getDim());
-  MXD P2(s2->getDim(), s2->getDim());
+  MXD P1(s1a->GetDimention(), s1a->GetDimention());
+  MXD P2(s2->GetDimention(), s2->GetDimention());
   t.transformState(s2, s1a);
   t.transformCovMat(P2, s1a, P1);
   t.testJac(s1a);
@@ -199,11 +199,11 @@ TEST_F(NewStateTest, constructor) {
   // Velocity Residual
   std::shared_ptr<BinaryRedidualVelocity> velRes(new BinaryRedidualVelocity());
   std::shared_ptr<ElementVector> pre(new ElementVector(velRes->preDefinition()));
-  pre->setIdentity();
+  pre->SetIdentity();
   std::shared_ptr<ElementVector> pos(new ElementVector(velRes->posDefinition()));
-  pos->setIdentity();
+  pos->SetIdentity();
   std::shared_ptr<ElementVector> noi(new ElementVector(velRes->noiDefinition()));
-  noi->setIdentity();
+  noi->SetIdentity();
   velRes->testJacs(pre, pos, noi);
 
   // Accelerometer Residual
@@ -215,12 +215,12 @@ TEST_F(NewStateTest, constructor) {
   f.addRes(velRes);
   f.addRes(accRes);
   std::shared_ptr<ElementVector> preState(new ElementVector(f.stateDefinition()));
-  preState->setIdentity();
-  preState->getValue < V3D > ("pos") = V3D(1, 2, 3);
-  preState->print();
+  preState->SetIdentity();
+  preState->GetValue < V3D > ("pos") = V3D(1, 2, 3);
+  preState->Print();
   std::shared_ptr<ElementVector> posState(new ElementVector(f.stateDefinition()));
-  posState->setIdentity();
-  posState->print();
+  posState->SetIdentity();
+  posState->Print();
   f.evalRes(preState, posState);
 
 
@@ -254,9 +254,9 @@ TEST_F(NewStateTest, constructor) {
   std::shared_ptr<ElementVector> preAcc(new ElementVector(accPre->preDefinition()));
   std::shared_ptr<ElementVector> posAcc(new ElementVector(accPre->preDefinition()));
   std::shared_ptr<ElementVector> noiAcc(new ElementVector(accPre->noiDefinition()));
-  preAcc->setIdentity();
-  posAcc->setIdentity();
-  noiAcc->setIdentity();
+  preAcc->SetIdentity();
+  posAcc->SetIdentity();
+  noiAcc->SetIdentity();
   accPre->testJacs(preAcc, posAcc, noiAcc);
 
   // Test measurements

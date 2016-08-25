@@ -123,9 +123,9 @@ class BinaryResidual<ElementPack<Res...>, ElementPack<Pre...>,
                          std::shared_ptr<const ElementVectorBase>& out) const {
     if (isMergeable_) {
       std::shared_ptr < ElementVectorBase > newMeas(new Meas());
-      VXD diff(in1->getDim());
-      in1->boxminus(in2, diff);
-      in2->boxplus(toSec(t1 - t0) / toSec(t2 - t0) * diff, newMeas);
+      VXD diff(in1->GetDimention());
+      in1->BoxMinus(in2, diff);
+      in2->BoxPlus(toSec(t1 - t0) / toSec(t2 - t0) * diff, newMeas);
       out = newMeas;
     } else {
       std::cout
@@ -242,14 +242,14 @@ class BinaryResidual<ElementPack<Res...>, ElementPack<Pre...>,
 
   bool testJacs(int& s, const double& delta = 1e-6, const double& th = 1e-6) {
     std::shared_ptr < Meas > meas(new Meas());
-    meas->setRandom(s);
+    meas->SetRandom(s);
     meas_ = meas;
     std::shared_ptr < ElementVectorBase > pre(new ElementVector(preDefinition()));
-    pre->setRandom(s);
+    pre->SetRandom(s);
     std::shared_ptr < ElementVectorBase > pos(new ElementVector(posDefinition()));
-    pos->setRandom(s);
+    pos->SetRandom(s);
     std::shared_ptr < ElementVectorBase > noi(new ElementVector(noiDefinition()));
-    noi->setIdentity();
+    noi->SetIdentity();
     const std::array<std::shared_ptr<const ElementVectorBase>, 3> ins =
         { pre, pos, noi };
     return (preDefinition()->GetStateDimension() == 0

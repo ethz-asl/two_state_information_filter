@@ -18,9 +18,9 @@ class ResidualStruct {
     posWrap_.reset(new ElementVectorWrapper(res->posDefinition(), stateDefinition));
     inn_.reset(new ElementVector(res->resDefinition()));
     innRef_.reset(new ElementVector(res->resDefinition()));
-    innRef_->setIdentity();
+    innRef_->SetIdentity();
     noi_.reset(new ElementVector(res->noiDefinition()));
-    noi_->setIdentity();
+    noi_->SetIdentity();
     innDim_ = res->resDefinition()->GetStateDimension();
     jacPre_.resize(innDim_, res->preDefinition()->GetStateDimension());
     jacPos_.resize(innDim_, res->posDefinition()->GetStateDimension());
@@ -59,7 +59,7 @@ class Filter {
     startTime_ = t;
     time_ = t;
     state_.reset(new ElementVector(stateDefinition_));
-    state_->setIdentity();
+    state_->SetIdentity();
     posLinState_.reset(new ElementVector(stateDefinition_));
     cov_.resize(stateDefinition_->GetStateDimension(), stateDefinition_->GetStateDimension());
     cov_.setIdentity();
@@ -79,7 +79,7 @@ class Filter {
                                           residuals_.at(i).preWrap_,
                                           residuals_.at(i).posWrap_,
                                           residuals_.at(i).noi_);
-      residuals_.at(i).inn_->print();
+      residuals_.at(i).inn_->Print();
     }
   }
   std::shared_ptr<ElementVectorDefinition> stateDefinition() const {
@@ -207,7 +207,7 @@ class Filter {
                                             residuals_.at(i).preWrap_,
                                             residuals_.at(i).posWrap_,
                                             residuals_.at(i).noi_);
-        residuals_.at(i).innRef_->boxminus(
+        residuals_.at(i).innRef_->BoxMinus(
             residuals_.at(i).inn_,
             y.block(count, 0, residuals_.at(i).innDim_, 1));
 
@@ -252,9 +252,9 @@ class Filter {
     VXD dx = cov_ * S * y;
 
     // Apply Kalman update
-    posLinState_->boxplus(dx, state_);
+    posLinState_->BoxPlus(dx, state_);
     std::cout << "state after update:" << std::endl;
-    state_->print();
+    state_->Print();
 
     // Remove measurements and update timepoint
     time_ = t;

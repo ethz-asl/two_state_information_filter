@@ -3,7 +3,7 @@
 
 #include <unordered_map>
 
-#include "element-description.h"
+#include "generalized_information_filter/element-description.h"
 #include "generalized_information_filter/common.h"
 
 namespace GIF {

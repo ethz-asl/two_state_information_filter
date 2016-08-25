@@ -1,5 +1,5 @@
-#include "../include/generalized_information_filter/element-vector.h"
-#include "../include/generalized_information_filter/element-vector-definition.h"
+#include "generalized_information_filter/element-vector.h"
+#include "generalized_information_filter/element-vector-definition.h"
 
 namespace GIF {
 
@@ -29,7 +29,7 @@ bool ElementVectorDefinition::MatchesDefinition(
 
 bool ElementVectorDefinition::MatchesDefinition(
     const SP<const ElementVectorBase>& other) const {
-  return MatchesDefinition(other->getDef());
+  return MatchesDefinition(other->GetDefinition());
 }
 
 std::string ElementVectorDefinition::GetName(int outer_index) const { // Slow

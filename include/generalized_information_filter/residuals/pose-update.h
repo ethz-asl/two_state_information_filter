@@ -10,8 +10,8 @@ class PoseMeas : public ElementVector {
  public:
   PoseMeas(const V3D& pos = V3D(0, 0, 0), const QPD& att = QPD())
       : ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementPack<V3D, QPD>({ "pos", "att" }))),
-        pos_(ElementVector::getValue<V3D>("pos")),
-        att_(ElementVector::getValue<QPD>("att")) {
+        pos_(ElementVector::GetValue<V3D>("pos")),
+        att_(ElementVector::GetValue<QPD>("att")) {
     pos_ = pos;
     att_ = att;
   }

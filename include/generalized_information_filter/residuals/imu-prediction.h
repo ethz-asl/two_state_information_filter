@@ -10,8 +10,8 @@ class IMUMeas : public ElementVector {
  public:
   IMUMeas(const V3D& gyr = V3D(0, 0, 0), const V3D& acc = V3D(0, 0, 0))
       : ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementPack<V3D, V3D>({"gyr", "acc"}))),
-        gyr_(ElementVector::getValue<V3D>("gyr")),
-        acc_(ElementVector::getValue<V3D>("acc")) {
+        gyr_(ElementVector::GetValue<V3D>("gyr")),
+        acc_(ElementVector::GetValue<V3D>("acc")) {
     gyr_ = gyr;
     acc_ = acc;
   }
