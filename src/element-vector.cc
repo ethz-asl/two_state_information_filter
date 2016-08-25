@@ -2,14 +2,14 @@
 
 namespace GIF {
 
-ElementVectorBase::ElementVectorBase(const std::shared_ptr<const ElementVectorDefinition>& def)
+ElementVectorBase::ElementVectorBase(const SP<const ElementVectorDefinition>& def)
     : def_(def) {
 }
 
 ElementVectorBase::~ElementVectorBase() {}
 
 bool ElementVectorBase::matchesDef(
-    const std::shared_ptr<const ElementVectorDefinition>& def) const {
+    const SP<const ElementVectorDefinition>& def) const {
   if (getNumElement() != def->GetNumElements()) {
     return false;
   }
@@ -48,7 +48,7 @@ void ElementVectorBase::setRandom(int& s) {
 }
 
 void ElementVectorBase::boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec,
-                        const std::shared_ptr<ElementVectorBase>& out) const {
+                        const SP<ElementVectorBase>& out) const {
   for (int i = 0; i < getNumElement(); i++) {
     getElement(i)->boxplus(
         vec.block(getStart(i), 0, getElement(i)->getDim(), 1),
@@ -56,7 +56,7 @@ void ElementVectorBase::boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec,
   }
 }
 
-void ElementVectorBase::boxminus(const std::shared_ptr<const ElementVectorBase>& ref,
+void ElementVectorBase::boxminus(const SP<const ElementVectorBase>& ref,
                          Eigen::Ref<Eigen::VectorXd> vec) const {
   for (int i = 0; i < getNumElement(); i++) {
     getElement(i)->boxminus(
@@ -65,11 +65,11 @@ void ElementVectorBase::boxminus(const std::shared_ptr<const ElementVectorBase>&
   }
 }
 
-std::shared_ptr<const ElementVectorDefinition> ElementVectorBase::getDef() const {
+SP<const ElementVectorDefinition> ElementVectorBase::getDef() const {
   return def_;
 }
 
-ElementVector::ElementVector(const std::shared_ptr<const ElementVectorDefinition>& def)
+ElementVector::ElementVector(const SP<const ElementVectorDefinition>& def)
     : ElementVectorBase(def) {
   for (int i = 0; i < def_->GetNumElements(); i++) {
     elements_.push_back(def_->GetElementDefinition(i)->MakeElement());
@@ -87,8 +87,8 @@ int ElementVector::getNumElement() const {
   return elements_.size();
 }
 
-ElementVectorWrapper::ElementVectorWrapper(const std::shared_ptr<const ElementVectorDefinition>& def,
-                           const std::shared_ptr<const ElementVectorDefinition>& in)
+ElementVectorWrapper::ElementVectorWrapper(const SP<const ElementVectorDefinition>& def,
+                           const SP<const ElementVectorDefinition>& in)
     : ElementVectorBase(def),
       in_(in) {
   computeMap();
@@ -113,14 +113,14 @@ void ElementVectorWrapper::computeMap() {
   }
 }
 
-void ElementVectorWrapper::setState(const std::shared_ptr<ElementVectorBase>& state) {
+void ElementVectorWrapper::setState(const SP<ElementVectorBase>& state) {
   state->matchesDef(in_);
   state_ = state;
   constState_ = state;
 }
 
 void ElementVectorWrapper::setState(
-    const std::shared_ptr<const ElementVectorBase>& state) const {
+    const SP<const ElementVectorBase>& state) const {
   state->matchesDef(in_);
   constState_ = state;
 }

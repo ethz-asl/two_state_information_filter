@@ -181,16 +181,16 @@ class Model {
 
 // ==================== Implementation ==================== //
 template<typename ... Ts, typename ... InPacks>
-struct TH_pack_size<ElementVectorPack<Ts...>, InPacks...> {
+struct TH_pack_size<ElementPack<Ts...>, InPacks...> {
   static constexpr int n_ = TH_pack_size<InPacks...>::n_ + sizeof...(Ts);
 };
 template<typename ... Ts>
-struct TH_pack_size<ElementVectorPack<Ts...>> {
+struct TH_pack_size<ElementPack<Ts...>> {
   static constexpr int n_ = sizeof...(Ts);
 };
 
 template<int i, typename ... Ts, typename ... Packs>
-struct TH_pack_index<i, ElementVectorPack<Ts...>, Packs...> {
+struct TH_pack_index<i, ElementPack<Ts...>, Packs...> {
   template<int j = i, typename std::enable_if<(j >= sizeof...(Ts))>::type* = nullptr>
   static constexpr int getOuter() {
     return TH_pack_index<i-sizeof...(Ts),Packs...>::getOuter()+1;
@@ -207,7 +207,7 @@ struct TH_pack_index<i, ElementVectorPack<Ts...>, Packs...> {
   }
 };
 template<int i, typename ... Ts>
-struct TH_pack_index<i, ElementVectorPack<Ts...>> {
+struct TH_pack_index<i, ElementPack<Ts...>> {
   template<typename std::enable_if<(i < sizeof...(Ts))>::type* = nullptr>
   static constexpr int getOuter() {return 0;};
   template<typename std::enable_if<(i<sizeof...(Ts))>::type* = nullptr>

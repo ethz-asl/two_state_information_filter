@@ -10,11 +10,18 @@ namespace GIF {
 
 class ElementVectorBase;
 
+/*! \brief Element Vector Definition
+ *         Defines the structure of an element vector. The descriptions of the
+ *         elements are stored as vector element_definions_. mames_map_ stores
+ *         the identifiers (strings) of the elements and provides the map to
+ *         the outer index.
+ */
 class ElementVectorDefinition {
  public:
   ElementVectorDefinition();
-  ~ElementVectorDefinition();
-  bool operator ==(const std::shared_ptr<const ElementVectorDefinition>& other) const;
+  virtual ~ElementVectorDefinition();
+  bool MatchesDefinition(const SP<const ElementVectorDefinition>& other) const;
+  bool MatchesDefinition(const SP<const ElementVectorBase>& other) const;
   inline int GetStateDimension() const;
   inline int GetNumElements() const;
   inline int GetStartIndex(int outer_index) const;
@@ -22,34 +29,37 @@ class ElementVectorDefinition {
   inline int GetInnerIndex(int i) const;
   std::string GetName(int outer_index) const;
   int FindName(const std::string& name) const;
-  std::shared_ptr<const ElementDescriptionBase> GetElementDefinition(
-      int outer_index) const;
-  int AddElementDefinition(
+  SP<const ElementDescriptionBase> GetElementDefinition(int outer_index) const;
+  int AddElement(
       const std::string& name,
-      const std::shared_ptr<const ElementDescriptionBase>& new_element_definition);
+      const SP<const ElementDescriptionBase>& new_element_definition);
   template<typename T>
-  int AddElementDefinition(const std::string& name);
-  void ExtendWithStateDefinition(const std::shared_ptr<const ElementVectorDefinition>& state_definition,
-              const std::string& sub_name = "");
+  int AddElement(const std::string& name);
+  void Extend(const SP<const ElementVectorDefinition>& other);
 
  protected:
-  std::vector<std::pair<std::shared_ptr<const ElementDescriptionBase>, int>> element_definitions_;
+  std::vector<std::pair<SP<const ElementDescriptionBase>, int>> descriptions_;
   std::unordered_map<std::string, int> names_map_;
   int d_;
 };
 
-
+/*! \brief Template Helper class for computing the dimension of an ElementPack
+ */
 template<typename ... Ts>
 struct TH_pack_dim;
 
+/*! \brief Element Pack
+ *         This is a compile-time version of ElementVectorDefinition and
+ *         and provides extra functionality
+ */
 template<typename ... Ts>
-class ElementVectorPack : public ElementVectorDefinition{
+class ElementPack : public ElementVectorDefinition{
  public:
   static constexpr int n_ = sizeof...(Ts);
   static constexpr int d_ = TH_pack_dim<Ts...>::d_;
   typedef std::tuple<Ts...> mtTuple;
 
-  ElementVectorPack(const std::array<std::string,n_>& names);
+  ElementPack(const std::array<std::string,n_>& names);
 
   template<int i>
   static constexpr int _GetStateDimension();
@@ -60,9 +70,11 @@ class ElementVectorPack : public ElementVectorDefinition{
   static constexpr int _GetStartIndex();
 
  protected:
-  template<int i = 0, typename std::enable_if<(i<sizeof...(Ts))>::type* = nullptr>
+  template<int i = 0,
+      typename std::enable_if<(i<sizeof...(Ts))>::type* = nullptr>
   void addElementsToDefinition(const std::array<std::string,n_>& names);
-  template<int i = 0, typename std::enable_if<(i==sizeof...(Ts))>::type* = nullptr>
+  template<int i = 0,
+        typename std::enable_if<(i==sizeof...(Ts))>::type* = nullptr>
   void addElementsToDefinition(const std::array<std::string,n_>& names);
 
 };
@@ -73,17 +85,17 @@ int ElementVectorDefinition::GetStateDimension() const {
 }
 
 int ElementVectorDefinition::GetNumElements() const {
-  return names_map_.size();
+  return descriptions_.size();
 }
 
 int ElementVectorDefinition::GetStartIndex(int outer_index) const {
-  return element_definitions_.at(outer_index).second;
+  return descriptions_.at(outer_index).second;
 }
 
 int ElementVectorDefinition::GetOuterIndex(int i) const {
   assert(i >= 0 && i < GetStateDimension());
   int outer_index = GetNumElements()-1;
-  while (element_definitions_.at(outer_index).second > i) {
+  while (descriptions_.at(outer_index).second > i) {
     --outer_index;
   }
   return outer_index;
@@ -94,10 +106,8 @@ int ElementVectorDefinition::GetInnerIndex(int i) const {
 }
 
 template<typename T>
-int ElementVectorDefinition::AddElementDefinition(const std::string& name) {
-  const std::shared_ptr<const ElementDescriptionBase> new_element_definition(
-      new ElementDescription<T>());
-  AddElementDefinition(name, new_element_definition);
+int ElementVectorDefinition::AddElement(const std::string& name) {
+  AddElement(name, std::make_shared<ElementDescription<T>>());
 }
 
 template<typename T, typename ... Ts>
@@ -110,37 +120,40 @@ struct TH_pack_dim<> {
 };
 
 template<typename ... Ts>
-ElementVectorPack<Ts...>::ElementVectorPack(const std::array<std::string,n_>& names){
+ElementPack<Ts...>::ElementPack(const std::array<std::string,n_>& names){
   addElementsToDefinition(names);
 }
 
 template<typename ... Ts>
 template<int i>
-constexpr int ElementVectorPack<Ts...>::_GetStateDimension() {
-  return ElementTraits<typename std::tuple_element<i,mtTuple>::type>::d_;
+constexpr int ElementPack<Ts...>::_GetStateDimension() {
+  typedef typename std::tuple_element<i,mtTuple>::type mtElementType;
+  return ElementTraits<mtElementType>::d_;
 }
 
 template<typename ... Ts>
 template<int i, typename std::enable_if<(i>0)>::type*>
-constexpr int ElementVectorPack<Ts...>::_GetStartIndex() {
+constexpr int ElementPack<Ts...>::_GetStartIndex() {
   return _GetStartIndex<i-1>() + _GetStateDimension<i-1>();
 }
 template<typename ... Ts>
 template<int i, typename std::enable_if<(i==0)>::type*>
-constexpr int ElementVectorPack<Ts...>::_GetStartIndex() {
+constexpr int ElementPack<Ts...>::_GetStartIndex() {
   return 0;
 }
 
 template<typename ... Ts>
 template<int i, typename std::enable_if<(i<sizeof...(Ts))>::type*>
-void ElementVectorPack<Ts...>::addElementsToDefinition(const std::array<std::string,n_>& names) {
+void ElementPack<Ts...>::addElementsToDefinition(
+      const std::array<std::string,n_>& names) {
   typedef typename std::tuple_element<i,mtTuple>::type mtElementType;
-  AddElementDefinition<mtElementType>(names.at(i));
+  AddElement<mtElementType>(names.at(i));
   addElementsToDefinition<i+1>(names);
 }
 template<typename ... Ts>
 template<int i, typename std::enable_if<(i==sizeof...(Ts))>::type*>
-void ElementVectorPack<Ts...>::addElementsToDefinition(const std::array<std::string,n_>& names) {}
+void ElementPack<Ts...>::addElementsToDefinition(
+      const std::array<std::string,n_>& names) {}
 
 }
 

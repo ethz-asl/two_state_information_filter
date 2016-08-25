@@ -9,12 +9,12 @@ namespace GIF {
 
 class ElementVectorBase {
  public:
-  ElementVectorBase(const std::shared_ptr<const ElementVectorDefinition>& def);
+  ElementVectorBase(const SP<const ElementVectorDefinition>& def);
   virtual ~ElementVectorBase();
-  bool matchesDef(const std::shared_ptr<const ElementVectorDefinition>& def) const;
+  bool matchesDef(const SP<const ElementVectorDefinition>& def) const;
   ElementVectorBase& operator=(const ElementVectorBase& other);
-  virtual std::shared_ptr<ElementBase> getElement(int i) = 0;
-  virtual std::shared_ptr<const ElementBase> getElement(int i) const = 0;
+  virtual SP<ElementBase> getElement(int i) = 0;
+  virtual SP<const ElementBase> getElement(int i) const = 0;
   template<typename T>
   inline T& getValue(int i);
   template<typename T>
@@ -32,47 +32,47 @@ class ElementVectorBase {
   void setIdentity();
   void setRandom(int& s);
   void boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec,
-               const std::shared_ptr<ElementVectorBase>& out) const;
-  void boxminus(const std::shared_ptr<const ElementVectorBase>& ref,
+               const SP<ElementVectorBase>& out) const;
+  void boxminus(const SP<const ElementVectorBase>& ref,
                 Eigen::Ref<Eigen::VectorXd> vec) const;
-  std::shared_ptr<const ElementVectorDefinition> getDef() const;
+  SP<const ElementVectorDefinition> getDef() const;
 
  protected:
-  const std::shared_ptr<const ElementVectorDefinition> def_;
+  const SP<const ElementVectorDefinition> def_;
 };
 
 class ElementVector : public ElementVectorBase {
  public:
-  ElementVector(const std::shared_ptr<const ElementVectorDefinition>& def);
+  ElementVector(const SP<const ElementVectorDefinition>& def);
   virtual ~ElementVector();
   ElementVector& operator=(const ElementVectorBase& other);
   int getNumElement() const;
-  inline std::shared_ptr<ElementBase> getElement(int i);
-  inline std::shared_ptr<const ElementBase> getElement(int i) const;
+  inline SP<ElementBase> getElement(int i);
+  inline SP<const ElementBase> getElement(int i) const;
 
  protected:
-  std::vector<std::shared_ptr<ElementBase>> elements_;
+  std::vector<SP<ElementBase>> elements_;
 };
 
 class ElementVectorWrapper : public ElementVectorBase {
  public:
-  ElementVectorWrapper(const std::shared_ptr<const ElementVectorDefinition>& def,
-               const std::shared_ptr<const ElementVectorDefinition>& in);
+  ElementVectorWrapper(const SP<const ElementVectorDefinition>& def,
+               const SP<const ElementVectorDefinition>& in);
   ~ElementVectorWrapper();
   ElementVectorWrapper& operator=(const ElementVectorBase& other);
   int getNumElement() const;
-  inline std::shared_ptr<ElementBase> getElement(int i);
-  inline std::shared_ptr<const ElementBase> getElement(int i) const;
+  inline SP<ElementBase> getElement(int i);
+  inline SP<const ElementBase> getElement(int i) const;
   void computeMap();
-  void setState(const std::shared_ptr<ElementVectorBase>& state);
-  void setState(const std::shared_ptr<const ElementVectorBase>& state) const;
+  void setState(const SP<ElementVectorBase>& state);
+  void setState(const SP<const ElementVectorBase>& state) const;
   void wrapJacobian(Eigen::Ref<MXD> out, const Eigen::Ref<const MXD>& in,
                     int rowOffset = 0) const;
 
  protected:
-  std::shared_ptr<ElementVectorBase> state_;
-  mutable std::shared_ptr<const ElementVectorBase> constState_;
-  const std::shared_ptr<const ElementVectorDefinition> in_;
+  SP<ElementVectorBase> state_;
+  mutable SP<const ElementVectorBase> constState_;
+  const SP<const ElementVectorDefinition> in_;
   std::vector<int> indexMap_;
 };
 
@@ -123,19 +123,19 @@ int ElementVectorBase::getInner(int i) const {
   return def_->GetInnerIndex(i);
 }
 
-std::shared_ptr<ElementBase> ElementVector::getElement(int i) {
+SP<ElementBase> ElementVector::getElement(int i) {
   return elements_.at(i);
 }
 
-std::shared_ptr<const ElementBase> ElementVector::getElement(int i) const {
+SP<const ElementBase> ElementVector::getElement(int i) const {
   return elements_.at(i);
 }
 
-std::shared_ptr<ElementBase> ElementVectorWrapper::getElement(int i) {
+SP<ElementBase> ElementVectorWrapper::getElement(int i) {
   return state_->getElement(indexMap_[i]);
 }
 
-std::shared_ptr<const ElementBase> ElementVectorWrapper::getElement(int i) const {
+SP<const ElementBase> ElementVectorWrapper::getElement(int i) const {
   return constState_->getElement(indexMap_[i]);
 }
 

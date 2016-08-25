@@ -10,8 +10,8 @@ class ResidualStruct {
  public:
   ResidualStruct(const std::shared_ptr<BinaryResidualBase>& res,
                  const std::shared_ptr<ElementVectorDefinition>& stateDefinition) {
-    stateDefinition->ExtendWithStateDefinition(res->preDefinition());
-    stateDefinition->ExtendWithStateDefinition(res->posDefinition());
+    stateDefinition->Extend(res->preDefinition());
+    stateDefinition->Extend(res->posDefinition());
     res_ = res;
     mt_.reset(new MeasurementTimeline(!res->isUnary_));
     preWrap_.reset(new ElementVectorWrapper(res->preDefinition(), stateDefinition));

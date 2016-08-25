@@ -12,8 +12,8 @@
 
 using namespace GIF;
 
-class TransformationExample : public Transformation<ElementVectorPack<V3D>,
-    ElementVectorPack<double, std::array<V3D, 4>>> {
+class TransformationExample : public Transformation<ElementPack<V3D>,
+    ElementPack<double, std::array<V3D, 4>>> {
  public:
   TransformationExample()
       : mtTransformation({"pos"}, {"tim", "sta"}) {
@@ -41,8 +41,8 @@ class EmptyMeas : public ElementVector {
   EmptyMeas(): ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementVectorDefinition())){};
 };
 
-class BinaryRedidualVelocity : public BinaryResidual<ElementVectorPack<V3D>,
-    ElementVectorPack<V3D, V3D>, ElementVectorPack<V3D>, ElementVectorPack<V3D>, EmptyMeas> {
+class BinaryRedidualVelocity : public BinaryResidual<ElementPack<V3D>,
+    ElementPack<V3D, V3D>, ElementPack<V3D>, ElementPack<V3D>, EmptyMeas> {
  public:
   BinaryRedidualVelocity()
       : mtBinaryRedidual( { "pos" }, { "pos", "vel" }, { "pos" }, { "pos" },
@@ -83,15 +83,15 @@ class BinaryRedidualVelocity : public BinaryResidual<ElementVectorPack<V3D>,
 class AccelerometerMeas : public ElementVector {
  public:
   AccelerometerMeas(const V3D& acc = V3D(0, 0, 0))
-      : ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementVectorPack<V3D>( { "acc" }))),
+      : ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementPack<V3D>( { "acc" }))),
         acc_(ElementVector::getValue<V3D>("acc")) {
     acc_ = acc;
   }
   V3D& acc_;
 };
 
-class BinaryRedidualAccelerometer : public BinaryResidual<ElementVectorPack<V3D>,
-    ElementVectorPack<V3D>, ElementVectorPack<V3D>, ElementVectorPack<V3D>, AccelerometerMeas> {
+class BinaryRedidualAccelerometer : public BinaryResidual<ElementPack<V3D>,
+    ElementPack<V3D>, ElementPack<V3D>, ElementPack<V3D>, AccelerometerMeas> {
  public:
   BinaryRedidualAccelerometer()
       : mtBinaryRedidual( { "vel" }, { "vel" }, { "vel" }, { "vel" }, false,
@@ -126,8 +126,8 @@ class BinaryRedidualAccelerometer : public BinaryResidual<ElementVectorPack<V3D>
   double dt_;
 };
 
-class PredictionAccelerometer : public Prediction<ElementVectorPack<V3D>,
-    ElementVectorPack<V3D>, AccelerometerMeas> {
+class PredictionAccelerometer : public Prediction<ElementPack<V3D>,
+    ElementPack<V3D>, AccelerometerMeas> {
  public:
   PredictionAccelerometer()
       : mtPrediction( { "vel" }, { "vel" }) {

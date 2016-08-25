@@ -10,16 +10,16 @@ template<typename PackOut, typename PackIn>
 class Transformation;
 
 template<typename ... Out, typename ... In>
-class Transformation<ElementVectorPack<Out...>, ElementVectorPack<In...>> : public Model<
-    Transformation<ElementVectorPack<Out...>, ElementVectorPack<In...>>,
-    ElementVectorPack<Out...>, ElementVectorPack<In...>> {
+class Transformation<ElementPack<Out...>, ElementPack<In...>> : public Model<
+    Transformation<ElementPack<Out...>, ElementPack<In...>>,
+    ElementPack<Out...>, ElementPack<In...>> {
  public:
-  using mtBase = Model<Transformation<ElementVectorPack<Out...>,ElementVectorPack<In...>>, ElementVectorPack<Out...>, ElementVectorPack<In...>>;
-  typedef Transformation<ElementVectorPack<Out...>, ElementVectorPack<In...>> mtTransformation;
+  using mtBase = Model<Transformation<ElementPack<Out...>,ElementPack<In...>>, ElementPack<Out...>, ElementPack<In...>>;
+  typedef Transformation<ElementPack<Out...>, ElementPack<In...>> mtTransformation;
   Transformation(const std::array<std::string, mtBase::n_>& namesOut,
                  const std::array<std::string, mtBase::m_>& namesIn)
       : mtBase(namesOut, std::forward_as_tuple(namesIn)),
-        J_((int) ElementVectorPack<Out...>::d_, (int) ElementVectorPack<In...>::d_) {
+        J_((int) ElementPack<Out...>::d_, (int) ElementPack<In...>::d_) {
   }
 
   virtual ~Transformation() {
@@ -54,8 +54,8 @@ class Transformation<ElementVectorPack<Out...>, ElementVectorPack<In...>> : publ
   template<int n, int m>
   void setJacBlock(
       MXD& J,
-      const Eigen::Matrix<double, ElementVectorPack<Out...>::template _GetStateDimension<n>(),
-          ElementVectorPack<In...>::template _GetStateDimension<m>()>& B) const {
+      const Eigen::Matrix<double, ElementPack<Out...>::template _GetStateDimension<n>(),
+          ElementPack<In...>::template _GetStateDimension<m>()>& B) const {
     this->template _setJacBlock<0, n, m>(J, B);
   }
 
