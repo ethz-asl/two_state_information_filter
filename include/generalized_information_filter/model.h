@@ -186,6 +186,8 @@ inline void Model<Derived,OutPack,InPacks...>::_jac(Mat<>& J,
   static constexpr int innerIndex =
       TH_pack_index<sizeof...(Ps),InPacks...>::GetInner();
   assert(ins.at(outerIndex)->MatchesDefinition(inDefinitions_[outerIndex]));
+  assert(J.cols() == inDefinitions_[j]->GetStateDimension());
+  assert(J.rows() == outDefinition_->GetStateDimension());
   typedef typename InPack<outerIndex>::Tuple Tuple;
   typedef typename std::tuple_element<innerIndex,Tuple>::type mtElementType;
   _jac<j>(J, ins, elements...,
