@@ -31,7 +31,7 @@ class IMUPrediction : public Prediction<ElementPack<V3D, V3D, V3D, V3D, QPD>,
   }
   virtual ~IMUPrediction() {
   }
-  void evalPredictionImpl(V3D& posPos, V3D& velPos, V3D& gybPos, V3D& acbPos, QPD& attPos,
+  void predict(V3D& posCur, V3D& velCur, V3D& gybCur, V3D& acbCur, QPD& attCur,
                           const V3D& posPre, const V3D& velPre, const V3D& gybPre,
                           const V3D& acbPre, const QPD& attPre, const V3D& posNoi,
                           const V3D& velNoi, const V3D& gybNoi, const V3D& acbNoi,
@@ -40,13 +40,13 @@ class IMUPrediction : public Prediction<ElementPack<V3D, V3D, V3D, V3D, QPD>,
     const V3D acc = meas_->acc_ - acbPre + velNoi / sqrt(dt_);
     const V3D dOmega = dt_ * gyr;
     QPD dQ = dQ.exponentialMap(dOmega);
-    posPos = posPre + dt_ * (attPre.rotate(velPre) + posNoi / sqrt(dt_));
-    velPos = (M3D::Identity() - gSM(dOmega)) * velPre + dt_ * (acc + attPre.inverseRotate(g_));
-    gybPos = gybPre + gybNoi * sqrt(dt_);
-    acbPos = acbPre + acbNoi * sqrt(dt_);
-    attPos = attPre * dQ;
+    posCur = posPre + dt_ * (attPre.rotate(velPre) + posNoi / sqrt(dt_));
+    velCur = (M3D::Identity() - gSM(dOmega)) * velPre + dt_ * (acc + attPre.inverseRotate(g_));
+    gybCur = gybPre + gybNoi * sqrt(dt_);
+    acbCur = acbPre + acbNoi * sqrt(dt_);
+    attCur = attPre * dQ;
   }
-  void jacPrePredictionImpl(MXD& J, const V3D& posPre, const V3D& velPre, const V3D& gybPre,
+  void predictJacPre(MXD& J, const V3D& posPre, const V3D& velPre, const V3D& gybPre,
                             const V3D& acbPre, const QPD& attPre, const V3D& posNoi,
                             const V3D& velNoi, const V3D& gybNoi, const V3D& acbNoi,
                             const V3D& attNoi) const {
@@ -66,7 +66,7 @@ class IMUPrediction : public Prediction<ElementPack<V3D, V3D, V3D, V3D, QPD>,
     setJacBlockPre<ATT, GYB>(J, -dt_ * MPD(attPre).matrix() * Lmat(dOmega));
     setJacBlockPre<ATT, ATT>(J, M3D::Identity());
   }
-  void jacNoiPredictionImpl(MXD& J, const V3D& posPre, const V3D& velPre, const V3D& gybPre,
+  void predictJacNoi(MXD& J, const V3D& posPre, const V3D& velPre, const V3D& gybPre,
                             const V3D& acbPre, const QPD& attPre, const V3D& posNoi,
                             const V3D& velNoi, const V3D& gybNoi, const V3D& acbNoi,
                             const V3D& attNoi) const {

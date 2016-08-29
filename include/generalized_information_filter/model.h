@@ -9,12 +9,21 @@
 
 namespace GIF {
 
+/*! \brief Template helper for summing the number of elements.
+ */
 template<typename ... InPacks>
 struct TH_pack_size;
 
+/*! \brief Template helper for getting the index of the first element of a Pack
+ */
 template<int i, typename ... Packs>
 struct TH_pack_index;
 
+/*! \brief Model
+ *         A class for implementing the mapping from multiple inputs
+ *         (ElementVectors) to a single output (ElementVector). It also provides
+ *         a finite difference implementation and testing functionality.
+ */
 template<typename Derived, typename OutPack, typename ... InPacks>
 class Model {
  public:
@@ -228,6 +237,9 @@ bool Model<Derived,OutPack,InPacks...>::_testJacInput(
       const std::array<SP<const ElementVectorBase>,N_>& ins,
       const double& delta,
       const double& th) const {
+  if(OutPack::d_ <= 0 || InPack<j>::d_ <= 0){
+    return true;
+  }
   Mat<> J((int)OutPack::d_,(int)InPack<j>::d_);
   Mat<> J_FD((int)OutPack::d_,(int)InPack<j>::d_);
   SP<ElementVector> output(new ElementVector(outDefinition_));

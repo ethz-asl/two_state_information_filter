@@ -22,97 +22,94 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
              const std::array<std::string, ElementPack<Noi...>::n_>& namesNoi)
       : mtBinaryRedidual(namesSta, namesSta, namesSta, namesNoi, false, true,
                          true),
-        prediction_(new ElementVector(this->posDefinition())) {
+        prediction_(new ElementVector(this->curDefinition())) {
   }
 
   virtual ~Prediction() {}
 
   // User implementations
-  virtual void evalPredictionImpl(Sta&... pos, const Sta&... pre,
-                                  const Noi&... noi) const = 0;
-  virtual void jacPrePredictionImpl(MXD& J, const Sta&... pre,
-                                    const Noi&... noi) const = 0;
-  virtual void jacNoiPredictionImpl(MXD& J, const Sta&... pre,
-                                    const Noi&... noi) const = 0;
+  virtual void predict(Sta&... cur, const Sta&... pre, const Noi&... noi) const = 0;
+  virtual void predictJacPre(MXD& J, const Sta&... pre, const Noi&... noi) const = 0;
+  virtual void predictJacNoi(MXD& J, const Sta&... pre, const Noi&... noi) const = 0;
 
  protected:
   template<typename ... Ts, typename std::enable_if<(sizeof...(Ts)<ElementPack<Sta...>::n_)>::type* = nullptr>
-  void _evalPredictionImpl(const std::shared_ptr<ElementVectorBase>& pos,
+  void _predict(const std::shared_ptr<ElementVectorBase>& cur,
                            const Sta&... pre, const Noi&... noi,
                            Ts&... elements) const {
-    assert(pos->MatchesDefinition(this->posDefinition()));
+    assert(cur->MatchesDefinition(this->curDefinition()));
     static constexpr int innerIndex = sizeof...(Ts);
     typedef typename ElementPack<Sta...>::Tuple Tuple;
     typedef typename std::tuple_element<innerIndex,Tuple>::type mtElementType;
-    _evalPredictionImpl(pos, pre..., noi..., elements...,
+    _predict(cur, pre..., noi..., elements...,
                         std::dynamic_pointer_cast<Element<mtElementType>>(
-                            pos->GetElement(innerIndex))->get());
+                            cur->GetElement(innerIndex))->get());
   }
 
   template<typename... Ts, typename std::enable_if<(sizeof...(Ts)==ElementPack<Sta...>::n_)>::type* = nullptr>
-  void _evalPredictionImpl(const std::shared_ptr<ElementVectorBase>& pos,
+  void _predict(const std::shared_ptr<ElementVectorBase>& cur,
                            const Sta&... pre, const Noi&... noi,
                            Ts&... elements) const {
-    evalPredictionImpl(elements..., pre..., noi...);
+    predict(elements..., pre..., noi...);
   }
 
   // Wrapping from BinaryResidual to Prediction implementation
-  void evalResidualImpl(Sta&... res, const Sta&... pre, const Sta&... pos,
+  void eval(Sta&... inn, const Sta&... pre, const Sta&... cur,
                         const Noi&... noi) const {
     // First compute prediction
-    _evalPredictionImpl(prediction_, pre..., noi...);
+    _predict(prediction_, pre..., noi...);
     // Then evaluate difference to posterior
-    computeInnovation(res...,pos...,prediction_);
+    computeInnovation(inn...,cur...,prediction_);
   }
-  void jacPreImpl(MXD& J, const Sta&... pre, const Sta&... pos,
+  void jacPre(MXD& J, const Sta&... pre, const Sta&... cur,
                   const Noi&... noi) const {
-    jacPrePredictionImpl(J,pre...,noi...);
+    predictJacPre(J,pre...,noi...);
   }
-  void jacPosImpl(MXD& J, const Sta&... pre, const Sta&... pos,
+  void jacCur(MXD& J, const Sta&... pre, const Sta&... cur,
                   const Noi&... noi) const {
     J.setZero();
-    _evalPredictionImpl(prediction_, pre..., noi...);
-    computePosJacobian(J,prediction_,pos...);
+    _predict(prediction_, pre..., noi...);
+    computeCurJacobian(J,prediction_,cur...);
   }
-  void jacNoiImpl(MXD& J, const Sta&... pre, const Sta&... pos,
+  void jacNoi(MXD& J, const Sta&... pre, const Sta&... cur,
                   const Noi&... noi) const {
-    jacNoiPredictionImpl(J,pre...,noi...);
+    predictJacNoi(J,pre...,noi...);
   }
 
   template<int i = 0, typename std::enable_if<(i<sizeof...(Sta))>::type* = nullptr>
-  inline void computeInnovation(Sta&... res, const Sta&... pos,
+  inline void computeInnovation(Sta&... inn, const Sta&... cur,
       const std::shared_ptr<const ElementVectorBase>& prediction) const {
     typedef typename std::tuple_element<i,
         typename ElementPack<Sta...>::Tuple>::type mtElementType;
 
-    // res = I+(pred-pos)
+    // inn = I+(pred-cur)
     Eigen::Matrix<double,ElementTraits<mtElementType>::d_,1> vec;
     ElementTraits<mtElementType>::boxminus(
         std::dynamic_pointer_cast<const Element<mtElementType>>(
             prediction->GetElement(i))->get(),std::get<i>(
-                std::forward_as_tuple(pos...)),vec);
+                std::forward_as_tuple(cur...)),vec);
     // TODO: make more efficient (could be done directly on boxminus, but then
     // jacobian becomes more annoying)
     ElementTraits<mtElementType>::boxplus(
         ElementTraits<mtElementType>::identity(),vec,std::get<i>(
-            std::forward_as_tuple(res...)));
-    computeInnovation<i+1>(res...,pos...,prediction);
+            std::forward_as_tuple(inn...)));
+    computeInnovation<i+1>(inn...,cur...,prediction);
   }
   template<int i = 0, typename std::enable_if<(i>=sizeof...(Sta))>::type* = nullptr>
-  inline void computeInnovation(Sta&... res, const Sta&... pos,
+  inline void computeInnovation(Sta&... inn, const Sta&... cur,
       const std::shared_ptr<const ElementVectorBase>& prediction) const {}
 
   template<int i = 0, int j = 0, typename std::enable_if<(i<sizeof...(Sta))>::type* = nullptr>
-  void computePosJacobian(MXD& J, const std::shared_ptr<ElementVectorBase>& prediction,
-                          const Sta&... pos) const{
-    assert(prediction->MatchesDefinition(this->posDefinition()));
+  void computeCurJacobian(MXD& J, const std::shared_ptr<ElementVectorBase>& prediction,
+                          const Sta&... cur) const{
+    assert(prediction->MatchesDefinition(this->curDefinition()));
     typedef typename std::tuple_element<i,typename
         ElementPack<Sta...>::Tuple>::type mtElementType;
     Eigen::Matrix<double,ElementTraits<mtElementType>::d_,1> vec;
     ElementTraits<mtElementType>::boxminus(
         std::dynamic_pointer_cast<const Element<mtElementType>>(
             prediction->GetElement(i))->get(),std::get<i>(
-                std::forward_as_tuple(pos...)),vec);
+                std::forward_as_tuple(cur...)),vec);
     J.template block<ElementTraits<mtElementType>::d_,
                      ElementTraits<mtElementType>::d_>(j,j) =
       ElementTraits<mtElementType>::boxplusJacVec(
@@ -120,12 +117,12 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
       ElementTraits<mtElementType>::boxminusJacRef(
           std::dynamic_pointer_cast<const Element<mtElementType>>(
               prediction->GetElement(i))->get(),std::get<i>(
-                  std::forward_as_tuple(pos...)));
-    computePosJacobian<i+1,j+ElementTraits<mtElementType>::d_>(J,prediction,pos...);
+                  std::forward_as_tuple(cur...)));
+    computeCurJacobian<i+1,j+ElementTraits<mtElementType>::d_>(J,prediction,cur...);
   }
   template<int i = 0, int j = 0, typename std::enable_if<(i>=sizeof...(Sta))>::type* = nullptr>
-  void computePosJacobian(MXD& J, const std::shared_ptr<ElementVectorBase>& prediction,
-                          const Sta&... pos) const{}
+  void computeCurJacobian(MXD& J, const std::shared_ptr<ElementVectorBase>& prediction,
+                          const Sta&... cur) const{}
 
  protected:
   std::shared_ptr<ElementVector> prediction_;

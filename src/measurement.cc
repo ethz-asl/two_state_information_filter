@@ -113,7 +113,7 @@ void MeasurementTimeline::split(
     const std::shared_ptr<const BinaryResidualBase>& res) {
   assert(t0 <= t1 && t1 <= t2);
   addMeas(std::shared_ptr<const ElementVectorBase>(), t1);
-  res->splitMeasurements(measMap_.at(t2), t0, t1, t2, measMap_.at(t1),
+  res->splitMeasurements(t0, t1, t2, measMap_.at(t2), measMap_.at(t1),
                          measMap_.at(t2));
 }
 
@@ -140,8 +140,7 @@ void MeasurementTimeline::merge(
     const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
     const std::shared_ptr<const BinaryResidualBase>& res) {
   assert(t0 <= t1 && t1 <= t2);
-  res->mergeMeasurements(measMap_.at(t1), measMap_.at(t2), t0, t1, t2,
-                         measMap_.at(t2));
+  res->mergeMeasurements(t0, t1, t2, measMap_.at(t1), measMap_.at(t2), measMap_.at(t2));
   measMap_.erase(t1);  // does not count as processed
 }
 

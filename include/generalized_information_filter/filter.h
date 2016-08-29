@@ -1,8 +1,9 @@
 #ifndef GIF_FILTER_HPP_
 #define GIF_FILTER_HPP_
 
-#include "generalized_information_filter/binary-residual.h"
 #include "generalized_information_filter/common.h"
+#include "generalized_information_filter/binary-residual.h"
+#include "generalized_information_filter/measurement.h"
 
 namespace GIF {
 
@@ -11,19 +12,19 @@ class ResidualStruct {
   ResidualStruct(const std::shared_ptr<BinaryResidualBase>& res,
                  const std::shared_ptr<ElementVectorDefinition>& stateDefinition) {
     stateDefinition->Extend(res->preDefinition());
-    stateDefinition->Extend(res->posDefinition());
+    stateDefinition->Extend(res->curDefinition());
     res_ = res;
     mt_.reset(new MeasurementTimeline(!res->isUnary_));
     preWrap_.reset(new ElementVectorWrapper(res->preDefinition(), stateDefinition));
-    posWrap_.reset(new ElementVectorWrapper(res->posDefinition(), stateDefinition));
-    inn_.reset(new ElementVector(res->resDefinition()));
-    innRef_.reset(new ElementVector(res->resDefinition()));
+    curWrap_.reset(new ElementVectorWrapper(res->curDefinition(), stateDefinition));
+    inn_.reset(new ElementVector(res->innDefinition()));
+    innRef_.reset(new ElementVector(res->innDefinition()));
     innRef_->SetIdentity();
     noi_.reset(new ElementVector(res->noiDefinition()));
     noi_->SetIdentity();
-    innDim_ = res->resDefinition()->GetStateDimension();
+    innDim_ = res->innDefinition()->GetStateDimension();
     jacPre_.resize(innDim_, res->preDefinition()->GetStateDimension());
-    jacPos_.resize(innDim_, res->posDefinition()->GetStateDimension());
+    jacCur_.resize(innDim_, res->curDefinition()->GetStateDimension());
     jacNoi_.resize(innDim_, res->noiDefinition()->GetStateDimension());
   }
   ;
@@ -34,12 +35,12 @@ class ResidualStruct {
   std::shared_ptr<BinaryResidualBase> res_;
   std::shared_ptr<MeasurementTimeline> mt_;
   std::shared_ptr<ElementVectorWrapper> preWrap_;
-  std::shared_ptr<ElementVectorWrapper> posWrap_;
+  std::shared_ptr<ElementVectorWrapper> curWrap_;
   std::shared_ptr<ElementVector> inn_;
   std::shared_ptr<ElementVector> innRef_;
   std::shared_ptr<ElementVector> noi_;
   MXD jacPre_;
-  MXD jacPos_;
+  MXD jacCur_;
   MXD jacNoi_;
   int innDim_;
 };
@@ -60,7 +61,7 @@ class Filter {
     time_ = t;
     state_.reset(new ElementVector(stateDefinition_));
     state_->SetIdentity();
-    posLinState_.reset(new ElementVector(stateDefinition_));
+    curLinState_.reset(new ElementVector(stateDefinition_));
     cov_.resize(stateDefinition_->GetStateDimension(), stateDefinition_->GetStateDimension());
     cov_.setIdentity();
   }
@@ -71,13 +72,13 @@ class Filter {
     return residuals_.size() - 1;
   }
   void evalRes(const std::shared_ptr<const ElementVectorBase>& pre,
-               const std::shared_ptr<const ElementVectorBase>& pos) {
+               const std::shared_ptr<const ElementVectorBase>& cur) {
     for (int i = 0; i < residuals_.size(); i++) {
       residuals_.at(i).preWrap_->setState(pre);
-      residuals_.at(i).posWrap_->setState(pos);
-      residuals_.at(i).res_->evalResidual(residuals_.at(i).inn_,
+      residuals_.at(i).curWrap_->setState(cur);
+      residuals_.at(i).res_->eval(residuals_.at(i).inn_,
                                           residuals_.at(i).preWrap_,
-                                          residuals_.at(i).posWrap_,
+                                          residuals_.at(i).curWrap_,
                                           residuals_.at(i).noi_);
       residuals_.at(i).inn_->Print();
     }
@@ -176,7 +177,7 @@ class Filter {
 
   void makeUpdateStep(const TimePoint& t) {
     // Compute linearisation point
-    posLinState_ = state_;
+    curLinState_ = state_;
 
     // Eval residual and Jacobians
     int innDim = 0;
@@ -185,14 +186,14 @@ class Filter {
     for (int i = 0; i < residuals_.size(); i++) {
       hasMeas.at(i) = residuals_.at(i).mt_->getMeas(t, meas);
       if (hasMeas.at(i)) {
-        innDim += residuals_.at(i).res_->resDefinition()->GetStateDimension();
+        innDim += residuals_.at(i).res_->innDefinition()->GetStateDimension();
       }
     }
     VXD y(innDim);
     MXD jacPre(innDim, stateDefinition_->GetStateDimension());
-    MXD jacPos(innDim, stateDefinition_->GetStateDimension());
+    MXD jacCur(innDim, stateDefinition_->GetStateDimension());
     jacPre.setZero();
-    jacPos.setZero();
+    jacCur.setZero();
     MXD Winv(innDim, innDim);
     Winv.setZero();
     int count = 0;
@@ -201,11 +202,11 @@ class Filter {
         residuals_.at(i).mt_->getMeas(t, meas);
         residuals_.at(i).res_->setMeas(meas);
         residuals_.at(i).preWrap_->setState(state_);
-        residuals_.at(i).posWrap_->setState(posLinState_);
-//        residuals_.at(i).res_->testJacs(residuals_.at(i).preWrap_,residuals_.at(i).posWrap_,residuals_.at(i).noi_);
-        residuals_.at(i).res_->evalResidual(residuals_.at(i).inn_,
+        residuals_.at(i).curWrap_->setState(curLinState_);
+//        residuals_.at(i).res_->testJacs(residuals_.at(i).preWrap_,residuals_.at(i).curWrap_,residuals_.at(i).noi_);
+        residuals_.at(i).res_->eval(residuals_.at(i).inn_,
                                             residuals_.at(i).preWrap_,
-                                            residuals_.at(i).posWrap_,
+                                            residuals_.at(i).curWrap_,
                                             residuals_.at(i).noi_);
         residuals_.at(i).innRef_->BoxMinus(
             residuals_.at(i).inn_,
@@ -214,21 +215,21 @@ class Filter {
         // Compute Jacobians
         residuals_.at(i).res_->jacPre(residuals_.at(i).jacPre_,
                                       residuals_.at(i).preWrap_,
-                                      residuals_.at(i).posWrap_,
+                                      residuals_.at(i).curWrap_,
                                       residuals_.at(i).noi_);
-        residuals_.at(i).res_->jacPos(residuals_.at(i).jacPos_,
+        residuals_.at(i).res_->jacCur(residuals_.at(i).jacCur_,
                                       residuals_.at(i).preWrap_,
-                                      residuals_.at(i).posWrap_,
+                                      residuals_.at(i).curWrap_,
                                       residuals_.at(i).noi_);
         residuals_.at(i).res_->jacNoi(residuals_.at(i).jacNoi_,
                                       residuals_.at(i).preWrap_,
-                                      residuals_.at(i).posWrap_,
+                                      residuals_.at(i).curWrap_,
                                       residuals_.at(i).noi_);
         residuals_.at(i).preWrap_->wrapJacobian(jacPre,
                                                 residuals_.at(i).jacPre_,
                                                 count);
-        residuals_.at(i).posWrap_->wrapJacobian(jacPos,
-                                                residuals_.at(i).jacPos_,
+        residuals_.at(i).curWrap_->wrapJacobian(jacCur,
+                                                residuals_.at(i).jacCur_,
                                                 count);
         Winv.block(count, count, residuals_.at(i).innDim_,
                    residuals_.at(i).innDim_) = (residuals_.at(i).jacNoi_
@@ -241,18 +242,18 @@ class Filter {
     }
     std::cout << "Innovation:\t" << y.transpose() << std::endl;
 //    std::cout << jacPre << std::endl;
-//    std::cout << jacPos << std::endl;
+//    std::cout << jacCur << std::endl;
 //    std::cout << Winv << std::endl;
 
     // Compute Kalman update // TODO: make more efficient
     MXD D = cov_.inverse() + jacPre.transpose() * Winv * jacPre;
-    MXD S = jacPos.transpose()
+    MXD S = jacCur.transpose()
         * (Winv - Winv * jacPre * D.inverse() * jacPre.transpose() * Winv);
-    cov_ = (S * jacPos).inverse();
+    cov_ = (S * jacCur).inverse();
     VXD dx = cov_ * S * y;
 
     // Apply Kalman update
-    posLinState_->BoxPlus(dx, state_);
+    curLinState_->BoxPlus(dx, state_);
     std::cout << "state after update:" << std::endl;
     state_->Print();
 
@@ -264,7 +265,7 @@ class Filter {
   TimePoint time_;
   TimePoint startTime_;
   std::shared_ptr<ElementVector> state_;
-  std::shared_ptr<ElementVector> posLinState_;
+  std::shared_ptr<ElementVector> curLinState_;
   MXD cov_;
 
   std::shared_ptr<ElementVectorDefinition> stateDefinition_;

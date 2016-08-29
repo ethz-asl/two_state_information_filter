@@ -2,90 +2,91 @@
 #define GIF_BINARYRESIDUAL_HPP_
 
 #include "generalized_information_filter/common.h"
-#include "generalized_information_filter/measurement.h"
 #include "generalized_information_filter/model.h"
 
 namespace GIF {
 
+/*! \brief Base Class for Binary Residual
+ *         This class defines the interface for a residual relating two states.
+ */
 class BinaryResidualBase {
  public:
-  BinaryResidualBase(bool isUnary = false, bool isSplitable = false,
-                     bool isMergeable = false)
-      : isUnary_(isUnary),
-        isSplitable_(isSplitable),
-        isMergeable_(isMergeable) {
+  BinaryResidualBase(bool isUnary = false, bool isSplitable = false, bool isMergeable = false)
+      : isUnary_(isUnary), isSplitable_(isSplitable), isMergeable_(isMergeable){
   }
   virtual ~BinaryResidualBase() {
   }
-  virtual void evalResidual(
-      const std::shared_ptr<ElementVectorBase>& res,
-      const std::shared_ptr<const ElementVectorBase>& pre,
-      const std::shared_ptr<const ElementVectorBase>& pos,
-      const std::shared_ptr<const ElementVectorBase>& noi) const = 0;
-  virtual void jacPre(MXD& J, const std::shared_ptr<const ElementVectorBase>& pre,
-                      const std::shared_ptr<const ElementVectorBase>& pos,
-                      const std::shared_ptr<const ElementVectorBase>& noi) const = 0;
-  virtual void jacPos(MXD& J, const std::shared_ptr<const ElementVectorBase>& pre,
-                      const std::shared_ptr<const ElementVectorBase>& pos,
-                      const std::shared_ptr<const ElementVectorBase>& noi) const = 0;
-  virtual void jacNoi(MXD& J, const std::shared_ptr<const ElementVectorBase>& pre,
-                      const std::shared_ptr<const ElementVectorBase>& pos,
-                      const std::shared_ptr<const ElementVectorBase>& noi) const = 0;
-  virtual std::shared_ptr<ElementVectorDefinition> resDefinition() const = 0;
-  virtual std::shared_ptr<ElementVectorDefinition> preDefinition() const = 0;
-  virtual std::shared_ptr<ElementVectorDefinition> posDefinition() const = 0;
-  virtual std::shared_ptr<ElementVectorDefinition> noiDefinition() const = 0;
+  virtual void eval(const SP<ElementVectorBase>& inn,
+                            const SP<const ElementVectorBase>& pre,
+                            const SP<const ElementVectorBase>& cur,
+                            const SP<const ElementVectorBase>& noi) const = 0;
+  virtual void jacPre(MXD& J,
+                      const SP<const ElementVectorBase>& pre,
+                      const SP<const ElementVectorBase>& cur,
+                      const SP<const ElementVectorBase>& noi) const = 0;
+  virtual void jacCur(MXD& J,
+                      const SP<const ElementVectorBase>& pre,
+                      const SP<const ElementVectorBase>& cur,
+                      const SP<const ElementVectorBase>& noi) const = 0;
+  virtual void jacNoi(MXD& J,
+                      const SP<const ElementVectorBase>& pre,
+                      const SP<const ElementVectorBase>& cur,
+                      const SP<const ElementVectorBase>& noi) const = 0;
+  virtual SP<ElementVectorDefinition> innDefinition() const = 0;
+  virtual SP<ElementVectorDefinition> preDefinition() const = 0;
+  virtual SP<ElementVectorDefinition> curDefinition() const = 0;
+  virtual SP<ElementVectorDefinition> noiDefinition() const = 0;
   virtual void splitMeasurements(
-      const std::shared_ptr<const ElementVectorBase>& in, const TimePoint& t0,
-      const TimePoint& t1, const TimePoint& t2,
-      std::shared_ptr<const ElementVectorBase>& out1,
-      std::shared_ptr<const ElementVectorBase>& out2) const = 0;
+      const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
+      const SP<const ElementVectorBase>& in,
+      SP<const ElementVectorBase>& out1,
+      SP<const ElementVectorBase>& out2) const = 0;
   virtual void mergeMeasurements(
-      const std::shared_ptr<const ElementVectorBase>& in1,
-      const std::shared_ptr<const ElementVectorBase>& in2, const TimePoint& t0,
-      const TimePoint& t1, const TimePoint& t2,
-      std::shared_ptr<const ElementVectorBase>& out) const = 0;
-  virtual void setMeas(const std::shared_ptr<const ElementVectorBase>& meas) = 0;
+      const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
+      const SP<const ElementVectorBase>& in1,
+      const SP<const ElementVectorBase>& in2,
+      SP<const ElementVectorBase>& out) const = 0;
+  virtual void setMeas(const SP<const ElementVectorBase>& meas) = 0;
   virtual const MXD& getR() const = 0;
-
-  virtual bool testJacs(const std::shared_ptr<const ElementVectorBase>& pre,
-                        const std::shared_ptr<const ElementVectorBase>& pos,
-                        const std::shared_ptr<const ElementVectorBase>& noi,
-                        const double& delta = 1e-6,
-                        const double& th = 1e-6) const = 0;
-  virtual bool testJacs(int& s, const double& delta = 1e-6, const double& th =
-                            1e-6) = 0;
+  virtual MXD& getR() = 0;
+  virtual bool testJacs(const SP<const ElementVectorBase>& pre,
+                        const SP<const ElementVectorBase>& cur,
+                        const SP<const ElementVectorBase>& noi,
+                        const double& delta = 1e-6, const double& th = 1e-6) const = 0;
+  virtual bool testJacs(int& s, const double& delta = 1e-6, const double& th = 1e-6) = 0;
 
   const bool isUnary_;
   const bool isSplitable_;
   const bool isMergeable_;
 };
 
-template<typename PackRes, typename PackPre, typename PackPos, typename PackNoi,
-    typename Meas>
+/*! \brief Binary Residual
+ *         A binary residual has three inputs (the two states (previous and current) + an additional
+ *         noise term) and returns the innovation. It stores various properties of the residual.
+ */
+template<typename PackInn, typename PackPre, typename PackCur, typename PackNoi, typename Meas>
 class BinaryResidual;
 
-template<typename ... Res, typename ... Pre, typename ... Pos, typename ... Noi,
-    typename Meas>
-class BinaryResidual<ElementPack<Res...>, ElementPack<Pre...>,
-    ElementPack<Pos...>, ElementPack<Noi...>, Meas> : public Model<
-    BinaryResidual<ElementPack<Res...>, ElementPack<Pre...>,
-        ElementPack<Pos...>, ElementPack<Noi...>, Meas>, ElementPack<Res...>,
-    ElementPack<Pre...>, ElementPack<Pos...>, ElementPack<Noi...>>,
-    public BinaryResidualBase {
+template<typename ... Inn, typename ... Pre, typename ... Cur, typename ... Noi, typename Meas>
+class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...>,
+                     ElementPack<Noi...>, Meas>
+        : public Model<BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>, ElementPack<Cur...>,
+          ElementPack<Noi...>, Meas>, ElementPack<Inn...>, ElementPack<Pre...>, ElementPack<Cur...>,
+          ElementPack<Noi...>>,
+          public BinaryResidualBase {
  public:
-  typedef BinaryResidual<ElementPack<Res...>, ElementPack<Pre...>,
-      ElementPack<Pos...>, ElementPack<Noi...>, Meas> mtBinaryRedidual;
-  using mtBase = Model<mtBinaryRedidual,ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>>;
-  BinaryResidual(
-      const std::array<std::string, ElementPack<Res...>::n_>& namesRes,
-      const std::array<std::string, ElementPack<Pre...>::n_>& namesPre,
-      const std::array<std::string, ElementPack<Pos...>::n_>& namesPos,
-      const std::array<std::string, ElementPack<Noi...>::n_>& namesNoi,
-      bool isUnary = false, bool isSplitable = false, bool isMergeable = false)
-      : mtBase(namesRes, std::forward_as_tuple(namesPre, namesPos, namesNoi)),
-        BinaryResidualBase(isUnary, isSplitable, isMergeable),
-        meas_(new Meas()) {
+  typedef BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>, ElementPack<Cur...>,
+      ElementPack<Noi...>, Meas> mtBinaryRedidual;
+  using mtBase = Model<mtBinaryRedidual,ElementPack<Inn...>,ElementPack<Pre...>,ElementPack<Cur...>,
+      ElementPack<Noi...>>;
+  BinaryResidual(const std::array<std::string, ElementPack<Inn...>::n_>& namesInn,
+                 const std::array<std::string, ElementPack<Pre...>::n_>& namesPre,
+                 const std::array<std::string, ElementPack<Cur...>::n_>& namesCur,
+                 const std::array<std::string, ElementPack<Noi...>::n_>& namesNoi,
+                 bool isUnary = false, bool isSplitable = false, bool isMergeable = false)
+        : mtBase(namesInn, std::forward_as_tuple(namesPre, namesCur, namesNoi)),
+          BinaryResidualBase(isUnary, isSplitable, isMergeable),
+          meas_(new Meas()) {
     R_.resize(noiDefinition()->GetStateDimension(), noiDefinition()->GetStateDimension());
     R_.setIdentity();
   }
@@ -93,184 +94,160 @@ class BinaryResidual<ElementPack<Res...>, ElementPack<Pre...>,
   }
 
   // Set measurement
-  void setMeas(const std::shared_ptr<const ElementVectorBase>& meas) {
+  void setMeas(const SP<const ElementVectorBase>& meas) {
     meas_ = std::dynamic_pointer_cast<const Meas>(meas);
     if (!meas_) {
+      assert("ERROR: Passing wrong measurement type" == 0);
       std::cout << "ERROR: Passing wrong measurement type" << std::endl;
     }
   }
 
-  void splitMeasurements(const std::shared_ptr<const ElementVectorBase>& in,
-                         const TimePoint& t0, const TimePoint& t1,
-                         const TimePoint& t2,
-                         std::shared_ptr<const ElementVectorBase>& out1,
-                         std::shared_ptr<const ElementVectorBase>& out2) const {
+  void splitMeasurements(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
+                         const SP<const ElementVectorBase>& in,
+                         SP<const ElementVectorBase>& out1,
+                         SP<const ElementVectorBase>& out2) const {
     // carefull: in/out1/out2 may point to the same elements
     if (isSplitable_) {
       out1 = in;
       out2 = in;
     } else {
-      std::cout
-          << "ERROR: splitting of specific residual not supported/implemented!"
-          << std::endl;
+      std::cout << "ERROR: splitting of specific residual not supported/implemented!" << std::endl;
     }
   }
 
-  void mergeMeasurements(const std::shared_ptr<const ElementVectorBase>& in1,
-                         const std::shared_ptr<const ElementVectorBase>& in2,
-                         const TimePoint& t0, const TimePoint& t1,
-                         const TimePoint& t2,
-                         std::shared_ptr<const ElementVectorBase>& out) const {
+  void mergeMeasurements(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
+                         const SP<const ElementVectorBase>& in1,
+                         const SP<const ElementVectorBase>& in2,
+                         SP<const ElementVectorBase>& out) const {
     if (isMergeable_) {
-      std::shared_ptr < ElementVectorBase > newMeas(new Meas());
+      SP<ElementVectorBase> newMeas(new Meas());
       VXD diff(in1->GetDimension());
       in1->BoxMinus(in2, diff);
       in2->BoxPlus(toSec(t1 - t0) / toSec(t2 - t0) * diff, newMeas);
       out = newMeas;
     } else {
-      std::cout
-          << "ERROR: merging of specific residual not supported!/implemented"
-          << std::endl;
+      std::cout << "ERROR: merging of specific residual not supported!/implemented" << std::endl;
     }
   }
 
   // User implementations
-  virtual void evalResidualImpl(Res&... res, const Pre&... pre,
-                                const Pos&... pos, const Noi&... noi) const = 0;
-  virtual void jacPreImpl(MXD& J, const Pre&... pre, const Pos&... pos,
-                          const Noi&... noi) const = 0;
-  virtual void jacPosImpl(MXD& J, const Pre&... pre, const Pos&... pos,
-                          const Noi&... noi) const = 0;
-  virtual void jacNoiImpl(MXD& J, const Pre&... pre, const Pos&... pos,
-                          const Noi&... noi) const = 0;
+  virtual void eval(Inn&... inn, const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
+  virtual void jacPre(MXD& J,    const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
+  virtual void jacCur(MXD& J,    const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
+  virtual void jacNoi(MXD& J,    const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
 
   // Wrapping from user interface to base
-  void evalResidual(const std::shared_ptr<ElementVectorBase>& res,
-                    const std::shared_ptr<const ElementVectorBase>& pre,
-                    const std::shared_ptr<const ElementVectorBase>& pos,
-                    const std::shared_ptr<const ElementVectorBase>& noi) const {
-    const std::array<std::shared_ptr<const ElementVectorBase>, 3> ins =
-        { pre, pos, noi };
-    this->_eval(res, ins);
+  void eval(const SP<ElementVectorBase>& inn,
+            const SP<const ElementVectorBase>& pre,
+            const SP<const ElementVectorBase>& cur,
+            const SP<const ElementVectorBase>& noi) const {
+    const std::array<SP<const ElementVectorBase>, 3> ins = {pre, cur, noi};
+    this->_eval(inn, ins);
   }
 
-  void jacPre(MXD& J, const std::shared_ptr<const ElementVectorBase>& pre,
-              const std::shared_ptr<const ElementVectorBase>& pos,
-              const std::shared_ptr<const ElementVectorBase>& noi) const {
-    const std::array<std::shared_ptr<const ElementVectorBase>, 3> ins =
-        { pre, pos, noi };
+  void jacPre(MXD& J, const SP<const ElementVectorBase>& pre,
+                      const SP<const ElementVectorBase>& cur,
+                      const SP<const ElementVectorBase>& noi) const {
+    const std::array<SP<const ElementVectorBase>, 3> ins = {pre, cur, noi};
     this->template _jac<0>(J, ins);
   }
-  void jacPos(MXD& J, const std::shared_ptr<const ElementVectorBase>& pre,
-              const std::shared_ptr<const ElementVectorBase>& pos,
-              const std::shared_ptr<const ElementVectorBase>& noi) const {
-    const std::array<std::shared_ptr<const ElementVectorBase>, 3> ins =
-        { pre, pos, noi };
+  void jacCur(MXD& J, const SP<const ElementVectorBase>& pre,
+                      const SP<const ElementVectorBase>& cur,
+                      const SP<const ElementVectorBase>& noi) const {
+    const std::array<SP<const ElementVectorBase>, 3> ins = {pre, cur, noi};
     this->template _jac<1>(J, ins);
   }
 
-  void jacNoi(MXD& J, const std::shared_ptr<const ElementVectorBase>& pre,
-              const std::shared_ptr<const ElementVectorBase>& pos,
-              const std::shared_ptr<const ElementVectorBase>& noi) const {
-    const std::array<std::shared_ptr<const ElementVectorBase>, 3> ins =
-        { pre, pos, noi };
+  void jacNoi(MXD& J, const SP<const ElementVectorBase>& pre,
+                      const SP<const ElementVectorBase>& cur,
+                      const SP<const ElementVectorBase>& noi) const {
+    const std::array<SP<const ElementVectorBase>, 3> ins = {pre, cur, noi};
     this->template _jac<2>(J, ins);
   }
-  void jacFDPre(MXD& J, const std::shared_ptr<const ElementVectorBase>& pre,
-                const std::shared_ptr<const ElementVectorBase>& pos,
-                const std::shared_ptr<const ElementVectorBase>& noi,
-                const double& delta = 1e-6) {
-    const std::array<std::shared_ptr<const ElementVectorBase>, 3> ins =
-        { pre, pos, noi };
+  void jacFDPre(MXD& J, const SP<const ElementVectorBase>& pre,
+                        const SP<const ElementVectorBase>& cur,
+                        const SP<const ElementVectorBase>& noi,
+                        const double& delta = 1e-6) {
+    const std::array<SP<const ElementVectorBase>, 3> ins = {pre, cur, noi};
     this->template _jacFD<0>(J, ins, delta);
   }
-  void jacFDPos(MXD& J, const std::shared_ptr<const ElementVectorBase>& pre,
-                const std::shared_ptr<const ElementVectorBase>& pos,
-                const std::shared_ptr<const ElementVectorBase>& noi,
-                const double& delta = 1e-6) {
-    const std::array<std::shared_ptr<const ElementVectorBase>, 3> ins =
-        { pre, pos, noi };
+  void jacFDCur(MXD& J, const SP<const ElementVectorBase>& pre,
+                        const SP<const ElementVectorBase>& cur,
+                        const SP<const ElementVectorBase>& noi,
+                        const double& delta = 1e-6) {
+    const std::array<SP<const ElementVectorBase>, 3> ins = {pre, cur, noi};
     this->template _jacFD<1>(J, ins, delta);
   }
 
-  void jacFDNoi(MXD& J, const std::shared_ptr<const ElementVectorBase>& pre,
-                const std::shared_ptr<const ElementVectorBase>& pos,
-                const std::shared_ptr<const ElementVectorBase>& noi,
-                const double& delta = 1e-6) {
-    const std::array<std::shared_ptr<const ElementVectorBase>, 3> ins =
-        { pre, pos, noi };
+  void jacFDNoi(MXD& J, const SP<const ElementVectorBase>& pre,
+                        const SP<const ElementVectorBase>& cur,
+                        const SP<const ElementVectorBase>& noi,
+                        const double& delta = 1e-6) {
+    const std::array<SP<const ElementVectorBase>, 3> ins = {pre, cur, noi};
     this->template _jacFD<2>(J, ins, delta);
   }
 
   template<int n, int m>
   void setJacBlockPre(
       MXD& J,
-      const Eigen::Matrix<double, ElementPack<Res...>::template _GetStateDimension<n>(),
-          ElementPack<Pre...>::template _GetStateDimension<m>()>& B) const {
+      const Mat<ElementPack<Inn...>::template _GetStateDimension<n>(),
+                ElementPack<Pre...>::template _GetStateDimension<m>()>& B) const {
     this->template _setJacBlock<0, n, m>(J, B);
   }
 
   template<int n, int m>
-  void setJacBlockPos(
+  void setJacBlockCur(
       MXD& J,
-      const Eigen::Matrix<double, ElementPack<Res...>::template _GetStateDimension<n>(),
-          ElementPack<Pos...>::template _GetStateDimension<m>()>& B) const {
+      const Mat<ElementPack<Inn...>::template _GetStateDimension<n>(),
+                ElementPack<Cur...>::template _GetStateDimension<m>()>& B) const {
     this->template _setJacBlock<1, n, m>(J, B);
   }
 
   template<int n, int m>
   void setJacBlockNoi(
       MXD& J,
-      const Eigen::Matrix<double, ElementPack<Res...>::template _GetStateDimension<n>(),
-          ElementPack<Noi...>::template _GetStateDimension<m>()>& B) const {
+      const Mat<ElementPack<Inn...>::template _GetStateDimension<n>(),
+                ElementPack<Noi...>::template _GetStateDimension<m>()>& B) const {
     this->template _setJacBlock<2, n, m>(J, B);
   }
 
-  bool testJacs(const std::shared_ptr<const ElementVectorBase>& pre,
-                const std::shared_ptr<const ElementVectorBase>& pos,
-                const std::shared_ptr<const ElementVectorBase>& noi,
+  bool testJacs(const SP<const ElementVectorBase>& pre,
+                const SP<const ElementVectorBase>& cur,
+                const SP<const ElementVectorBase>& noi,
                 const double& delta = 1e-6, const double& th = 1e-6) const {
-    const std::array<std::shared_ptr<const ElementVectorBase>, 3> ins =
-        { pre, pos, noi };
-    return (preDefinition()->GetStateDimension() == 0
-        || this->template _testJacInput<0>(ins, delta, th))
-        & (posDefinition()->GetStateDimension() == 0
-            || this->template _testJacInput<1>(ins, delta, th))
-        & (noiDefinition()->GetStateDimension() == 0
-            || this->template _testJacInput<2>(ins, delta, th));
+    const std::array<SP<const ElementVectorBase>, 3> ins = {pre, cur, noi};
+    return this->template _testJacInput<0>(ins, delta, th)
+         & this->template _testJacInput<1>(ins, delta, th)
+         & this->template _testJacInput<2>(ins, delta, th);
   }
 
   bool testJacs(int& s, const double& delta = 1e-6, const double& th = 1e-6) {
-    std::shared_ptr < Meas > meas(new Meas());
+    SP<Meas> meas(new Meas());
     meas->SetRandom(s);
     meas_ = meas;
-    std::shared_ptr < ElementVectorBase > pre(new ElementVector(preDefinition()));
+    SP<ElementVectorBase> pre(new ElementVector(preDefinition()));
     pre->SetRandom(s);
-    std::shared_ptr < ElementVectorBase > pos(new ElementVector(posDefinition()));
-    pos->SetRandom(s);
-    std::shared_ptr < ElementVectorBase > noi(new ElementVector(noiDefinition()));
+    SP<ElementVectorBase> cur(new ElementVector(curDefinition()));
+    cur->SetRandom(s);
+    SP<ElementVectorBase> noi(new ElementVector(noiDefinition()));
     noi->SetIdentity();
-    const std::array<std::shared_ptr<const ElementVectorBase>, 3> ins =
-        { pre, pos, noi };
-    return (preDefinition()->GetStateDimension() == 0
-        || this->template _testJacInput<0>(ins, delta, th))
-        & (posDefinition()->GetStateDimension() == 0
-            || this->template _testJacInput<1>(ins, delta, th))
-        & (noiDefinition()->GetStateDimension() == 0
-            || this->template _testJacInput<2>(ins, delta, th));
+    const std::array<SP<const ElementVectorBase>, 3> ins = {pre, cur, noi};
+    return this->template _testJacInput<0>(ins, delta, th)
+         & this->template _testJacInput<1>(ins, delta, th)
+         & this->template _testJacInput<2>(ins, delta, th);
   }
 
   // Access to definitions
-  std::shared_ptr<ElementVectorDefinition> resDefinition() const {
+  SP<ElementVectorDefinition> innDefinition() const {
     return this->outDefinition_;
   }
-  std::shared_ptr<ElementVectorDefinition> preDefinition() const {
+  SP<ElementVectorDefinition> preDefinition() const {
     return this->inDefinitions_[0];
   }
-  std::shared_ptr<ElementVectorDefinition> posDefinition() const {
+  SP<ElementVectorDefinition> curDefinition() const {
     return this->inDefinitions_[1];
   }
-  std::shared_ptr<ElementVectorDefinition> noiDefinition() const {
+  SP<ElementVectorDefinition> noiDefinition() const {
     return this->inDefinitions_[2];
   }
 
@@ -284,28 +261,21 @@ class BinaryResidual<ElementPack<Res...>, ElementPack<Pre...>,
 
  protected:
   friend mtBase;
-  std::shared_ptr<const Meas> meas_;
+  SP<const Meas> meas_;
   MXD R_;
 
-  // Wrapping from base to user implementation
-  void eval(Res&... res, const Pre&... pre, const Pos&... pos,
-            const Noi&... noi) const {
-    evalResidualImpl(res..., pre..., pos..., noi...);
-  }
+  // Wrapping from base (model) to user implementation
   template<int j, typename std::enable_if<(j == 0)>::type* = nullptr>
-  void jac(MXD& J, const Pre&... pre, const Pos&... pos,
-           const Noi&... noi) const {
-    jacPreImpl(J, pre..., pos..., noi...);
+  void jac(MXD& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
+    jacPre(J, pre..., cur..., noi...);
   }
   template<int j, typename std::enable_if<(j == 1)>::type* = nullptr>
-  void jac(MXD& J, const Pre&... pre, const Pos&... pos,
-           const Noi&... noi) const {
-    jacPosImpl(J, pre..., pos..., noi...);
+  void jac(MXD& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
+    jacCur(J, pre..., cur..., noi...);
   }
   template<int j, typename std::enable_if<(j == 2)>::type* = nullptr>
-  void jac(MXD& J, const Pre&... pre, const Pos&... pos,
-           const Noi&... noi) const {
-    jacNoiImpl(J, pre..., pos..., noi...);
+  void jac(MXD& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
+    jacNoi(J, pre..., cur..., noi...);
   }
 
 };

@@ -30,20 +30,20 @@ class PoseUpdate : public UnaryUpdate<ElementPack<V3D, QPD>,
   virtual ~PoseUpdate() {
   }
 
-  void evalUnaryUpdateImpl(V3D& posInn, QPD& attInn, const V3D& posSta,
+  void eval(V3D& posInn, QPD& attInn, const V3D& posSta,
                            const QPD& attSta, const V3D& posNoi,
                            const V3D& attNoi) const {
     posInn = posSta - meas_->pos_ + posNoi;
     QPD dQ = dQ.exponentialMap(attNoi);
     attInn = dQ * attSta * meas_->att_.inverted();
   }
-  void jacStaUnaryUpdateImpl(MXD& J, const V3D& posSta, const QPD& attSta,
+  void jacCur(MXD& J, const V3D& posSta, const QPD& attSta,
                              const V3D& posNoi, const V3D& attNoi) const {
     J.setZero();
-    setJacBlockPos<POS, POS>(J, M3D::Identity());
-    setJacBlockPos<ATT, ATT>(J, M3D::Identity());
+    setJacBlockCur<POS, POS>(J, M3D::Identity());
+    setJacBlockCur<ATT, ATT>(J, M3D::Identity());
   }
-  void jacNoiUnaryUpdateImpl(MXD& J, const V3D& posSta, const QPD& attSta,
+  void jacNoi(MXD& J, const V3D& posSta, const QPD& attSta,
                              const V3D& posNoi, const V3D& attNoi) const {
     J.setZero();
     setJacBlockNoi<POS, POS>(J, M3D::Identity());

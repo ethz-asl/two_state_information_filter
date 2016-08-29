@@ -28,29 +28,10 @@ class UnaryUpdate<ElementPack<Inn...>, ElementPack<Sta...>, ElementPack<Noi...>,
   virtual ~UnaryUpdate() {
   }
 
-
-  // User implementations
-  virtual void evalUnaryUpdateImpl(Inn&... inn, const Sta&... sta,
-                                   const Noi&... noi) const = 0;
-  virtual void jacStaUnaryUpdateImpl(MXD& J, const Sta&... sta,
-                                     const Noi&... noi) const = 0;
-  virtual void jacNoiUnaryUpdateImpl(MXD& J, const Sta&... sta,
-                                     const Noi&... noi) const = 0;
-
  protected:
-  // Wrapping from BinaryResidual to UnaryUpdate implementation
-  void evalResidualImpl(Inn&... inn, const Sta&... sta,
-                        const Noi&... noi) const {
-    evalUnaryUpdateImpl(inn..., sta..., noi...);
-  }
-  void jacPreImpl(MXD& J, const Sta&... sta, const Noi&... noi) const {
+  // Set Jacobian w.r.t. previous state to zero
+  void jacPre(MXD& J, const Sta&... sta, const Noi&... noi) const {
     J.setZero();
-  }
-  void jacPosImpl(MXD& J, const Sta&... sta, const Noi&... noi) const {
-    jacStaUnaryUpdateImpl(J, sta..., noi...);
-  }
-  void jacNoiImpl(MXD& J, const Sta&... sta, const Noi&... noi) const {
-    jacNoiUnaryUpdateImpl(J, sta..., noi...);
   }
 };
 
