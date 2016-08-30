@@ -305,7 +305,9 @@ TEST_F(NewStateTest, constructor) {
         new PoseMeas(V3D(0.0, 0.0, 0.0), QPD(1.0, 0.0, 0.0, 0.0))),
         start + fromSec(i));
   }
+  TimePoint startFilter = Clock::now();
   imuPoseFilter.update();
+  std::cout << toSec(Clock::now()-startFilter)*1000 << " ms" << std::endl;
 
 }
 

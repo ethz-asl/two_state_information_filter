@@ -69,11 +69,11 @@ class ElementBase {
   virtual Mat<> boxminusJacRef(const SP<ElementBase>& ref) const = 0;
   template<typename T>
   T& get() {
-    dynamic_cast<Element<T>*>(this)->get();
+    return dynamic_cast<Element<T>*>(this)->get();
   }
   template<typename T>
   const T& get() const {
-    dynamic_cast<const Element<T>*>(this)->get();
+    return dynamic_cast<const Element<T>*>(this)->get();
   }
 };
 
