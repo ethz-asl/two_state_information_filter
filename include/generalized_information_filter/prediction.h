@@ -29,8 +29,8 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
 
   // User implementations
   virtual void predict(Sta&... cur, const Sta&... pre, const Noi&... noi) const = 0;
-  virtual void predictJacPre(MXD& J, const Sta&... pre, const Noi&... noi) const = 0;
-  virtual void predictJacNoi(MXD& J, const Sta&... pre, const Noi&... noi) const = 0;
+  virtual void predictJacPre(MatX& J, const Sta&... pre, const Noi&... noi) const = 0;
+  virtual void predictJacNoi(MatX& J, const Sta&... pre, const Noi&... noi) const = 0;
 
  protected:
   template<typename ... Ts, typename std::enable_if<(sizeof...(Ts)<ElementPack<Sta...>::n_)>::type* = nullptr>
@@ -61,17 +61,17 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
     // Then evaluate difference to posterior
     computeInnovation(inn...,cur...,prediction_);
   }
-  void jacPre(MXD& J, const Sta&... pre, const Sta&... cur,
+  void jacPre(MatX& J, const Sta&... pre, const Sta&... cur,
                   const Noi&... noi) const {
     predictJacPre(J,pre...,noi...);
   }
-  void jacCur(MXD& J, const Sta&... pre, const Sta&... cur,
+  void jacCur(MatX& J, const Sta&... pre, const Sta&... cur,
                   const Noi&... noi) const {
     J.setZero();
     _predict(prediction_, pre..., noi...);
     computeCurJacobian(J,prediction_,cur...);
   }
-  void jacNoi(MXD& J, const Sta&... pre, const Sta&... cur,
+  void jacNoi(MatX& J, const Sta&... pre, const Sta&... cur,
                   const Noi&... noi) const {
     predictJacNoi(J,pre...,noi...);
   }
@@ -100,7 +100,7 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
       const std::shared_ptr<const ElementVectorBase>& prediction) const {}
 
   template<int i = 0, int j = 0, typename std::enable_if<(i<sizeof...(Sta))>::type* = nullptr>
-  void computeCurJacobian(MXD& J, const std::shared_ptr<ElementVectorBase>& prediction,
+  void computeCurJacobian(MatX& J, const std::shared_ptr<ElementVectorBase>& prediction,
                           const Sta&... cur) const{
     assert(prediction->MatchesDefinition(this->curDefinition()));
     typedef typename std::tuple_element<i,typename
@@ -121,7 +121,7 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
     computeCurJacobian<i+1,j+ElementTraits<mtElementType>::d_>(J,prediction,cur...);
   }
   template<int i = 0, int j = 0, typename std::enable_if<(i>=sizeof...(Sta))>::type* = nullptr>
-  void computeCurJacobian(MXD& J, const std::shared_ptr<ElementVectorBase>& prediction,
+  void computeCurJacobian(MatX& J, const std::shared_ptr<ElementVectorBase>& prediction,
                           const Sta&... cur) const{}
 
  protected:

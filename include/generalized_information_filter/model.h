@@ -221,8 +221,8 @@ void Model<Derived,OutPack,InPacks...>::_jacFD(Mat<>& J,
   std::array<SP<const ElementVectorBase>,N_> inDis = ins;
   inDis[j] = stateDis;
   _eval(outRef,inDis);
-  Vec<> difIn(stateDis->GetDimension());
-  Vec<> difOut(outRef->GetDimension());
+  VecX difIn(stateDis->GetDimension());
+  VecX difOut(outRef->GetDimension());
   for(int i=0; i<stateDis->GetDimension(); i++){
     difIn.setZero();
     difIn(i) = delta;

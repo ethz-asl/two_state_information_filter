@@ -47,7 +47,7 @@ void ElementVectorBase::SetRandom(int& s) {
   }
 }
 
-void ElementVectorBase::BoxPlus(const VecRC<>& vec,
+void ElementVectorBase::BoxPlus(const VecCRef<>& vec,
                                 const SP<ElementVectorBase>& out) const {
   for (int i = 0; i < GetNumElement(); i++) {
     GetElement(i)->boxplus(
@@ -57,7 +57,7 @@ void ElementVectorBase::BoxPlus(const VecRC<>& vec,
 }
 
 void ElementVectorBase::BoxMinus(const SP<const ElementVectorBase>& ref,
-                         VecR<> vec) const {
+                         VecRef<> vec) const {
   for (int i = 0; i < GetNumElement(); i++) {
     GetElement(i)->boxminus(
         ref->GetElement(i),
@@ -128,8 +128,8 @@ void ElementVectorWrapper::setState(
   constState_ = state;
 }
 
-void ElementVectorWrapper::wrapJacobian(MatR<> out,
-                                        const MatRC<>& in,
+void ElementVectorWrapper::wrapJacobian(MatRef<> out,
+                                        const MatCRef<>& in,
                                         int rowOffset) const {
   const int rows = in.rows();
   for (int i = 0; i < GetNumElement(); ++i) {

@@ -36,8 +36,8 @@ class ElementVectorBase {
   void Print() const;
   void SetIdentity();
   void SetRandom(int& s);
-  void BoxPlus(const VecRC<>& vec, const SP<ElementVectorBase>& out) const;
-  void BoxMinus(const SP<const ElementVectorBase>& ref, VecR<> vec) const;
+  void BoxPlus(const VecCRef<>& vec, const SP<ElementVectorBase>& out) const;
+  void BoxMinus(const SP<const ElementVectorBase>& ref, VecRef<> vec) const;
   SP<const ElementVectorDefinition> GetDefinition() const;
 
  protected:
@@ -77,7 +77,7 @@ class ElementVectorWrapper : public ElementVectorBase {
   void computeMap();
   void setState(const SP<ElementVectorBase>& state);
   void setState(const SP<const ElementVectorBase>& state) const;
-  void wrapJacobian(MatR<> out, const MatRC<>& in, int rowOffset = 0) const;
+  void wrapJacobian(MatRef<> out, const MatCRef<>& in, int rowOffset = 0) const;
 
  protected:
   SP<ElementVectorBase> state_;

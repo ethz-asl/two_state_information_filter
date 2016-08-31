@@ -8,19 +8,19 @@ namespace GIF {
 
 class IMUMeas : public ElementVector {
  public:
-  IMUMeas(const V3D& gyr = V3D(0, 0, 0), const V3D& acc = V3D(0, 0, 0))
-      : ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementPack<V3D, V3D>({"gyr", "acc"}))),
-        gyr_(ElementVector::GetValue<V3D>("gyr")),
-        acc_(ElementVector::GetValue<V3D>("acc")) {
+  IMUMeas(const Vec3& gyr = Vec3(0, 0, 0), const Vec3& acc = Vec3(0, 0, 0))
+      : ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementPack<Vec3, Vec3>({"gyr", "acc"}))),
+        gyr_(ElementVector::GetValue<Vec3>("gyr")),
+        acc_(ElementVector::GetValue<Vec3>("acc")) {
     gyr_ = gyr;
     acc_ = acc;
   }
-  V3D& gyr_;
-  V3D& acc_;
+  Vec3& gyr_;
+  Vec3& acc_;
 };
 
-class IMUPrediction : public Prediction<ElementPack<V3D, V3D, V3D, V3D, QPD>,
-                                        ElementPack<V3D, V3D, V3D, V3D, V3D>,
+class IMUPrediction : public Prediction<ElementPack<Vec3, Vec3, Vec3, Vec3, Quat>,
+                                        ElementPack<Vec3, Vec3, Vec3, Vec3, Vec3>,
                                         IMUMeas> {
  public:
   IMUPrediction()
@@ -31,60 +31,60 @@ class IMUPrediction : public Prediction<ElementPack<V3D, V3D, V3D, V3D, QPD>,
   }
   virtual ~IMUPrediction() {
   }
-  void predict(V3D& posCur, V3D& velCur, V3D& gybCur, V3D& acbCur, QPD& attCur,
-                          const V3D& posPre, const V3D& velPre, const V3D& gybPre,
-                          const V3D& acbPre, const QPD& attPre, const V3D& posNoi,
-                          const V3D& velNoi, const V3D& gybNoi, const V3D& acbNoi,
-                          const V3D& attNoi) const {
-    const V3D gyr = meas_->gyr_ - gybPre + attNoi / sqrt(dt_);
-    const V3D acc = meas_->acc_ - acbPre + velNoi / sqrt(dt_);
-    const V3D dOmega = dt_ * gyr;
-    QPD dQ = dQ.exponentialMap(dOmega);
+  void predict(Vec3& posCur, Vec3& velCur, Vec3& gybCur, Vec3& acbCur, Quat& attCur,
+                          const Vec3& posPre, const Vec3& velPre, const Vec3& gybPre,
+                          const Vec3& acbPre, const Quat& attPre, const Vec3& posNoi,
+                          const Vec3& velNoi, const Vec3& gybNoi, const Vec3& acbNoi,
+                          const Vec3& attNoi) const {
+    const Vec3 gyr = meas_->gyr_ - gybPre + attNoi / sqrt(dt_);
+    const Vec3 acc = meas_->acc_ - acbPre + velNoi / sqrt(dt_);
+    const Vec3 dOmega = dt_ * gyr;
+    Quat dQ = dQ.exponentialMap(dOmega);
     posCur = posPre + dt_ * (attPre.rotate(velPre) + posNoi / sqrt(dt_));
-    velCur = (M3D::Identity() - gSM(dOmega)) * velPre + dt_ * (acc + attPre.inverseRotate(g_));
+    velCur = (Mat3::Identity() - gSM(dOmega)) * velPre + dt_ * (acc + attPre.inverseRotate(g_));
     gybCur = gybPre + gybNoi * sqrt(dt_);
     acbCur = acbPre + acbNoi * sqrt(dt_);
     attCur = attPre * dQ;
   }
-  void predictJacPre(MXD& J, const V3D& posPre, const V3D& velPre, const V3D& gybPre,
-                            const V3D& acbPre, const QPD& attPre, const V3D& posNoi,
-                            const V3D& velNoi, const V3D& gybNoi, const V3D& acbNoi,
-                            const V3D& attNoi) const {
+  void predictJacPre(MatX& J, const Vec3& posPre, const Vec3& velPre, const Vec3& gybPre,
+                            const Vec3& acbPre, const Quat& attPre, const Vec3& posNoi,
+                            const Vec3& velNoi, const Vec3& gybNoi, const Vec3& acbNoi,
+                            const Vec3& attNoi) const {
     J.setZero();
-    const V3D gyr = meas_->gyr_ - gybPre + attNoi / sqrt(dt_);
-    const V3D acc = meas_->acc_ - acbPre + velNoi / sqrt(dt_);
-    const V3D dOmega = dt_ * gyr;
-    setJacBlockPre<POS, POS>(J, M3D::Identity());
-    setJacBlockPre<POS, VEL>(J, dt_ * MPD(attPre).matrix());
+    const Vec3 gyr = meas_->gyr_ - gybPre + attNoi / sqrt(dt_);
+    const Vec3 acc = meas_->acc_ - acbPre + velNoi / sqrt(dt_);
+    const Vec3 dOmega = dt_ * gyr;
+    setJacBlockPre<POS, POS>(J, Mat3::Identity());
+    setJacBlockPre<POS, VEL>(J, dt_ * RotMat(attPre).matrix());
     setJacBlockPre<POS, ATT>(J, -dt_ * gSM(attPre.rotate(velPre)));
-    setJacBlockPre<VEL, VEL>(J, (M3D::Identity() - gSM(dOmega)));
+    setJacBlockPre<VEL, VEL>(J, (Mat3::Identity() - gSM(dOmega)));
     setJacBlockPre<VEL, GYB>(J, -dt_ * gSM(velPre));
-    setJacBlockPre<VEL, ACB>(J, -dt_ * M3D::Identity());
-    setJacBlockPre<VEL, ATT>(J, dt_ * MPD(attPre).matrix().transpose() * gSM(g_));
-    setJacBlockPre<GYB, GYB>(J, M3D::Identity());
-    setJacBlockPre<ACB, ACB>(J, M3D::Identity());
-    setJacBlockPre<ATT, GYB>(J, -dt_ * MPD(attPre).matrix() * Lmat(dOmega));
-    setJacBlockPre<ATT, ATT>(J, M3D::Identity());
+    setJacBlockPre<VEL, ACB>(J, -dt_ * Mat3::Identity());
+    setJacBlockPre<VEL, ATT>(J, dt_ * RotMat(attPre).matrix().transpose() * gSM(g_));
+    setJacBlockPre<GYB, GYB>(J, Mat3::Identity());
+    setJacBlockPre<ACB, ACB>(J, Mat3::Identity());
+    setJacBlockPre<ATT, GYB>(J, -dt_ * RotMat(attPre).matrix() * GammaMat(dOmega));
+    setJacBlockPre<ATT, ATT>(J, Mat3::Identity());
   }
-  void predictJacNoi(MXD& J, const V3D& posPre, const V3D& velPre, const V3D& gybPre,
-                            const V3D& acbPre, const QPD& attPre, const V3D& posNoi,
-                            const V3D& velNoi, const V3D& gybNoi, const V3D& acbNoi,
-                            const V3D& attNoi) const {
+  void predictJacNoi(MatX& J, const Vec3& posPre, const Vec3& velPre, const Vec3& gybPre,
+                            const Vec3& acbPre, const Quat& attPre, const Vec3& posNoi,
+                            const Vec3& velNoi, const Vec3& gybNoi, const Vec3& acbNoi,
+                            const Vec3& attNoi) const {
     J.setZero();
-    const V3D gyr = meas_->gyr_ - gybPre + attNoi / sqrt(dt_);
-    const V3D acc = meas_->acc_ - acbPre + velNoi / sqrt(dt_);
-    const V3D dOmega = dt_ * gyr;
-    setJacBlockNoi<POS, POS>(J, sqrt(dt_) * M3D::Identity());
-    setJacBlockNoi<VEL, VEL>(J, sqrt(dt_) * M3D::Identity());
+    const Vec3 gyr = meas_->gyr_ - gybPre + attNoi / sqrt(dt_);
+    const Vec3 acc = meas_->acc_ - acbPre + velNoi / sqrt(dt_);
+    const Vec3 dOmega = dt_ * gyr;
+    setJacBlockNoi<POS, POS>(J, sqrt(dt_) * Mat3::Identity());
+    setJacBlockNoi<VEL, VEL>(J, sqrt(dt_) * Mat3::Identity());
     setJacBlockNoi<VEL, ATT>(J, sqrt(dt_) * gSM(velPre));
-    setJacBlockNoi<GYB, GYB>(J, sqrt(dt_) * M3D::Identity());
-    setJacBlockNoi<ACB, ACB>(J, sqrt(dt_) * M3D::Identity());
-    setJacBlockNoi<ATT, ATT>(J, sqrt(dt_) * MPD(attPre).matrix() * Lmat(dOmega));
+    setJacBlockNoi<GYB, GYB>(J, sqrt(dt_) * Mat3::Identity());
+    setJacBlockNoi<ACB, ACB>(J, sqrt(dt_) * Mat3::Identity());
+    setJacBlockNoi<ATT, ATT>(J, sqrt(dt_) * RotMat(attPre).matrix() * GammaMat(dOmega));
   }
 
  protected:
   double dt_;
-  const V3D g_;
+  const Vec3 g_;
   enum Elements {POS, VEL, GYB, ACB, ATT};
 };
 

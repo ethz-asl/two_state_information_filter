@@ -20,15 +20,15 @@ class BinaryResidualBase {
                             const SP<const ElementVectorBase>& pre,
                             const SP<const ElementVectorBase>& cur,
                             const SP<const ElementVectorBase>& noi) const = 0;
-  virtual void jacPre(MXD& J,
+  virtual void jacPre(MatX& J,
                       const SP<const ElementVectorBase>& pre,
                       const SP<const ElementVectorBase>& cur,
                       const SP<const ElementVectorBase>& noi) const = 0;
-  virtual void jacCur(MXD& J,
+  virtual void jacCur(MatX& J,
                       const SP<const ElementVectorBase>& pre,
                       const SP<const ElementVectorBase>& cur,
                       const SP<const ElementVectorBase>& noi) const = 0;
-  virtual void jacNoi(MXD& J,
+  virtual void jacNoi(MatX& J,
                       const SP<const ElementVectorBase>& pre,
                       const SP<const ElementVectorBase>& cur,
                       const SP<const ElementVectorBase>& noi) const = 0;
@@ -47,8 +47,8 @@ class BinaryResidualBase {
       const SP<const ElementVectorBase>& in2,
       SP<const ElementVectorBase>& out) const = 0;
   virtual void setMeas(const SP<const ElementVectorBase>& meas) = 0;
-  virtual const MXD& getR() const = 0;
-  virtual MXD& getR() = 0;
+  virtual const MatX& getR() const = 0;
+  virtual MatX& getR() = 0;
   virtual bool testJacs(const SP<const ElementVectorBase>& pre,
                         const SP<const ElementVectorBase>& cur,
                         const SP<const ElementVectorBase>& noi,
@@ -121,7 +121,7 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
                          SP<const ElementVectorBase>& out) const {
     if (isMergeable_) {
       SP<ElementVectorBase> newMeas(new Meas());
-      VXD diff(in1->GetDimension());
+      VecX diff(in1->GetDimension());
       in1->BoxMinus(in2, diff);
       in2->BoxPlus(toSec(t1 - t0) / toSec(t2 - t0) * diff, newMeas);
       out = newMeas;
@@ -132,9 +132,9 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
 
   // User implementations
   virtual void eval(Inn&... inn, const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
-  virtual void jacPre(MXD& J,    const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
-  virtual void jacCur(MXD& J,    const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
-  virtual void jacNoi(MXD& J,    const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
+  virtual void jacPre(MatX& J,    const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
+  virtual void jacCur(MatX& J,    const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
+  virtual void jacNoi(MatX& J,    const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
 
   // Wrapping from user interface to base
   void eval(const SP<ElementVectorBase>& inn,
@@ -145,33 +145,33 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
     this->_eval(inn, ins);
   }
 
-  void jacPre(MXD& J, const SP<const ElementVectorBase>& pre,
+  void jacPre(MatX& J, const SP<const ElementVectorBase>& pre,
                       const SP<const ElementVectorBase>& cur,
                       const SP<const ElementVectorBase>& noi) const {
     const std::array<SP<const ElementVectorBase>, 3> ins = {pre, cur, noi};
     this->template _jac<0>(J, ins);
   }
-  void jacCur(MXD& J, const SP<const ElementVectorBase>& pre,
+  void jacCur(MatX& J, const SP<const ElementVectorBase>& pre,
                       const SP<const ElementVectorBase>& cur,
                       const SP<const ElementVectorBase>& noi) const {
     const std::array<SP<const ElementVectorBase>, 3> ins = {pre, cur, noi};
     this->template _jac<1>(J, ins);
   }
 
-  void jacNoi(MXD& J, const SP<const ElementVectorBase>& pre,
+  void jacNoi(MatX& J, const SP<const ElementVectorBase>& pre,
                       const SP<const ElementVectorBase>& cur,
                       const SP<const ElementVectorBase>& noi) const {
     const std::array<SP<const ElementVectorBase>, 3> ins = {pre, cur, noi};
     this->template _jac<2>(J, ins);
   }
-  void jacFDPre(MXD& J, const SP<const ElementVectorBase>& pre,
+  void jacFDPre(MatX& J, const SP<const ElementVectorBase>& pre,
                         const SP<const ElementVectorBase>& cur,
                         const SP<const ElementVectorBase>& noi,
                         const double& delta = 1e-6) {
     const std::array<SP<const ElementVectorBase>, 3> ins = {pre, cur, noi};
     this->template _jacFD<0>(J, ins, delta);
   }
-  void jacFDCur(MXD& J, const SP<const ElementVectorBase>& pre,
+  void jacFDCur(MatX& J, const SP<const ElementVectorBase>& pre,
                         const SP<const ElementVectorBase>& cur,
                         const SP<const ElementVectorBase>& noi,
                         const double& delta = 1e-6) {
@@ -179,7 +179,7 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
     this->template _jacFD<1>(J, ins, delta);
   }
 
-  void jacFDNoi(MXD& J, const SP<const ElementVectorBase>& pre,
+  void jacFDNoi(MatX& J, const SP<const ElementVectorBase>& pre,
                         const SP<const ElementVectorBase>& cur,
                         const SP<const ElementVectorBase>& noi,
                         const double& delta = 1e-6) {
@@ -189,7 +189,7 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
 
   template<int n, int m>
   void setJacBlockPre(
-      MXD& J,
+      MatX& J,
       const Mat<ElementPack<Inn...>::template _GetStateDimension<n>(),
                 ElementPack<Pre...>::template _GetStateDimension<m>()>& B) const {
     this->template _setJacBlock<0, n, m>(J, B);
@@ -197,7 +197,7 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
 
   template<int n, int m>
   void setJacBlockCur(
-      MXD& J,
+      MatX& J,
       const Mat<ElementPack<Inn...>::template _GetStateDimension<n>(),
                 ElementPack<Cur...>::template _GetStateDimension<m>()>& B) const {
     this->template _setJacBlock<1, n, m>(J, B);
@@ -205,7 +205,7 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
 
   template<int n, int m>
   void setJacBlockNoi(
-      MXD& J,
+      MatX& J,
       const Mat<ElementPack<Inn...>::template _GetStateDimension<n>(),
                 ElementPack<Noi...>::template _GetStateDimension<m>()>& B) const {
     this->template _setJacBlock<2, n, m>(J, B);
@@ -252,29 +252,29 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
   }
 
   // Get Noise Matrix
-  const MXD& getR() const {
+  const MatX& getR() const {
     return R_;
   }
-  MXD& getR() {
+  MatX& getR() {
     return R_;
   }
 
  protected:
   friend mtBase;
   SP<const Meas> meas_;
-  MXD R_;
+  MatX R_;
 
   // Wrapping from base (model) to user implementation
   template<int j, typename std::enable_if<(j == 0)>::type* = nullptr>
-  void jac(MXD& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
+  void jac(MatX& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
     jacPre(J, pre..., cur..., noi...);
   }
   template<int j, typename std::enable_if<(j == 1)>::type* = nullptr>
-  void jac(MXD& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
+  void jac(MatX& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
     jacCur(J, pre..., cur..., noi...);
   }
   template<int j, typename std::enable_if<(j == 2)>::type* = nullptr>
-  void jac(MXD& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
+  void jac(MatX& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
     jacNoi(J, pre..., cur..., noi...);
   }
 

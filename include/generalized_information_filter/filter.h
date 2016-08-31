@@ -39,9 +39,9 @@ class ResidualStruct {
   std::shared_ptr<ElementVector> inn_;
   std::shared_ptr<ElementVector> innRef_;
   std::shared_ptr<ElementVector> noi_;
-  MXD jacPre_;
-  MXD jacCur_;
-  MXD jacNoi_;
+  MatX jacPre_;
+  MatX jacCur_;
+  MatX jacNoi_;
   int innDim_;
 };
 
@@ -189,12 +189,12 @@ class Filter {
         innDim += residuals_.at(i).res_->innDefinition()->GetStateDimension();
       }
     }
-    VXD y(innDim);
-    MXD jacPre(innDim, stateDefinition_->GetStateDimension());
-    MXD jacCur(innDim, stateDefinition_->GetStateDimension());
+    VecX y(innDim);
+    MatX jacPre(innDim, stateDefinition_->GetStateDimension());
+    MatX jacCur(innDim, stateDefinition_->GetStateDimension());
     jacPre.setZero();
     jacCur.setZero();
-    MXD Winv(innDim, innDim);
+    MatX Winv(innDim, innDim);
     Winv.setZero();
     int count = 0;
     for (int i = 0; i < residuals_.size(); i++) {
@@ -246,11 +246,11 @@ class Filter {
 //    std::cout << Winv << std::endl;
 
     // Compute Kalman update // TODO: make more efficient
-    MXD D = cov_.inverse() + jacPre.transpose() * Winv * jacPre;
-    MXD S = jacCur.transpose()
+    MatX D = cov_.inverse() + jacPre.transpose() * Winv * jacPre;
+    MatX S = jacCur.transpose()
         * (Winv - Winv * jacPre * D.inverse() * jacPre.transpose() * Winv);
     cov_ = (S * jacCur).inverse();
-    VXD dx = cov_ * S * y;
+    VecX dx = cov_ * S * y;
 
     // Apply Kalman update
     curLinState_->BoxPlus(dx, state_);
@@ -266,7 +266,7 @@ class Filter {
   TimePoint startTime_;
   std::shared_ptr<ElementVector> state_;
   std::shared_ptr<ElementVector> curLinState_;
-  MXD cov_;
+  MatX cov_;
 
   std::shared_ptr<ElementVectorDefinition> stateDefinition_;
   std::vector<ResidualStruct> residuals_;

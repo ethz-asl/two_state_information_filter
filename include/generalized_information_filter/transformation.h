@@ -28,10 +28,10 @@ class Transformation<ElementPack<Out...>, ElementPack<In...>> : public Model<
 
   // User implementations
   virtual void evalTransform(Out&... outs, const In&... ins) const = 0;
-  virtual void jacTransform(MXD& J, const In&... ins) const = 0;
+  virtual void jacTransform(MatX& J, const In&... ins) const = 0;
 
   // Wrapping from user interface to base
-  void jacFD(MXD& J, const std::shared_ptr<const ElementVectorBase>& in,
+  void jacFD(MatX& J, const std::shared_ptr<const ElementVectorBase>& in,
              const double& delta = 1e-6) {
     const std::array<std::shared_ptr<const ElementVectorBase>, 1> ins = { in };
     this->template _jacFD<0>(J, ins, delta);
@@ -43,9 +43,9 @@ class Transformation<ElementPack<Out...>, ElementPack<In...>> : public Model<
     this->template _eval(out, ins);
   }
 
-  void transformCovMat(MXD& outputCov,
+  void transformCovMat(MatX& outputCov,
                        const std::shared_ptr<const ElementVectorBase>& in,
-                       const MXD& inputCov) {
+                       const MatX& inputCov) {
     const std::array<std::shared_ptr<const ElementVectorBase>, 1> ins = { in };
     this->template _jac<0>(J_, ins);
     outputCov = J_ * inputCov * J_.transpose();
@@ -53,7 +53,7 @@ class Transformation<ElementPack<Out...>, ElementPack<In...>> : public Model<
 
   template<int n, int m>
   void setJacBlock(
-      MXD& J,
+      MatX& J,
       const Eigen::Matrix<double, ElementPack<Out...>::template _GetStateDimension<n>(),
           ElementPack<In...>::template _GetStateDimension<m>()>& B) const {
     this->template _setJacBlock<0, n, m>(J, B);
@@ -83,11 +83,11 @@ class Transformation<ElementPack<Out...>, ElementPack<In...>> : public Model<
   }
 
   template<int j, typename std::enable_if<(j == 0)>::type* = nullptr>
-  void jac(MXD& J, const In&... ins) const {
+  void jac(MatX& J, const In&... ins) const {
     jacTransform(J, ins...);
   }
 
-  MXD J_;
+  MatX J_;
 };
 
 }

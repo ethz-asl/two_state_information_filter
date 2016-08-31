@@ -10,26 +10,26 @@
 
 namespace GIF {
 
-typedef kindr::RotationQuaternionPD QPD;
-typedef kindr::RotationMatrixPD MPD;
-typedef Eigen::Vector3d V3D;
-typedef Eigen::Matrix3d M3D;
-typedef Eigen::VectorXd VXD;
-typedef Eigen::MatrixXd MXD;
+typedef kindr::RotationQuaternionPD Quat;
+typedef kindr::RotationMatrixPD RotMat;
 
 template<int N = -1>
 using Vec = Eigen::Matrix<double,N,1>;
+using Vec3 = Vec<3>;
+using VecX = Vec<>;
 template<int N = -1>
-using VecR = Eigen::Ref<Vec<N>>;
+using VecRef = Eigen::Ref<Vec<N>>;
 template<int N = -1>
-using VecRC = Eigen::Ref<const Vec<N>>;
+using VecCRef = Eigen::Ref<const Vec<N>>;
 
 template<int N = -1, int M = N>
 using Mat = Eigen::Matrix<double,N,M>;
+using Mat3 = Mat<3>;
+using MatX = Mat<>;
 template<int N = -1, int M = N>
-using MatR = Eigen::Ref<Mat<N,M>>;
+using MatRef = Eigen::Ref<Mat<N,M>>;
 template<int N = -1, int M = N>
-using MatRC = Eigen::Ref<const Mat<N,M>>;
+using MatCRef = Eigen::Ref<const Mat<N,M>>;
 
 template<typename T>
 using SP = std::shared_ptr<T>;
@@ -45,15 +45,15 @@ inline double toSec(const Duration& duration) {
   return std::chrono::duration_cast<std::chrono::duration<double>>(duration)
       .count();
 }
-inline M3D gSM(const V3D& vec) {
+inline Mat3 gSM(const Vec3& vec) {
   return kindr::getSkewMatrixFromVector(vec);
 }
 
-static void enforceSymmetry(MXD& mat) {
+static void enforceSymmetry(MatX& mat) {
   mat = 0.5 * (mat + mat.transpose()).eval();
 }
 
-inline M3D Lmat(const V3D& a) {
+inline Mat3 GammaMat(const Vec3& a) {
   return kindr::getJacobianOfExponentialMap(a);
 }
 

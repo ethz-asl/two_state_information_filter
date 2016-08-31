@@ -12,8 +12,8 @@
 
 using namespace GIF;
 
-class TransformationExample : public Transformation<ElementPack<V3D>,
-    ElementPack<double, std::array<V3D, 4>>> {
+class TransformationExample : public Transformation<ElementPack<Vec3>,
+    ElementPack<double, std::array<Vec3, 4>>> {
  public:
   TransformationExample()
       : mtTransformation({"pos"}, {"tim", "sta"}) {
@@ -21,17 +21,17 @@ class TransformationExample : public Transformation<ElementPack<V3D>,
 
   virtual ~TransformationExample() {}
 
-  void evalTransform(V3D& posOut, const double& timeIn,
-                     const std::array<V3D, 4>& posIn) const {
-    posOut = (timeIn + 1.0) * (posIn[2] + V3D(1, 2, 3));
+  void evalTransform(Vec3& posOut, const double& timeIn,
+                     const std::array<Vec3, 4>& posIn) const {
+    posOut = (timeIn + 1.0) * (posIn[2] + Vec3(1, 2, 3));
   }
-  void jacTransform(MXD& J, const double& timeIn,
-                    const std::array<V3D, 4>& posIn) const {
+  void jacTransform(MatX& J, const double& timeIn,
+                    const std::array<Vec3, 4>& posIn) const {
     J.setZero();
-    setJacBlock<0, 0>(J, V3D(1, 2, 3));
+    setJacBlock<0, 0>(J, Vec3(1, 2, 3));
     Eigen::Matrix<double, 3, 12> J2;
     J2.setZero();
-    J2.block<3, 3>(0, 6) = M3D::Identity();
+    J2.block<3, 3>(0, 6) = Mat3::Identity();
     setJacBlock<0, 1>(J, J2);
   }
 };
@@ -41,8 +41,8 @@ class EmptyMeas : public ElementVector {
   EmptyMeas(): ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementVectorDefinition())){};
 };
 
-class BinaryRedidualVelocity : public BinaryResidual<ElementPack<V3D>,
-    ElementPack<V3D, V3D>, ElementPack<V3D>, ElementPack<V3D>, EmptyMeas> {
+class BinaryRedidualVelocity : public BinaryResidual<ElementPack<Vec3>,
+    ElementPack<Vec3, Vec3>, ElementPack<Vec3>, ElementPack<Vec3>, EmptyMeas> {
  public:
   BinaryRedidualVelocity()
       : mtBinaryRedidual( { "pos" }, { "pos", "vel" }, { "pos" }, { "pos" },
@@ -52,28 +52,28 @@ class BinaryRedidualVelocity : public BinaryResidual<ElementPack<V3D>,
 
   virtual ~BinaryRedidualVelocity() {}
 
-  void eval(V3D& posRes, const V3D& posPre, const V3D& velPre,
-                        const V3D& posCur, const V3D& posNoi) const {
+  void eval(Vec3& posRes, const Vec3& posPre, const Vec3& velPre,
+                        const Vec3& posCur, const Vec3& posNoi) const {
     posRes = posPre + dt_ * velPre - posCur + posNoi;
   }
 
-  void jacPre(MXD& J, const V3D& posPre, const V3D& velPre,
-                  const V3D& posCur, const V3D& posNoi) const {
+  void jacPre(MatX& J, const Vec3& posPre, const Vec3& velPre,
+                  const Vec3& posCur, const Vec3& posNoi) const {
     J.setZero();
-    setJacBlockPre<0, 0>(J, M3D::Identity());
-    setJacBlockPre<0, 1>(J, dt_ * M3D::Identity());
+    setJacBlockPre<0, 0>(J, Mat3::Identity());
+    setJacBlockPre<0, 1>(J, dt_ * Mat3::Identity());
   }
 
-  void jacCur(MXD& J, const V3D& posPre, const V3D& velPre,
-                  const V3D& posCur, const V3D& posNoi) const {
+  void jacCur(MatX& J, const Vec3& posPre, const Vec3& velPre,
+                  const Vec3& posCur, const Vec3& posNoi) const {
     J.setZero();
-    setJacBlockCur<0, 0>(J, -M3D::Identity());
+    setJacBlockCur<0, 0>(J, -Mat3::Identity());
   }
 
-  void jacNoi(MXD& J, const V3D& posPre, const V3D& velPre,
-                  const V3D& posCur, const V3D& posNoi) const {
+  void jacNoi(MatX& J, const Vec3& posPre, const Vec3& velPre,
+                  const Vec3& posCur, const Vec3& posNoi) const {
     J.setZero();
-    setJacBlockNoi<0, 0>(J, M3D::Identity());
+    setJacBlockNoi<0, 0>(J, Mat3::Identity());
   }
 
  protected:
@@ -82,16 +82,16 @@ class BinaryRedidualVelocity : public BinaryResidual<ElementPack<V3D>,
 
 class AccelerometerMeas : public ElementVector {
  public:
-  AccelerometerMeas(const V3D& acc = V3D(0, 0, 0))
-      : ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementPack<V3D>( { "acc" }))),
-        acc_(ElementVector::GetValue<V3D>("acc")) {
+  AccelerometerMeas(const Vec3& acc = Vec3(0, 0, 0))
+      : ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementPack<Vec3>( { "acc" }))),
+        acc_(ElementVector::GetValue<Vec3>("acc")) {
     acc_ = acc;
   }
-  V3D& acc_;
+  Vec3& acc_;
 };
 
-class BinaryRedidualAccelerometer : public BinaryResidual<ElementPack<V3D>,
-    ElementPack<V3D>, ElementPack<V3D>, ElementPack<V3D>, AccelerometerMeas> {
+class BinaryRedidualAccelerometer : public BinaryResidual<ElementPack<Vec3>,
+    ElementPack<Vec3>, ElementPack<Vec3>, ElementPack<Vec3>, AccelerometerMeas> {
  public:
   BinaryRedidualAccelerometer()
       : mtBinaryRedidual( { "vel" }, { "vel" }, { "vel" }, { "vel" }, false,
@@ -102,32 +102,32 @@ class BinaryRedidualAccelerometer : public BinaryResidual<ElementPack<V3D>,
   virtual ~BinaryRedidualAccelerometer() {
   }
 
-  void eval(V3D& velRes, const V3D& velPre, const V3D& velCur,
-                        const V3D& velNoi) const {
+  void eval(Vec3& velRes, const Vec3& velPre, const Vec3& velCur,
+                        const Vec3& velNoi) const {
     velRes = velPre + dt_ * meas_->acc_ - velCur + velNoi;
   }
-  void jacPre(MXD& J, const V3D& velPre, const V3D& velCur,
-                  const V3D& velNoi) const {
+  void jacPre(MatX& J, const Vec3& velPre, const Vec3& velCur,
+                  const Vec3& velNoi) const {
     J.setZero();
-    setJacBlockPre<0, 0>(J, M3D::Identity());
+    setJacBlockPre<0, 0>(J, Mat3::Identity());
   }
-  void jacCur(MXD& J, const V3D& velPre, const V3D& velCur,
-                  const V3D& velNoi) const {
+  void jacCur(MatX& J, const Vec3& velPre, const Vec3& velCur,
+                  const Vec3& velNoi) const {
     J.setZero();
-    setJacBlockCur<0, 0>(J, -M3D::Identity());
+    setJacBlockCur<0, 0>(J, -Mat3::Identity());
   }
-  void jacNoi(MXD& J, const V3D& velPre, const V3D& velCur,
-                  const V3D& velNoi) const {
+  void jacNoi(MatX& J, const Vec3& velPre, const Vec3& velCur,
+                  const Vec3& velNoi) const {
     J.setZero();
-    setJacBlockNoi<0, 0>(J, M3D::Identity());
+    setJacBlockNoi<0, 0>(J, Mat3::Identity());
   }
 
  protected:
   double dt_;
 };
 
-class PredictionAccelerometer : public Prediction<ElementPack<V3D>,
-    ElementPack<V3D>, AccelerometerMeas> {
+class PredictionAccelerometer : public Prediction<ElementPack<Vec3>,
+    ElementPack<Vec3>, AccelerometerMeas> {
  public:
   PredictionAccelerometer()
       : mtPrediction( { "vel" }, { "vel" }) {
@@ -136,19 +136,19 @@ class PredictionAccelerometer : public Prediction<ElementPack<V3D>,
 
   virtual ~PredictionAccelerometer() {}
 
-  void predict(V3D& velCur, const V3D& velPre,
-                          const V3D& velNoi) const {
+  void predict(Vec3& velCur, const Vec3& velPre,
+                          const Vec3& velNoi) const {
     velCur = velPre + dt_ * meas_->acc_ + velNoi;
   }
-  void predictJacPre(MXD& J, const V3D& velPre,
-                            const V3D& velNoi) const {
+  void predictJacPre(MatX& J, const Vec3& velPre,
+                            const Vec3& velNoi) const {
     J.setZero();
-    setJacBlockPre<0, 0>(J, M3D::Identity());
+    setJacBlockPre<0, 0>(J, Mat3::Identity());
   }
-  void predictJacNoi(MXD& J, const V3D& velPre,
-                            const V3D& velNoi) const {
+  void predictJacNoi(MatX& J, const Vec3& velPre,
+                            const Vec3& velNoi) const {
     J.setZero();
-    setJacBlockNoi<0, 0>(J, M3D::Identity());
+    setJacBlockNoi<0, 0>(J, Mat3::Identity());
   }
 
  protected:
@@ -161,7 +161,7 @@ class NewStateTest : public virtual ::testing::Test {
   NewStateTest()
       : covMat_(1, 1) {}
   virtual ~NewStateTest() {}
-  MXD covMat_;
+  MatX covMat_;
 };
 
 // Test constructors
@@ -184,14 +184,14 @@ TEST_F(NewStateTest, constructor) {
   std::cout << v.transpose() << std::endl;
 
   // Jacobian
-  MXD J;
+  MatX J;
   t.jacFD(J, s1a);
   std::cout << J << std::endl;
 
   // Transformation
   std::shared_ptr<ElementVector> s2(new ElementVector(t.outputDefinition()));
-  MXD P1(s1a->GetDimension(), s1a->GetDimension());
-  MXD P2(s2->GetDimension(), s2->GetDimension());
+  MatX P1(s1a->GetDimension(), s1a->GetDimension());
+  MatX P2(s2->GetDimension(), s2->GetDimension());
   t.transformState(s2, s1a);
   t.transformCovMat(P2, s1a, P1);
   t.testJac(s1a);
@@ -216,7 +216,7 @@ TEST_F(NewStateTest, constructor) {
   f.addRes(accRes);
   std::shared_ptr<ElementVector> preState(new ElementVector(f.stateDefinition()));
   preState->SetIdentity();
-  preState->GetValue < V3D > ("pos") = V3D(1, 2, 3);
+  preState->GetValue < Vec3 > ("pos") = Vec3(1, 2, 3);
   preState->Print();
   std::shared_ptr<ElementVector> curState(new ElementVector(f.stateDefinition()));
   curState->SetIdentity();
@@ -234,15 +234,15 @@ TEST_F(NewStateTest, constructor) {
   f.addMeas(0, eptMeas,start+fromSec(0.3));
   f.addMeas(0, eptMeas,start+fromSec(0.4));
   f.addMeas(1, std::shared_ptr<AccelerometerMeas>(
-      new AccelerometerMeas(V3D(-0.1,0.0,0.0))),start+fromSec(-0.1));
+      new AccelerometerMeas(Vec3(-0.1,0.0,0.0))),start+fromSec(-0.1));
   f.addMeas(1, std::shared_ptr<AccelerometerMeas>(
-      new AccelerometerMeas(V3D(0.0,0.0,0.0))),start+fromSec(0.0));
+      new AccelerometerMeas(Vec3(0.0,0.0,0.0))),start+fromSec(0.0));
   f.addMeas(1, std::shared_ptr<AccelerometerMeas>(
-      new AccelerometerMeas(V3D(0.1,0.0,0.0))),start+fromSec(0.1));
+      new AccelerometerMeas(Vec3(0.1,0.0,0.0))),start+fromSec(0.1));
   f.addMeas(1, std::shared_ptr<AccelerometerMeas>(
-      new AccelerometerMeas(V3D(0.4,0.0,0.0))),start+fromSec(0.3));
+      new AccelerometerMeas(Vec3(0.4,0.0,0.0))),start+fromSec(0.3));
   f.addMeas(1, std::shared_ptr<AccelerometerMeas>(
-      new AccelerometerMeas(V3D(0.3,0.0,0.0))),start+fromSec(0.5));
+      new AccelerometerMeas(Vec3(0.3,0.0,0.0))),start+fromSec(0.5));
 
   f.update();
 
@@ -270,15 +270,15 @@ TEST_F(NewStateTest, constructor) {
   f2.addMeas(0,eptMeas,start+fromSec(0.3));
   f2.addMeas(0,eptMeas,start+fromSec(0.4));
   f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(
-      new AccelerometerMeas(V3D(-0.1,0.0,0.0))),start+fromSec(-0.1));
+      new AccelerometerMeas(Vec3(-0.1,0.0,0.0))),start+fromSec(-0.1));
   f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(
-      new AccelerometerMeas(V3D(0.0,0.0,0.0))),start+fromSec(0.0));
+      new AccelerometerMeas(Vec3(0.0,0.0,0.0))),start+fromSec(0.0));
   f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(
-      new AccelerometerMeas(V3D(0.1,0.0,0.0))),start+fromSec(0.1));
+      new AccelerometerMeas(Vec3(0.1,0.0,0.0))),start+fromSec(0.1));
   f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(
-      new AccelerometerMeas(V3D(0.4,0.0,0.0))),start+fromSec(0.3));
+      new AccelerometerMeas(Vec3(0.4,0.0,0.0))),start+fromSec(0.3));
   f2.addMeas(1,std::shared_ptr<AccelerometerMeas>(
-      new AccelerometerMeas(V3D(0.3,0.0,0.0))),start+fromSec(0.5));
+      new AccelerometerMeas(Vec3(0.3,0.0,0.0))),start+fromSec(0.5));
   f2.update();
   f2.update();
 
@@ -296,13 +296,13 @@ TEST_F(NewStateTest, constructor) {
   int poseUpdInd = imuPoseFilter.addRes(poseUpd);
   imuPoseFilter.init(start);
   imuPoseFilter.addMeas(imuPreInd, std::shared_ptr<IMUMeas>(
-      new IMUMeas(V3D(0.0, 0.0, 0.0), V3D(0.0, 0.0, 9.81))), start);
+      new IMUMeas(Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 9.81))), start);
   for (int i = 1; i <= 10; i++) {
     imuPoseFilter.addMeas(imuPreInd, std::shared_ptr<IMUMeas>(
-        new IMUMeas(V3D(0.3, 0.0, 0.1), V3D(0.0, 0.2, 9.81))),
+        new IMUMeas(Vec3(0.3, 0.0, 0.1), Vec3(0.0, 0.2, 9.81))),
         start + fromSec(i));
     imuPoseFilter.addMeas(poseUpdInd, std::shared_ptr<PoseMeas>(
-        new PoseMeas(V3D(0.0, 0.0, 0.0), QPD(1.0, 0.0, 0.0, 0.0))),
+        new PoseMeas(Vec3(0.0, 0.0, 0.0), Quat(1.0, 0.0, 0.0, 0.0))),
         start + fromSec(i));
   }
   TimePoint startFilter = Clock::now();

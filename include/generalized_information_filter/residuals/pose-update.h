@@ -8,19 +8,19 @@ namespace GIF {
 
 class PoseMeas : public ElementVector {
  public:
-  PoseMeas(const V3D& pos = V3D(0, 0, 0), const QPD& att = QPD())
-      : ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementPack<V3D, QPD>({ "pos", "att" }))),
-        pos_(ElementVector::GetValue<V3D>("pos")),
-        att_(ElementVector::GetValue<QPD>("att")) {
+  PoseMeas(const Vec3& pos = Vec3(0, 0, 0), const Quat& att = Quat())
+      : ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementPack<Vec3, Quat>({ "pos", "att" }))),
+        pos_(ElementVector::GetValue<Vec3>("pos")),
+        att_(ElementVector::GetValue<Quat>("att")) {
     pos_ = pos;
     att_ = att;
   }
-  V3D& pos_;
-  QPD& att_;
+  Vec3& pos_;
+  Quat& att_;
 };
 
-class PoseUpdate : public UnaryUpdate<ElementPack<V3D, QPD>,
-    ElementPack<V3D, QPD>, ElementPack<V3D, V3D>, PoseMeas> {
+class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
+    ElementPack<Vec3, Quat>, ElementPack<Vec3, Vec3>, PoseMeas> {
  public:
   PoseUpdate()
       : mtUnaryUpdate( { "pos", "att" }, { "pos", "att" }, { "pos", "att" }) {
@@ -30,24 +30,24 @@ class PoseUpdate : public UnaryUpdate<ElementPack<V3D, QPD>,
   virtual ~PoseUpdate() {
   }
 
-  void eval(V3D& posInn, QPD& attInn, const V3D& posSta,
-                           const QPD& attSta, const V3D& posNoi,
-                           const V3D& attNoi) const {
+  void eval(Vec3& posInn, Quat& attInn, const Vec3& posSta,
+                           const Quat& attSta, const Vec3& posNoi,
+                           const Vec3& attNoi) const {
     posInn = posSta - meas_->pos_ + posNoi;
-    QPD dQ = dQ.exponentialMap(attNoi);
+    Quat dQ = dQ.exponentialMap(attNoi);
     attInn = dQ * attSta * meas_->att_.inverted();
   }
-  void jacCur(MXD& J, const V3D& posSta, const QPD& attSta,
-                             const V3D& posNoi, const V3D& attNoi) const {
+  void jacCur(MatX& J, const Vec3& posSta, const Quat& attSta,
+                             const Vec3& posNoi, const Vec3& attNoi) const {
     J.setZero();
-    setJacBlockCur<POS, POS>(J, M3D::Identity());
-    setJacBlockCur<ATT, ATT>(J, M3D::Identity());
+    setJacBlockCur<POS, POS>(J, Mat3::Identity());
+    setJacBlockCur<ATT, ATT>(J, Mat3::Identity());
   }
-  void jacNoi(MXD& J, const V3D& posSta, const QPD& attSta,
-                             const V3D& posNoi, const V3D& attNoi) const {
+  void jacNoi(MatX& J, const Vec3& posSta, const Quat& attSta,
+                             const Vec3& posNoi, const Vec3& attNoi) const {
     J.setZero();
-    setJacBlockNoi<POS, POS>(J, M3D::Identity());
-    setJacBlockNoi<ATT, ATT>(J, M3D::Identity());
+    setJacBlockNoi<POS, POS>(J, Mat3::Identity());
+    setJacBlockNoi<ATT, ATT>(J, Mat3::Identity());
   }
 
  protected:
