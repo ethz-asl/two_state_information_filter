@@ -29,13 +29,13 @@ class MeasurementTimeline {
   void getLastInRange(std::set<TimePoint>& times, const TimePoint& start,
                       const TimePoint& end) const;
   void split(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
-             const std::shared_ptr<const BinaryResidualBase>& res);
+             const BinaryResidualBase* res);
   void split(const std::set<TimePoint>& times,
-             const std::shared_ptr<const BinaryResidualBase>& res);
+             const BinaryResidualBase* res);
   void merge(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
-             const std::shared_ptr<const BinaryResidualBase>& res);
+             const BinaryResidualBase* res);
   void mergeUndesired(const std::set<TimePoint>& times,
-                      const std::shared_ptr<const BinaryResidualBase>& res);
+                      const BinaryResidualBase* res);
   void removeOutdated(const TimePoint& time);
   void print(const TimePoint& start = TimePoint::min(), int startOffset = 0,
              double resolution = 0.01) const;

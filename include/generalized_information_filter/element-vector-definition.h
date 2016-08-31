@@ -22,8 +22,8 @@ class ElementVectorDefinition {
   typedef std::shared_ptr<const ElementVectorDefinition> CPtr;
   ElementVectorDefinition();
   virtual ~ElementVectorDefinition();
-  bool MatchesDefinition(const ElementVectorDefinition::CPtr& other) const;
-  bool MatchesDefinition(const std::shared_ptr<const ElementVectorBase>& other) const;
+  bool MatchesDefinition(const ElementVectorDefinition& other) const;
+  bool MatchesDefinition(const ElementVectorBase& other) const;
   inline int GetStateDimension() const;
   inline int GetNumElements() const;
   inline int GetStartIndex(int outer_index) const;
@@ -31,13 +31,11 @@ class ElementVectorDefinition {
   inline int GetInnerIndex(int i) const;
   std::string GetName(int outer_index) const;
   int FindName(const std::string& name) const;
-  ElementDescriptionBase::CPtr GetElementDefinition(int outer_index) const;
-  int AddElement(
-      const std::string& name,
-      const ElementDescriptionBase::CPtr& new_element_definition);
+  const ElementDescriptionBase& GetElementDescription(int outer_index) const;
+  int AddElement(const std::string& name, const ElementDescriptionBase& new_element_definition);
   template<typename T>
   int AddElement(const std::string& name);
-  void Extend(const ElementVectorDefinition::CPtr& other);
+  void Extend(const ElementVectorDefinition& other);
 
  protected:
   std::vector<std::pair<ElementDescriptionBase::CPtr, int>> descriptions_;
@@ -109,7 +107,7 @@ int ElementVectorDefinition::GetInnerIndex(int i) const {
 
 template<typename T>
 int ElementVectorDefinition::AddElement(const std::string& name) {
-  AddElement(name, std::make_shared<ElementDescription<T>>());
+  AddElement(name, ElementDescription<T>());
 }
 
 template<typename T, typename ... Ts>

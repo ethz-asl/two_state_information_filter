@@ -9,18 +9,17 @@ ElementVectorDefinition::ElementVectorDefinition() {
 
 ElementVectorDefinition::~ElementVectorDefinition() {}
 
-bool ElementVectorDefinition::MatchesDefinition(
-    const ElementVectorDefinition::CPtr& other) const {
-  if (GetStateDimension() != other->GetStateDimension()) {
+bool ElementVectorDefinition::MatchesDefinition(const ElementVectorDefinition& other) const {
+  if (GetStateDimension() != other.GetStateDimension()) {
     return false;
   }
   for (auto entry : names_map_) {
-    int other_outer_index = other->FindName(entry.first);
+    int other_outer_index = other.FindName(entry.first);
     if (other_outer_index != entry.second) {
       return false;
     }
-    if (!GetElementDefinition(entry.second)->MatchesDescription(
-        other->GetElementDefinition(other_outer_index))) {
+    if (!GetElementDescription(entry.second).MatchesDescription(
+        other.GetElementDescription(other_outer_index))) {
       return false;
     }
   }
@@ -28,8 +27,8 @@ bool ElementVectorDefinition::MatchesDefinition(
 }
 
 bool ElementVectorDefinition::MatchesDefinition(
-    const ElementVectorBase::CPtr& other) const {
-  return MatchesDefinition(other->GetDefinition());
+    const ElementVectorBase& other) const {
+  return MatchesDefinition(*other.GetDefinition());
 }
 
 std::string ElementVectorDefinition::GetName(int outer_index) const { // Slow
@@ -47,33 +46,30 @@ int ElementVectorDefinition::FindName(const std::string& name) const {
   return (query != names_map_.end()) ? query->second : -1;
 }
 
-ElementDescriptionBase::CPtr ElementVectorDefinition::GetElementDefinition(
-    int outer_index) const {
-  return descriptions_.at(outer_index).first;
+const ElementDescriptionBase& ElementVectorDefinition::GetElementDescription(int outer_index) const {
+  return *descriptions_.at(outer_index).first;
 }
 
-int ElementVectorDefinition::AddElement(
-    const std::string& name,
-    const ElementDescriptionBase::CPtr& description) {
+int ElementVectorDefinition::AddElement(const std::string& name,
+                                        const ElementDescriptionBase& description) {
   int outer_index = FindName(name);
   if (outer_index != -1) {
-    if (!GetElementDefinition(outer_index)->MatchesDescription(description)) {
+    if (!GetElementDescription(outer_index).MatchesDescription(description)) {
       assert("ERROR: invalid extension of state definition" == 0);
     }
     return outer_index;
   } else {
     descriptions_.push_back(
-        std::pair<ElementDescriptionBase::CPtr, int>(description, d_));
-    d_ += description->GetDimension();
+        std::pair<ElementDescriptionBase::CPtr, int>(description.Copy(), d_));
+    d_ += description.GetDimension();
     names_map_.insert(std::pair<std::string, int>(name, GetNumElements() - 1));
     return GetNumElements() - 1;
   }
 }
 
-void ElementVectorDefinition::Extend(
-    const ElementVectorDefinition::CPtr& other) {
-  for (auto entry : other->names_map_) {
-    AddElement(entry.first,other->GetElementDefinition(entry.second));
+void ElementVectorDefinition::Extend(const ElementVectorDefinition& other) {
+  for (auto entry : other.names_map_) {
+    AddElement(entry.first,other.GetElementDescription(entry.second));
   }
 }
 

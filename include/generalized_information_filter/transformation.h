@@ -14,7 +14,8 @@ class Transformation<ElementPack<Out...>, ElementPack<In...>> : public Model<
     Transformation<ElementPack<Out...>, ElementPack<In...>>,
     ElementPack<Out...>, ElementPack<In...>> {
  public:
-  using mtBase = Model<Transformation<ElementPack<Out...>,ElementPack<In...>>, ElementPack<Out...>, ElementPack<In...>>;
+  using mtBase = Model<Transformation<ElementPack<Out...>,ElementPack<In...>>, ElementPack<Out...>,
+      ElementPack<In...>>;
   typedef Transformation<ElementPack<Out...>, ElementPack<In...>> mtTransformation;
   Transformation(const std::array<std::string, mtBase::n_>& namesOut,
                  const std::array<std::string, mtBase::m_>& namesIn)
@@ -31,38 +32,35 @@ class Transformation<ElementPack<Out...>, ElementPack<In...>> : public Model<
   virtual void jacTransform(MatX& J, const In&... ins) const = 0;
 
   // Wrapping from user interface to base
-  void jacFD(MatX& J, const std::shared_ptr<const ElementVectorBase>& in,
-             const double& delta = 1e-6) {
-    const std::array<std::shared_ptr<const ElementVectorBase>, 1> ins = { in };
+  void jacFD(MatX& J, const ElementVectorBase* in, const double& delta = 1e-6) {
+    const std::array<const ElementVectorBase*, 1> ins = {in};
     this->template _jacFD<0>(J, ins, delta);
   }
 
-  void transformState(const std::shared_ptr<ElementVectorBase>& out,
-                      const std::shared_ptr<const ElementVectorBase>& in) {
-    const std::array<std::shared_ptr<const ElementVectorBase>, 1> ins = { in };
+  void transformState(ElementVectorBase* out, const ElementVectorBase* in) {
+    const std::array<const ElementVectorBase*, 1> ins = {in};
     this->template _eval(out, ins);
   }
 
   void transformCovMat(MatX& outputCov,
-                       const std::shared_ptr<const ElementVectorBase>& in,
+                       const ElementVectorBase* in,
                        const MatX& inputCov) {
-    const std::array<std::shared_ptr<const ElementVectorBase>, 1> ins = { in };
+    const std::array<const ElementVectorBase*, 1> ins = {in};
     this->template _jac<0>(J_, ins);
     outputCov = J_ * inputCov * J_.transpose();
   }
 
   template<int n, int m>
   void setJacBlock(
-      MatX& J,
-      const Eigen::Matrix<double, ElementPack<Out...>::template _GetStateDimension<n>(),
-          ElementPack<In...>::template _GetStateDimension<m>()>& B) const {
+        MatX& J,
+        const Eigen::Matrix<double, ElementPack<Out...>::template _GetStateDimension<n>(),
+        ElementPack<In...>::template _GetStateDimension<m>()>& B) const {
     this->template _setJacBlock<0, n, m>(J, B);
   }
 
-  bool testJac(const std::shared_ptr<const ElementVectorBase>& in, const double& delta =
-                   1e-6,
+  bool testJac(const ElementVectorBase* in, const double& delta = 1e-6,
                const double& th = 1e-6) const {
-    const std::array<std::shared_ptr<const ElementVectorBase>, 1> ins = { in };
+    const std::array<const ElementVectorBase*, 1> ins = {in};
     return this->template _testJacInput<0>(ins, delta, th);
   }
 

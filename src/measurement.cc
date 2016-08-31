@@ -110,7 +110,7 @@ void MeasurementTimeline::getLastInRange(std::set<TimePoint>& times,
 
 void MeasurementTimeline::split(
     const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
-    const std::shared_ptr<const BinaryResidualBase>& res) {
+    const BinaryResidualBase* res) {
   assert(t0 <= t1 && t1 <= t2);
   addMeas(std::shared_ptr<const ElementVectorBase>(), t1);
   res->splitMeasurements(t0, t1, t2, measMap_.at(t2), measMap_.at(t1),
@@ -119,7 +119,7 @@ void MeasurementTimeline::split(
 
 void MeasurementTimeline::split(
     const std::set<TimePoint>& times,
-    const std::shared_ptr<const BinaryResidualBase>& res) {
+    const BinaryResidualBase* res) {
   for (auto t : times) {
     auto it = measMap_.lower_bound(t);
     if (it == measMap_.end()) {
@@ -138,7 +138,7 @@ void MeasurementTimeline::split(
 
 void MeasurementTimeline::merge(
     const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
-    const std::shared_ptr<const BinaryResidualBase>& res) {
+    const BinaryResidualBase* res) {
   assert(t0 <= t1 && t1 <= t2);
   res->mergeMeasurements(t0, t1, t2, measMap_.at(t1), measMap_.at(t2), measMap_.at(t2));
   measMap_.erase(t1);  // does not count as processed
@@ -146,7 +146,7 @@ void MeasurementTimeline::merge(
 
 void MeasurementTimeline::mergeUndesired(
     const std::set<TimePoint>& times,
-    const std::shared_ptr<const BinaryResidualBase>& res) {
+    const BinaryResidualBase* res) {
   // Merge measurements such that only timepoints remain which are in times or
   // past its end.
   if (times.size() == 0) {

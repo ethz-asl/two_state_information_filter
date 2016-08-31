@@ -38,7 +38,7 @@ class TransformationExample : public Transformation<ElementPack<Vec3>,
 
 class EmptyMeas : public ElementVector {
  public:
-  EmptyMeas(): ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementVectorDefinition())){};
+  EmptyMeas(): ElementVector(std::make_shared<ElementVectorDefinition>()){};
 };
 
 class BinaryRedidualVelocity : public BinaryResidual<ElementPack<Vec3>,
@@ -167,61 +167,60 @@ class NewStateTest : public virtual ::testing::Test {
 // Test constructors
 TEST_F(NewStateTest, constructor) {
   TransformationExample t;
-  std::shared_ptr<ElementVector> s1a(new ElementVector(t.inputDefinition()));
-  std::shared_ptr<ElementVector> s1b(new ElementVector(t.inputDefinition()));
-  s1a->SetIdentity();
-  s1a->Print();
+  ElementVector s1a(t.inputDefinition());
+  ElementVector s1b(t.inputDefinition());
+  s1a.SetIdentity();
+  s1a.Print();
 
   // Boxplus and BoxMinus
-  Eigen::VectorXd v(s1a->GetDimension());
+  Eigen::VectorXd v(s1a.GetDimension());
   v.setZero();
-  for (int i = 0; i < s1a->GetDimension(); i++) {
+  for (int i = 0; i < s1a.GetDimension(); i++) {
     v(i) = i;
   }
-  s1a->BoxPlus(v, s1b);
-  s1b->Print();
-  s1a->BoxMinus(s1b, v);
+  s1a.BoxPlus(v, &s1b);
+  s1b.Print();
+  s1a.BoxMinus(s1b, v);
   std::cout << v.transpose() << std::endl;
 
   // Jacobian
   MatX J;
-  t.jacFD(J, s1a);
+  t.jacFD(J, &s1a);
   std::cout << J << std::endl;
 
   // Transformation
-  std::shared_ptr<ElementVector> s2(new ElementVector(t.outputDefinition()));
-  MatX P1(s1a->GetDimension(), s1a->GetDimension());
-  MatX P2(s2->GetDimension(), s2->GetDimension());
-  t.transformState(s2, s1a);
-  t.transformCovMat(P2, s1a, P1);
-  t.testJac(s1a);
+  ElementVector s2(t.outputDefinition());
+  MatX P1(s1a.GetDimension(), s1a.GetDimension());
+  MatX P2(s2.GetDimension(), s2.GetDimension());
+  t.transformState(&s2, &s1a);
+  t.transformCovMat(P2, &s1a, P1);
+  t.testJac(&s1a);
 
   // Velocity Residual
   std::shared_ptr<BinaryRedidualVelocity> velRes(new BinaryRedidualVelocity());
-  std::shared_ptr<ElementVector> pre(new ElementVector(velRes->preDefinition()));
-  pre->SetIdentity();
-  std::shared_ptr<ElementVector> cur(new ElementVector(velRes->curDefinition()));
-  cur->SetIdentity();
-  std::shared_ptr<ElementVector> noi(new ElementVector(velRes->noiDefinition()));
-  noi->SetIdentity();
-  velRes->testJacs(pre, cur, noi);
+  ElementVector pre(velRes->preDefinition());
+  pre.SetIdentity();
+  ElementVector cur(velRes->curDefinition());
+  cur.SetIdentity();
+  ElementVector noi(velRes->noiDefinition());
+  noi.SetIdentity();
+  velRes->testJacs(&pre, &cur, &noi);
 
   // Accelerometer Residual
-  std::shared_ptr<BinaryRedidualAccelerometer> accRes(
-      new BinaryRedidualAccelerometer());
+  std::shared_ptr<BinaryRedidualAccelerometer> accRes(new BinaryRedidualAccelerometer());
 
   // Filter
   Filter f;
   f.addRes(velRes);
   f.addRes(accRes);
-  std::shared_ptr<ElementVector> preState(new ElementVector(f.stateDefinition()));
-  preState->SetIdentity();
-  preState->GetValue < Vec3 > ("pos") = Vec3(1, 2, 3);
-  preState->Print();
-  std::shared_ptr<ElementVector> curState(new ElementVector(f.stateDefinition()));
-  curState->SetIdentity();
-  curState->Print();
-  f.evalRes(preState, curState);
+  ElementVector preState(f.stateDefinition());
+  preState.SetIdentity();
+  preState.GetValue < Vec3 > ("pos") = Vec3(1, 2, 3);
+  preState.Print();
+  ElementVector curState(f.stateDefinition());
+  curState.SetIdentity();
+  curState.Print();
+  f.evalRes(&preState, &curState);
 
 
   // Test measurements
@@ -249,15 +248,14 @@ TEST_F(NewStateTest, constructor) {
   f.update();
 
   // Prediction Accelerometer
-  std::shared_ptr<PredictionAccelerometer> accPre(
-      new PredictionAccelerometer());
-  std::shared_ptr<ElementVector> preAcc(new ElementVector(accPre->preDefinition()));
-  std::shared_ptr<ElementVector> curAcc(new ElementVector(accPre->preDefinition()));
-  std::shared_ptr<ElementVector> noiAcc(new ElementVector(accPre->noiDefinition()));
-  preAcc->SetIdentity();
-  curAcc->SetIdentity();
-  noiAcc->SetIdentity();
-  accPre->testJacs(preAcc, curAcc, noiAcc);
+  std::shared_ptr<PredictionAccelerometer> accPre(new PredictionAccelerometer());
+  ElementVector preAcc(accPre->preDefinition());
+  ElementVector curAcc(accPre->preDefinition());
+  ElementVector noiAcc(accPre->noiDefinition());
+  preAcc.SetIdentity();
+  curAcc.SetIdentity();
+  noiAcc.SetIdentity();
+  accPre->testJacs(&preAcc, &curAcc, &noiAcc);
 
   // Test measurements
   Filter f2;

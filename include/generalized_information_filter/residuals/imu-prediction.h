@@ -9,7 +9,8 @@ namespace GIF {
 class IMUMeas : public ElementVector {
  public:
   IMUMeas(const Vec3& gyr = Vec3(0, 0, 0), const Vec3& acc = Vec3(0, 0, 0))
-      : ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementPack<Vec3, Vec3>({"gyr", "acc"}))),
+      : ElementVector(std::shared_ptr<ElementVectorDefinition>(
+            new ElementPack<Vec3, Vec3>({"gyr", "acc"}))),
         gyr_(ElementVector::GetValue<Vec3>("gyr")),
         acc_(ElementVector::GetValue<Vec3>("acc")) {
     gyr_ = gyr;
@@ -32,10 +33,10 @@ class IMUPrediction : public Prediction<ElementPack<Vec3, Vec3, Vec3, Vec3, Quat
   virtual ~IMUPrediction() {
   }
   void predict(Vec3& posCur, Vec3& velCur, Vec3& gybCur, Vec3& acbCur, Quat& attCur,
-                          const Vec3& posPre, const Vec3& velPre, const Vec3& gybPre,
-                          const Vec3& acbPre, const Quat& attPre, const Vec3& posNoi,
-                          const Vec3& velNoi, const Vec3& gybNoi, const Vec3& acbNoi,
-                          const Vec3& attNoi) const {
+               const Vec3& posPre, const Vec3& velPre, const Vec3& gybPre,
+               const Vec3& acbPre, const Quat& attPre, const Vec3& posNoi,
+               const Vec3& velNoi, const Vec3& gybNoi, const Vec3& acbNoi,
+               const Vec3& attNoi) const {
     const Vec3 gyr = meas_->gyr_ - gybPre + attNoi / sqrt(dt_);
     const Vec3 acc = meas_->acc_ - acbPre + velNoi / sqrt(dt_);
     const Vec3 dOmega = dt_ * gyr;
@@ -47,9 +48,9 @@ class IMUPrediction : public Prediction<ElementPack<Vec3, Vec3, Vec3, Vec3, Quat
     attCur = attPre * dQ;
   }
   void predictJacPre(MatX& J, const Vec3& posPre, const Vec3& velPre, const Vec3& gybPre,
-                            const Vec3& acbPre, const Quat& attPre, const Vec3& posNoi,
-                            const Vec3& velNoi, const Vec3& gybNoi, const Vec3& acbNoi,
-                            const Vec3& attNoi) const {
+                              const Vec3& acbPre, const Quat& attPre, const Vec3& posNoi,
+                              const Vec3& velNoi, const Vec3& gybNoi, const Vec3& acbNoi,
+                              const Vec3& attNoi) const {
     J.setZero();
     const Vec3 gyr = meas_->gyr_ - gybPre + attNoi / sqrt(dt_);
     const Vec3 acc = meas_->acc_ - acbPre + velNoi / sqrt(dt_);
@@ -67,9 +68,9 @@ class IMUPrediction : public Prediction<ElementPack<Vec3, Vec3, Vec3, Vec3, Quat
     setJacBlockPre<ATT, ATT>(J, Mat3::Identity());
   }
   void predictJacNoi(MatX& J, const Vec3& posPre, const Vec3& velPre, const Vec3& gybPre,
-                            const Vec3& acbPre, const Quat& attPre, const Vec3& posNoi,
-                            const Vec3& velNoi, const Vec3& gybNoi, const Vec3& acbNoi,
-                            const Vec3& attNoi) const {
+                              const Vec3& acbPre, const Quat& attPre, const Vec3& posNoi,
+                              const Vec3& velNoi, const Vec3& gybNoi, const Vec3& acbNoi,
+                              const Vec3& attNoi) const {
     J.setZero();
     const Vec3 gyr = meas_->gyr_ - gybPre + attNoi / sqrt(dt_);
     const Vec3 acc = meas_->acc_ - acbPre + velNoi / sqrt(dt_);

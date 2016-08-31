@@ -9,12 +9,12 @@ ElementVectorBase::ElementVectorBase(
 ElementVectorBase::~ElementVectorBase() {}
 
 bool ElementVectorBase::MatchesDefinition(
-    const ElementVectorDefinition::CPtr& def) const {
-  if (GetNumElement() != def->GetNumElements()) {
+    const ElementVectorDefinition& def) const {
+  if (GetNumElement() != def.GetNumElements()) {
     return false;
   }
   for (int i = 0; i < GetNumElement(); i++) {
-    if (!def->GetElementDefinition(i)->MatchesDescription(GetElement(i))) {
+    if (!def.GetElementDescription(i).MatchesDescription(*GetElement(i))) {
       return false;
     }
   }
@@ -47,8 +47,7 @@ void ElementVectorBase::SetRandom(int& s) {
   }
 }
 
-void ElementVectorBase::BoxPlus(const VecCRefX& vec,
-                                const ElementVectorBase::Ptr& out) const {
+void ElementVectorBase::BoxPlus(const VecCRefX& vec, ElementVectorBase* out) const {
   for (int i = 0; i < GetNumElement(); i++) {
     GetElement(i)->Boxplus(
         vec.block(GetStart(i), 0, GetElement(i)->getDim(), 1),
@@ -56,24 +55,22 @@ void ElementVectorBase::BoxPlus(const VecCRefX& vec,
   }
 }
 
-void ElementVectorBase::BoxMinus(const ElementVectorBase::CPtr& ref,
+void ElementVectorBase::BoxMinus(const ElementVectorBase& ref,
                          VecRefX vec) const {
   for (int i = 0; i < GetNumElement(); i++) {
     GetElement(i)->Boxminus(
-        ref->GetElement(i),
+        *ref.GetElement(i),
         vec.block(GetStart(i), 0, GetElement(i)->getDim(), 1));
   }
 }
 
-ElementVectorDefinition::CPtr ElementVectorBase::GetDefinition() const {
-  return def_;
+const ElementVectorDefinition* ElementVectorBase::GetDefinition() const {
+  return def_.get();
 }
 
 ElementVector::ElementVector(const ElementVectorDefinition::CPtr& def)
     : ElementVectorBase(def) {
-  for (int i = 0; i < def_->GetNumElements(); i++) {
-    elements_.push_back(def_->GetElementDefinition(i)->MakeElement());
-  }
+  Construct();
 }
 
 ElementVector::~ElementVector() {
@@ -88,11 +85,18 @@ int ElementVector::GetNumElement() const {
   return elements_.size();
 }
 
+void ElementVector::Construct(){
+  elements_.clear();
+  for (int i = 0; i < def_->GetNumElements(); i++) {
+    elements_.push_back(def_->GetElementDescription(i).MakeElement());
+  }
+}
+
 ElementVectorWrapper::ElementVectorWrapper(
       const ElementVectorDefinition::CPtr& def,
-      const ElementVectorDefinition::CPtr& in): ElementVectorBase(def),
-                                                    inDef_(in) {
-  ComputeMap();
+      const ElementVectorDefinition::CPtr& in): ElementVectorBase(def), inDef_(in),
+                                                element_vector_(nullptr),
+                                                const_element_vector_(nullptr){
 }
 
 ElementVectorWrapper::~ElementVectorWrapper() {
@@ -116,16 +120,15 @@ void ElementVectorWrapper::ComputeMap() {
   }
 }
 
-void ElementVectorWrapper::SetVectorElement(const ElementVectorBase::Ptr& state) {
-  state->MatchesDefinition(inDef_);
-  state_ = state;
-  constState_ = state;
+void ElementVectorWrapper::SetElementVector(ElementVectorBase* element_vector) {
+  element_vector->MatchesDefinition(*inDef_);
+  element_vector_ = element_vector;
+  const_element_vector_ = element_vector;
 }
 
-void ElementVectorWrapper::SetVectorElement(
-      const ElementVectorBase::CPtr& state) const {
-  state->MatchesDefinition(inDef_);
-  constState_ = state;
+void ElementVectorWrapper::SetElementVector(const ElementVectorBase* element_vector) const {
+  element_vector->MatchesDefinition(*inDef_);
+  const_element_vector_ = element_vector;
 }
 
 void ElementVectorWrapper::EmbedJacobian(MatRef<> out,
@@ -134,7 +137,7 @@ void ElementVectorWrapper::EmbedJacobian(MatRef<> out,
   const int rows = in.rows();
   for (int i = 0; i < GetNumElement(); ++i) {
     const int cols = GetElement(i)->getDim();
-    out.block(rowOffset, constState_->GetStart(indexMap_.at(i)), rows, cols) =
+    out.block(rowOffset, const_element_vector_->GetStart(indexMap_.at(i)), rows, cols) =
         in.block(0, GetStart(i), rows, cols);
   }
 }

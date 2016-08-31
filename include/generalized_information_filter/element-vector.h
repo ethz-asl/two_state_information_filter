@@ -18,18 +18,18 @@ class ElementVectorBase {
   typedef std::shared_ptr<const ElementVectorBase> CPtr;
   ElementVectorBase(const ElementVectorDefinition::CPtr& def);
   virtual ~ElementVectorBase();
-  bool MatchesDefinition(const ElementVectorDefinition::CPtr& def) const;
+  bool MatchesDefinition(const ElementVectorDefinition& def) const;
   ElementVectorBase& operator=(const ElementVectorBase& other);
-  virtual ElementBase::Ptr GetElement(int i) = 0;
-  virtual ElementBase::CPtr GetElement(int i) const = 0;
+  virtual ElementBase* GetElement(int i) = 0;
+  virtual const ElementBase* GetElement(int i) const = 0;
   template<typename T>
   inline T& GetValue(int i);
   template<typename T>
-  inline T& GetValue(int i) const;
+  inline const T& GetValue(int i) const;
   template<typename T>
   T& GetValue(const std::string& name);
   template<typename T>
-  T& GetValue(const std::string& name) const;
+  const T& GetValue(const std::string& name) const;
   inline int GetDimension() const;
   virtual int GetNumElement() const = 0;
   inline int GetStart(int i) const;
@@ -38,9 +38,9 @@ class ElementVectorBase {
   void Print() const;
   void SetIdentity();
   void SetRandom(int& s);
-  void BoxPlus(const VecCRefX& vec, const ElementVectorBase::Ptr& out) const;
-  void BoxMinus(const ElementVectorBase::CPtr& ref, VecRefX vec) const;
-  ElementVectorDefinition::CPtr GetDefinition() const;
+  void BoxPlus(const VecCRefX& vec, ElementVectorBase* out) const;
+  void BoxMinus(const ElementVectorBase& ref, VecRefX vec) const;
+  const ElementVectorDefinition* GetDefinition() const;
 
  protected:
   const ElementVectorDefinition::CPtr def_;
@@ -55,8 +55,9 @@ class ElementVector : public ElementVectorBase {
   virtual ~ElementVector();
   ElementVector& operator=(const ElementVectorBase& other);
   int GetNumElement() const;
-  inline ElementBase::Ptr GetElement(int i);
-  inline ElementBase::CPtr GetElement(int i) const;
+  inline ElementBase* GetElement(int i);
+  inline const ElementBase* GetElement(int i) const;
+  void Construct();
 
  protected:
   std::vector<ElementBase::Ptr> elements_;
@@ -74,16 +75,16 @@ class ElementVectorWrapper : public ElementVectorBase {
   ~ElementVectorWrapper();
   ElementVectorWrapper& operator=(const ElementVectorBase& other);
   int GetNumElement() const;
-  inline ElementBase::Ptr GetElement(int i);
-  inline ElementBase::CPtr GetElement(int i) const;
+  inline ElementBase* GetElement(int i);
+  inline const ElementBase* GetElement(int i) const;
   void ComputeMap();
-  void SetVectorElement(const ElementVectorBase::Ptr& state);
-  void SetVectorElement(const ElementVectorBase::CPtr& state) const;
+  void SetElementVector(ElementVectorBase* element_vector);
+  void SetElementVector(const ElementVectorBase* element_vector) const;
   void EmbedJacobian(MatRef<> out, const MatCRef<>& in, int rowOffset = 0) const;
 
  protected:
-  ElementVectorBase::Ptr state_;
-  mutable ElementVectorBase::CPtr constState_;
+  ElementVectorBase* element_vector_;
+  mutable const ElementVectorBase* const_element_vector_;
   const ElementVectorDefinition::CPtr inDef_;
   std::vector<int> indexMap_;
 };
@@ -91,64 +92,66 @@ class ElementVectorWrapper : public ElementVectorBase {
 // ==================== Implementation ==================== //
 template<typename T>
 T& ElementVectorBase::GetValue(int i) {
-  return std::dynamic_pointer_cast<Element<T>> (GetElement(i))->get();
+  return dynamic_cast<Element<T>*>(GetElement(i))->get();
 }
 
 template<typename T>
-T& ElementVectorBase::GetValue(int i) const {
-  return std::dynamic_pointer_cast<const Element<T>>(GetElement(i))->get();
+const T& ElementVectorBase::GetValue(int i) const {
+  return dynamic_cast<const Element<T>*>(GetElement(i))->get();
 }
 
 template<typename T>
 T& ElementVectorBase::GetValue(const std::string& name) {
-  assert(MatchesDefinition(def_));
+  assert(MatchesDefinition(*def_));
   int i = def_->FindName(name);
   assert(i != -1);
   return GetValue<T>(i);
 }
 
 template<typename T>
-T& ElementVectorBase::GetValue(const std::string& name) const {
-  assert(MatchesDefinition(def_));
+const T& ElementVectorBase::GetValue(const std::string& name) const {
+  assert(MatchesDefinition(*def_));
   int i = def_->FindName(name);
   assert(i != -1);
   return GetValue<T>(i);
 }
 
 int ElementVectorBase::GetDimension() const {
-  assert(MatchesDefinition(def_));
+  assert(MatchesDefinition(*def_));
   return def_->GetStateDimension();
 }
 
 int ElementVectorBase::GetStart(int i) const {
-  assert(MatchesDefinition(def_));
+  assert(MatchesDefinition(*def_));
   return def_->GetStartIndex(i);
 }
 
 int ElementVectorBase::GetOuter(int i) const {
-  assert(MatchesDefinition(def_));
+  assert(MatchesDefinition(*def_));
   return def_->GetOuterIndex(i);
 }
 
 int ElementVectorBase::GetInner(int i) const {
-  assert(MatchesDefinition(def_));
+  assert(MatchesDefinition(*def_));
   return def_->GetInnerIndex(i);
 }
 
-ElementBase::Ptr ElementVector::GetElement(int i) {
-  return elements_.at(i);
+ElementBase* ElementVector::GetElement(int i) {
+  return elements_.at(i).get();
 }
 
-ElementBase::CPtr ElementVector::GetElement(int i) const {
-  return elements_.at(i);
+const ElementBase* ElementVector::GetElement(int i) const {
+  return elements_.at(i).get();
 }
 
-ElementBase::Ptr ElementVectorWrapper::GetElement(int i) {
-  return state_->GetElement(indexMap_[i]);
+ElementBase* ElementVectorWrapper::GetElement(int i) {
+  assert(element_vector_ != nullptr);
+  return element_vector_->GetElement(indexMap_[i]);
 }
 
-ElementBase::CPtr ElementVectorWrapper::GetElement(int i) const {
-  return constState_->GetElement(indexMap_[i]);
+const ElementBase* ElementVectorWrapper::GetElement(int i) const {
+  assert(const_element_vector_ != nullptr);
+  return const_element_vector_->GetElement(indexMap_[i]);
 }
 
 }
