@@ -12,13 +12,15 @@ namespace GIF {
  */
 class ElementDescriptionBase {
  public:
+  typedef std::shared_ptr<ElementDescriptionBase> Ptr;
+  typedef std::shared_ptr<const ElementDescriptionBase> CPtr;
   ElementDescriptionBase() {}
   virtual ~ElementDescriptionBase() {}
 
-  virtual SP<ElementBase> MakeElement() const = 0;
+  virtual ElementBase::Ptr MakeElement() const = 0;
   virtual bool MatchesDescription(
-      const SP<const ElementDescriptionBase>& in) const = 0;
-  virtual bool MatchesDescription(const SP<const ElementBase>& in) const = 0;
+      const ElementDescriptionBase::CPtr& in) const = 0;
+  virtual bool MatchesDescription(const ElementBase::CPtr& in) const = 0;
   virtual int GetDimension() const = 0;
 };
 
@@ -33,14 +35,14 @@ class ElementDescription : public ElementDescriptionBase {
   }
   ~ElementDescription() {
   }
-  SP<ElementBase> MakeElement() const {
+  ElementBase::Ptr MakeElement() const {
     return std::shared_ptr<Element<T>>(new Element<T>(this));
   }
-  bool MatchesDescription(const SP<const ElementDescriptionBase>& in) const {
+  bool MatchesDescription(const ElementDescriptionBase::CPtr& in) const {
     return std::dynamic_pointer_cast<const ElementDescription<T>>(in).get()
         != nullptr;
   }
-  bool MatchesDescription(const SP<const ElementBase>& in) const {
+  bool MatchesDescription(const ElementBase::CPtr& in) const {
     return std::dynamic_pointer_cast<const Element<T>>(in).get() != nullptr;
   }
   inline int GetDimension() const {

@@ -10,7 +10,7 @@ ElementVectorDefinition::ElementVectorDefinition() {
 ElementVectorDefinition::~ElementVectorDefinition() {}
 
 bool ElementVectorDefinition::MatchesDefinition(
-    const SP<const ElementVectorDefinition>& other) const {
+    const ElementVectorDefinition::CPtr& other) const {
   if (GetStateDimension() != other->GetStateDimension()) {
     return false;
   }
@@ -28,7 +28,7 @@ bool ElementVectorDefinition::MatchesDefinition(
 }
 
 bool ElementVectorDefinition::MatchesDefinition(
-    const SP<const ElementVectorBase>& other) const {
+    const ElementVectorBase::CPtr& other) const {
   return MatchesDefinition(other->GetDefinition());
 }
 
@@ -47,14 +47,14 @@ int ElementVectorDefinition::FindName(const std::string& name) const {
   return (query != names_map_.end()) ? query->second : -1;
 }
 
-SP<const ElementDescriptionBase> ElementVectorDefinition::GetElementDefinition(
+ElementDescriptionBase::CPtr ElementVectorDefinition::GetElementDefinition(
     int outer_index) const {
   return descriptions_.at(outer_index).first;
 }
 
 int ElementVectorDefinition::AddElement(
     const std::string& name,
-    const SP<const ElementDescriptionBase>& description) {
+    const ElementDescriptionBase::CPtr& description) {
   int outer_index = FindName(name);
   if (outer_index != -1) {
     if (!GetElementDefinition(outer_index)->MatchesDescription(description)) {
@@ -63,7 +63,7 @@ int ElementVectorDefinition::AddElement(
     return outer_index;
   } else {
     descriptions_.push_back(
-        std::pair<SP<const ElementDescriptionBase>, int>(description, d_));
+        std::pair<ElementDescriptionBase::CPtr, int>(description, d_));
     d_ += description->GetDimension();
     names_map_.insert(std::pair<std::string, int>(name, GetNumElements() - 1));
     return GetNumElements() - 1;
@@ -71,7 +71,7 @@ int ElementVectorDefinition::AddElement(
 }
 
 void ElementVectorDefinition::Extend(
-    const SP<const ElementVectorDefinition>& other) {
+    const ElementVectorDefinition::CPtr& other) {
   for (auto entry : other->names_map_) {
     AddElement(entry.first,other->GetElementDefinition(entry.second));
   }

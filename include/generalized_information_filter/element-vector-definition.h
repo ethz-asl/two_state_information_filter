@@ -18,10 +18,12 @@ class ElementVectorBase;
  */
 class ElementVectorDefinition {
  public:
+  typedef std::shared_ptr<ElementVectorDefinition> Ptr;
+  typedef std::shared_ptr<const ElementVectorDefinition> CPtr;
   ElementVectorDefinition();
   virtual ~ElementVectorDefinition();
-  bool MatchesDefinition(const SP<const ElementVectorDefinition>& other) const;
-  bool MatchesDefinition(const SP<const ElementVectorBase>& other) const;
+  bool MatchesDefinition(const ElementVectorDefinition::CPtr& other) const;
+  bool MatchesDefinition(const std::shared_ptr<const ElementVectorBase>& other) const;
   inline int GetStateDimension() const;
   inline int GetNumElements() const;
   inline int GetStartIndex(int outer_index) const;
@@ -29,16 +31,16 @@ class ElementVectorDefinition {
   inline int GetInnerIndex(int i) const;
   std::string GetName(int outer_index) const;
   int FindName(const std::string& name) const;
-  SP<const ElementDescriptionBase> GetElementDefinition(int outer_index) const;
+  ElementDescriptionBase::CPtr GetElementDefinition(int outer_index) const;
   int AddElement(
       const std::string& name,
-      const SP<const ElementDescriptionBase>& new_element_definition);
+      const ElementDescriptionBase::CPtr& new_element_definition);
   template<typename T>
   int AddElement(const std::string& name);
-  void Extend(const SP<const ElementVectorDefinition>& other);
+  void Extend(const ElementVectorDefinition::CPtr& other);
 
  protected:
-  std::vector<std::pair<SP<const ElementDescriptionBase>, int>> descriptions_;
+  std::vector<std::pair<ElementDescriptionBase::CPtr, int>> descriptions_;
   std::unordered_map<std::string, int> names_map_;
   int d_;
 };

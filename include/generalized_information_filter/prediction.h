@@ -84,14 +84,14 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
 
     // inn = I+(pred-cur)
     Eigen::Matrix<double,ElementTraits<mtElementType>::d_,1> vec;
-    ElementTraits<mtElementType>::boxminus(
+    ElementTraits<mtElementType>::Boxminus(
         std::dynamic_pointer_cast<const Element<mtElementType>>(
             prediction->GetElement(i))->get(),std::get<i>(
                 std::forward_as_tuple(cur...)),vec);
-    // TODO: make more efficient (could be done directly on boxminus, but then
+    // TODO: make more efficient (could be done directly on Boxminus, but then
     // jacobian becomes more annoying)
-    ElementTraits<mtElementType>::boxplus(
-        ElementTraits<mtElementType>::identity(),vec,std::get<i>(
+    ElementTraits<mtElementType>::Boxplus(
+        ElementTraits<mtElementType>::Identity(),vec,std::get<i>(
             std::forward_as_tuple(inn...)));
     computeInnovation<i+1>(inn...,cur...,prediction);
   }
@@ -106,15 +106,15 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
     typedef typename std::tuple_element<i,typename
         ElementPack<Sta...>::Tuple>::type mtElementType;
     Eigen::Matrix<double,ElementTraits<mtElementType>::d_,1> vec;
-    ElementTraits<mtElementType>::boxminus(
+    ElementTraits<mtElementType>::Boxminus(
         std::dynamic_pointer_cast<const Element<mtElementType>>(
             prediction->GetElement(i))->get(),std::get<i>(
                 std::forward_as_tuple(cur...)),vec);
     J.template block<ElementTraits<mtElementType>::d_,
                      ElementTraits<mtElementType>::d_>(j,j) =
-      ElementTraits<mtElementType>::boxplusJacVec(
-          ElementTraits<mtElementType>::identity(),vec) *
-      ElementTraits<mtElementType>::boxminusJacRef(
+      ElementTraits<mtElementType>::BoxplusJacVec(
+          ElementTraits<mtElementType>::Identity(),vec) *
+      ElementTraits<mtElementType>::BoxminusJacRef(
           std::dynamic_pointer_cast<const Element<mtElementType>>(
               prediction->GetElement(i))->get(),std::get<i>(
                   std::forward_as_tuple(cur...)));

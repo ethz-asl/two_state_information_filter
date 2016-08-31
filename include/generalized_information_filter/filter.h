@@ -74,8 +74,8 @@ class Filter {
   void evalRes(const std::shared_ptr<const ElementVectorBase>& pre,
                const std::shared_ptr<const ElementVectorBase>& cur) {
     for (int i = 0; i < residuals_.size(); i++) {
-      residuals_.at(i).preWrap_->setState(pre);
-      residuals_.at(i).curWrap_->setState(cur);
+      residuals_.at(i).preWrap_->SetVectorElement(pre);
+      residuals_.at(i).curWrap_->SetVectorElement(cur);
       residuals_.at(i).res_->eval(residuals_.at(i).inn_,
                                           residuals_.at(i).preWrap_,
                                           residuals_.at(i).curWrap_,
@@ -201,8 +201,8 @@ class Filter {
       if (hasMeas.at(i)) {
         residuals_.at(i).mt_->getMeas(t, meas);
         residuals_.at(i).res_->setMeas(meas);
-        residuals_.at(i).preWrap_->setState(state_);
-        residuals_.at(i).curWrap_->setState(curLinState_);
+        residuals_.at(i).preWrap_->SetVectorElement(state_);
+        residuals_.at(i).curWrap_->SetVectorElement(curLinState_);
 //        residuals_.at(i).res_->testJacs(residuals_.at(i).preWrap_,residuals_.at(i).curWrap_,residuals_.at(i).noi_);
         residuals_.at(i).res_->eval(residuals_.at(i).inn_,
                                             residuals_.at(i).preWrap_,
@@ -225,10 +225,10 @@ class Filter {
                                       residuals_.at(i).preWrap_,
                                       residuals_.at(i).curWrap_,
                                       residuals_.at(i).noi_);
-        residuals_.at(i).preWrap_->wrapJacobian(jacPre,
+        residuals_.at(i).preWrap_->EmbedJacobian(jacPre,
                                                 residuals_.at(i).jacPre_,
                                                 count);
-        residuals_.at(i).curWrap_->wrapJacobian(jacCur,
+        residuals_.at(i).curWrap_->EmbedJacobian(jacCur,
                                                 residuals_.at(i).jacCur_,
                                                 count);
         Winv.block(count, count, residuals_.at(i).innDim_,

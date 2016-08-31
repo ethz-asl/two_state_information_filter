@@ -31,9 +31,6 @@ using MatRef = Eigen::Ref<Mat<N,M>>;
 template<int N = -1, int M = N>
 using MatCRef = Eigen::Ref<const Mat<N,M>>;
 
-template<typename T>
-using SP = std::shared_ptr<T>;
-
 typedef std::chrono::high_resolution_clock Clock;
 typedef Clock::time_point TimePoint;
 typedef Clock::duration Duration;

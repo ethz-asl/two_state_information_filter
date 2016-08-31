@@ -1,9 +1,9 @@
 #ifndef GIF_ELEMENTVECTOR_HPP_
 #define GIF_ELEMENTVECTOR_HPP_
 
-#include "generalized_information_filter/element-vector-definition.h"
 #include "generalized_information_filter/common.h"
 #include "generalized_information_filter/element.h"
+#include "generalized_information_filter/element-vector-definition.h"
 
 namespace GIF {
 
@@ -14,12 +14,14 @@ namespace GIF {
  */
 class ElementVectorBase {
  public:
-  ElementVectorBase(const SP<const ElementVectorDefinition>& def);
+  typedef std::shared_ptr<ElementVectorBase> Ptr;
+  typedef std::shared_ptr<const ElementVectorBase> CPtr;
+  ElementVectorBase(const ElementVectorDefinition::CPtr& def);
   virtual ~ElementVectorBase();
-  bool MatchesDefinition(const SP<const ElementVectorDefinition>& def) const;
+  bool MatchesDefinition(const ElementVectorDefinition::CPtr& def) const;
   ElementVectorBase& operator=(const ElementVectorBase& other);
-  virtual SP<ElementBase> GetElement(int i) = 0;
-  virtual SP<const ElementBase> GetElement(int i) const = 0;
+  virtual ElementBase::Ptr GetElement(int i) = 0;
+  virtual ElementBase::CPtr GetElement(int i) const = 0;
   template<typename T>
   inline T& GetValue(int i);
   template<typename T>
@@ -36,12 +38,12 @@ class ElementVectorBase {
   void Print() const;
   void SetIdentity();
   void SetRandom(int& s);
-  void BoxPlus(const VecCRef<>& vec, const SP<ElementVectorBase>& out) const;
-  void BoxMinus(const SP<const ElementVectorBase>& ref, VecRef<> vec) const;
-  SP<const ElementVectorDefinition> GetDefinition() const;
+  void BoxPlus(const VecCRef<>& vec, const ElementVectorBase::Ptr& out) const;
+  void BoxMinus(const ElementVectorBase::CPtr& ref, VecRef<> vec) const;
+  ElementVectorDefinition::CPtr GetDefinition() const;
 
  protected:
-  const SP<const ElementVectorDefinition> def_;
+  const ElementVectorDefinition::CPtr def_;
 };
 
 /*! \brief Element Vector
@@ -49,15 +51,15 @@ class ElementVectorBase {
  */
 class ElementVector : public ElementVectorBase {
  public:
-  ElementVector(const SP<const ElementVectorDefinition>& def);
+  ElementVector(const ElementVectorDefinition::CPtr& def);
   virtual ~ElementVector();
   ElementVector& operator=(const ElementVectorBase& other);
   int GetNumElement() const;
-  inline SP<ElementBase> GetElement(int i);
-  inline SP<const ElementBase> GetElement(int i) const;
+  inline ElementBase::Ptr GetElement(int i);
+  inline ElementBase::CPtr GetElement(int i) const;
 
  protected:
-  std::vector<SP<ElementBase>> elements_;
+  std::vector<ElementBase::Ptr> elements_;
 };
 
 /*! \brief Element Vector Wrapper
@@ -67,22 +69,22 @@ class ElementVector : public ElementVectorBase {
  */
 class ElementVectorWrapper : public ElementVectorBase {
  public:
-  ElementVectorWrapper(const SP<const ElementVectorDefinition>& def,
-                       const SP<const ElementVectorDefinition>& in);
+  ElementVectorWrapper(const ElementVectorDefinition::CPtr& def,
+                       const ElementVectorDefinition::CPtr& in);
   ~ElementVectorWrapper();
   ElementVectorWrapper& operator=(const ElementVectorBase& other);
   int GetNumElement() const;
-  inline SP<ElementBase> GetElement(int i);
-  inline SP<const ElementBase> GetElement(int i) const;
-  void computeMap();
-  void setState(const SP<ElementVectorBase>& state);
-  void setState(const SP<const ElementVectorBase>& state) const;
-  void wrapJacobian(MatRef<> out, const MatCRef<>& in, int rowOffset = 0) const;
+  inline ElementBase::Ptr GetElement(int i);
+  inline ElementBase::CPtr GetElement(int i) const;
+  void ComputeMap();
+  void SetVectorElement(const ElementVectorBase::Ptr& state);
+  void SetVectorElement(const ElementVectorBase::CPtr& state) const;
+  void EmbedJacobian(MatRef<> out, const MatCRef<>& in, int rowOffset = 0) const;
 
  protected:
-  SP<ElementVectorBase> state_;
-  mutable SP<const ElementVectorBase> constState_;
-  const SP<const ElementVectorDefinition> inDef_;
+  ElementVectorBase::Ptr state_;
+  mutable ElementVectorBase::CPtr constState_;
+  const ElementVectorDefinition::CPtr inDef_;
   std::vector<int> indexMap_;
 };
 
@@ -133,19 +135,19 @@ int ElementVectorBase::GetInner(int i) const {
   return def_->GetInnerIndex(i);
 }
 
-SP<ElementBase> ElementVector::GetElement(int i) {
+ElementBase::Ptr ElementVector::GetElement(int i) {
   return elements_.at(i);
 }
 
-SP<const ElementBase> ElementVector::GetElement(int i) const {
+ElementBase::CPtr ElementVector::GetElement(int i) const {
   return elements_.at(i);
 }
 
-SP<ElementBase> ElementVectorWrapper::GetElement(int i) {
+ElementBase::Ptr ElementVectorWrapper::GetElement(int i) {
   return state_->GetElement(indexMap_[i]);
 }
 
-SP<const ElementBase> ElementVectorWrapper::GetElement(int i) const {
+ElementBase::CPtr ElementVectorWrapper::GetElement(int i) const {
   return constState_->GetElement(indexMap_[i]);
 }
 

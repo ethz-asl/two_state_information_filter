@@ -40,8 +40,8 @@ class Model {
   template<typename... Ps,
            typename std::enable_if<
                (sizeof...(Ps)<OutPack::n_)>::type* = nullptr>
-  inline void _eval(const SP<ElementVectorBase>& out,
-                    const std::array<SP<const ElementVectorBase>,N_>& ins,
+  inline void _eval(const ElementVectorBase::Ptr& out,
+                    const std::array<ElementVectorBase::CPtr,N_>& ins,
                     Ps&... elements) const;
 
   template<typename... Ps,
@@ -49,16 +49,16 @@ class Model {
                (sizeof...(Ps) >= OutPack::n_
               & sizeof...(Ps) <  OutPack::n_ + TH_pack_size<InPacks...>::n_)>::
                   type* = nullptr>
-  inline void _eval(const SP<ElementVectorBase>& out,
-                    const std::array<SP<const ElementVectorBase>,N_>& ins,
+  inline void _eval(const ElementVectorBase::Ptr& out,
+                    const std::array<ElementVectorBase::CPtr,N_>& ins,
                     Ps&... elements) const;
 
   template<typename... Ps,
            typename std::enable_if<
                (sizeof...(Ps) == TH_pack_size<InPacks...>::n_+OutPack::n_)>::
                    type* = nullptr>
-  inline void _eval(const SP<ElementVectorBase>& out,
-                    const std::array<SP<const ElementVectorBase>,N_>& ins,
+  inline void _eval(const ElementVectorBase::Ptr& out,
+                    const std::array<ElementVectorBase::CPtr,N_>& ins,
                     Ps&... elements) const;
 
   template<int j,
@@ -66,8 +66,8 @@ class Model {
            typename std::enable_if<
                (sizeof...(Ps)<TH_pack_size<InPacks...>::n_)>::
                    type* = nullptr>
-  inline void _jac(Mat<>& J,
-                   const std::array<SP<const ElementVectorBase>,N_>& ins,
+  inline void _jac(MatX& J,
+                   const std::array<ElementVectorBase::CPtr,N_>& ins,
                    Ps&... elements) const;
 
   template<int j,
@@ -75,17 +75,17 @@ class Model {
            typename std::enable_if<
                (sizeof...(Ps)==TH_pack_size<InPacks...>::n_)>::
                    type* = nullptr>
-  inline void _jac(Mat<>& J,
-                   const std::array<SP<const ElementVectorBase>,N_>& ins,
+  inline void _jac(MatX& J,
+                   const std::array<ElementVectorBase::CPtr,N_>& ins,
                    Ps&... elements) const;
 
   template<int j>
-  void _jacFD(Mat<>& J,
-              const std::array<SP<const ElementVectorBase>,N_>& ins,
+  void _jacFD(MatX& J,
+              const std::array<ElementVectorBase::CPtr,N_>& ins,
               const double& delta = 1e-8) const;
 
   template<int j>
-  bool _testJacInput(const std::array<SP<const ElementVectorBase>,N_>& ins,
+  bool _testJacInput(const std::array<ElementVectorBase::CPtr,N_>& ins,
                      const double& delta = 1e-6,
                      const double& th = 1e-6) const;
 
@@ -94,14 +94,14 @@ class Model {
                      const double& th = 1e-6) const;
 
   template<int j, int n, int m>
-  void _setJacBlock(Mat<>& J,
+  void _setJacBlock(MatX& J,
                     const Mat<OutPack::template _GetStateDimension<n>(),
                     std::tuple_element<j,std::tuple<InPacks...>>::type::
                         template _GetStateDimension<m>()>& B) const;
 
  protected:
-  SP<ElementVectorDefinition> outDefinition_;
-  std::array<SP<ElementVectorDefinition>,N_> inDefinitions_;
+  ElementVectorDefinition::Ptr outDefinition_;
+  std::array<ElementVectorDefinition::Ptr,N_> inDefinitions_;
 
   template<int i = 0, typename std::enable_if<(i<sizeof...(InPacks))>::
       type* = nullptr>
@@ -127,8 +127,8 @@ template<typename Derived, typename OutPack, typename ... InPacks>
 template<typename... Ps,
          typename std::enable_if<(sizeof...(Ps)<OutPack::n_)>::type*>
 inline void Model<Derived,OutPack,InPacks...>::_eval(
-      const SP<ElementVectorBase>& out,
-      const std::array<SP<const ElementVectorBase>,N_>& ins,
+      const ElementVectorBase::Ptr& out,
+      const std::array<ElementVectorBase::CPtr,N_>& ins,
       Ps&... elements) const{
   assert(out->MatchesDefinition(outDefinition_));
   static constexpr int inner_index = sizeof...(Ps);
@@ -146,8 +146,8 @@ template<typename... Ps,
             & sizeof...(Ps) < OutPack::n_+TH_pack_size<InPacks...>::n_)>::
                 type*>
 inline void Model<Derived,OutPack,InPacks...>::_eval(
-      const SP<ElementVectorBase>& out,
-      const std::array<SP<const ElementVectorBase>,N_>& ins,
+      const ElementVectorBase::Ptr& out,
+      const std::array<ElementVectorBase::CPtr,N_>& ins,
       Ps&... elements) const{
   static constexpr int outerIndex =
       TH_pack_index<sizeof...(Ps)-n_,InPacks...>::GetOuter();
@@ -167,8 +167,8 @@ template<typename... Ps,
          typename std::enable_if<
              (sizeof...(Ps)==TH_pack_size<InPacks...>::n_+OutPack::n_)>::type*>
 inline void Model<Derived,OutPack,InPacks...>::_eval(
-      const SP<ElementVectorBase>& out,
-      const std::array<SP<const ElementVectorBase>,N_>& ins,
+      const ElementVectorBase::Ptr& out,
+      const std::array<ElementVectorBase::CPtr,N_>& ins,
       Ps&... elements) const{
   static_cast<const Derived&>(*this).eval(elements...);
 }
@@ -178,8 +178,8 @@ template<int j,
          typename... Ps,
          typename std::enable_if<
              (sizeof...(Ps)<TH_pack_size<InPacks...>::n_)>::type*>
-inline void Model<Derived,OutPack,InPacks...>::_jac(Mat<>& J,
-                 const std::array<SP<const ElementVectorBase>,N_>& ins,
+inline void Model<Derived,OutPack,InPacks...>::_jac(MatX& J,
+                 const std::array<ElementVectorBase::CPtr,N_>& ins,
                  Ps&... elements) const{
   static constexpr int outerIndex =
       TH_pack_index<sizeof...(Ps),InPacks...>::GetOuter();
@@ -200,8 +200,8 @@ template<int j,
          typename... Ps,
          typename std::enable_if<
              (sizeof...(Ps)==TH_pack_size<InPacks...>::n_)>::type*>
-inline void Model<Derived,OutPack,InPacks...>::_jac(Mat<>& J,
-                 const std::array<SP<const ElementVectorBase>,N_>& ins,
+inline void Model<Derived,OutPack,InPacks...>::_jac(MatX& J,
+                 const std::array<ElementVectorBase::CPtr,N_>& ins,
                  Ps&... elements) const{
   static_assert(j<N_,"No such Jacobian!");
   static_cast<const Derived&>(*this).template jac<j>(J,elements...);
@@ -209,16 +209,16 @@ inline void Model<Derived,OutPack,InPacks...>::_jac(Mat<>& J,
 
 template<typename Derived, typename OutPack, typename ... InPacks>
 template<int j>
-void Model<Derived,OutPack,InPacks...>::_jacFD(Mat<>& J,
-            const std::array<SP<const ElementVectorBase>,N_>& ins,
+void Model<Derived,OutPack,InPacks...>::_jacFD(MatX& J,
+            const std::array<ElementVectorBase::CPtr,N_>& ins,
             const double& delta) const{
-  SP<ElementVector> stateDis(new ElementVector(inDefinitions_[j]));
-  SP<ElementVector> outRef(new ElementVector(outDefinition_));
-  SP<ElementVector> outDis(new ElementVector(outDefinition_));
+  ElementVectorBase::Ptr stateDis(new ElementVector(inDefinitions_[j]));
+  ElementVectorBase::Ptr outRef(new ElementVector(outDefinition_));
+  ElementVectorBase::Ptr outDis(new ElementVector(outDefinition_));
   J.resize(outRef->GetDimension(),stateDis->GetDimension());
   J.setZero();
   *stateDis = *ins[j];
-  std::array<SP<const ElementVectorBase>,N_> inDis = ins;
+  std::array<ElementVectorBase::CPtr,N_> inDis = ins;
   inDis[j] = stateDis;
   _eval(outRef,inDis);
   VecX difIn(stateDis->GetDimension());
@@ -236,18 +236,18 @@ void Model<Derived,OutPack,InPacks...>::_jacFD(Mat<>& J,
 template<typename Derived, typename OutPack, typename ... InPacks>
 template<int j>
 bool Model<Derived,OutPack,InPacks...>::_testJacInput(
-      const std::array<SP<const ElementVectorBase>,N_>& ins,
+      const std::array<ElementVectorBase::CPtr,N_>& ins,
       const double& delta,
       const double& th) const {
   if(OutPack::d_ <= 0 || InPack<j>::d_ <= 0){
     return true;
   }
-  Mat<> J((int)OutPack::d_,(int)InPack<j>::d_);
-  Mat<> J_FD((int)OutPack::d_,(int)InPack<j>::d_);
-  SP<ElementVector> output(new ElementVector(outDefinition_));
+  MatX J((int)OutPack::d_,(int)InPack<j>::d_);
+  MatX J_FD((int)OutPack::d_,(int)InPack<j>::d_);
+  ElementVectorBase::Ptr output(new ElementVector(outDefinition_));
   _jac<j>(J,ins);
   _jacFD<j>(J_FD,ins,delta);
-  typename Mat<>::Index maxRow, maxCol = 0;
+  typename MatX::Index maxRow, maxCol = 0;
   const double r = (J-J_FD).array().abs().maxCoeff(&maxRow, &maxCol);
   if(r>th){
     std::string outName = outDefinition_->GetName(output->GetOuter(maxRow));
@@ -271,9 +271,9 @@ template<int j>
 bool Model<Derived,OutPack,InPacks...>::_testJacInput(int& s,
                                                       const double& delta,
                                                       const double& th) const{
-  std::array<SP<const ElementVectorBase>,N_> ins;
+  std::array<ElementVectorBase::CPtr,N_> ins;
   for(int i=0;i<N_;i++){
-    SP<ElementVectorBase> randomState(new ElementVector(inDefinitions_[i]));
+    ElementVectorBase::Ptr randomState(new ElementVector(inDefinitions_[i]));
     randomState->SetRandom(s);
     ins[i] = randomState;
   }
@@ -282,7 +282,7 @@ bool Model<Derived,OutPack,InPacks...>::_testJacInput(int& s,
 
 template<typename Derived, typename OutPack, typename ... InPacks>
 template<int j, int n, int m>
-void Model<Derived,OutPack,InPacks...>::_setJacBlock(Mat<>& J,
+void Model<Derived,OutPack,InPacks...>::_setJacBlock(MatX& J,
                   const Mat<OutPack::template _GetStateDimension<n>(),
                   std::tuple_element<j,std::tuple<InPacks...>>::type::
                       template _GetStateDimension<m>()>& B) const {
