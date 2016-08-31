@@ -19,8 +19,12 @@ using Vec3 = Vec<3>;
 using VecX = Vec<>;
 template<int N = -1>
 using VecRef = Eigen::Ref<Vec<N>>;
+using VecRef3 = VecRef<3>;
+using VecRefX = VecRef<>;
 template<int N = -1>
 using VecCRef = Eigen::Ref<const Vec<N>>;
+using VecCRef3 = VecCRef<3>;
+using VecCRefX = VecCRef<>;
 
 template<int N = -1, int M = N>
 using Mat = Eigen::Matrix<double,N,M>;

@@ -63,10 +63,10 @@ class ElementBase {
   virtual void Print() const = 0;
   virtual void SetIdentity() = 0;
   virtual void SetRandom(int& s) = 0;
-  virtual void Boxplus(const VecCRef<>& vec,const ElementBase::Ptr& out) const = 0;
-  virtual void Boxminus(const ElementBase::CPtr& ref, VecRef<> vec) const = 0;
-  virtual MatX BoxplusJacInp(const VecCRef<>& vec) const = 0;
-  virtual MatX BoxplusJacVec(const VecCRef<>& vec) const = 0;
+  virtual void Boxplus(const VecCRefX& vec,ElementBase* out) const = 0;
+  virtual void Boxminus(const ElementBase& ref, VecRefX vec) const = 0;
+  virtual MatX BoxplusJacInp(const VecCRefX& vec) const = 0;
+  virtual MatX BoxplusJacVec(const VecCRefX& vec) const = 0;
   virtual MatX BoxminusJacInp(const ElementBase::Ptr& ref) const = 0;
   virtual MatX BoxminusJacRef(const ElementBase::Ptr& ref) const = 0;
   template<typename T>
@@ -112,16 +112,16 @@ class Element : public ElementBase {
   virtual void SetRandom(int& s) {
     Traits::SetRandom(get(), s);
   }
-  virtual void Boxplus(const VecCRef<>& vec, const ElementBase::Ptr& out) const {
+  virtual void Boxplus(const VecCRefX& vec, const ElementBase::Ptr& out) const {
     Traits::Boxplus(get(), vec, out->get<T>());
   }
-  virtual void Boxminus(const ElementBase::CPtr& ref, VecRef<> vec) const {
+  virtual void Boxminus(const ElementBase::CPtr& ref, VecRefX vec) const {
     Traits::Boxminus(get(), ref->get<T>(), vec);
   }
-  virtual MatX BoxplusJacInp(const VecCRef<>& vec) const {
+  virtual MatX BoxplusJacInp(const VecCRefX& vec) const {
     return Traits::BoxplusJacInp(get(), vec);
   }
-  virtual MatX BoxplusJacVec(const VecCRef<>& vec) const {
+  virtual MatX BoxplusJacVec(const VecCRefX& vec) const {
     return Traits::BoxplusJacVec(get(), vec);
   }
   virtual MatX BoxminusJacInp(const ElementBase::Ptr& ref) const {

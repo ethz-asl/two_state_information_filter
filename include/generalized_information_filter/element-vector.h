@@ -38,8 +38,8 @@ class ElementVectorBase {
   void Print() const;
   void SetIdentity();
   void SetRandom(int& s);
-  void BoxPlus(const VecCRef<>& vec, const ElementVectorBase::Ptr& out) const;
-  void BoxMinus(const ElementVectorBase::CPtr& ref, VecRef<> vec) const;
+  void BoxPlus(const VecCRefX& vec, const ElementVectorBase::Ptr& out) const;
+  void BoxMinus(const ElementVectorBase::CPtr& ref, VecRefX vec) const;
   ElementVectorDefinition::CPtr GetDefinition() const;
 
  protected:

@@ -47,7 +47,7 @@ void ElementVectorBase::SetRandom(int& s) {
   }
 }
 
-void ElementVectorBase::BoxPlus(const VecCRef<>& vec,
+void ElementVectorBase::BoxPlus(const VecCRefX& vec,
                                 const ElementVectorBase::Ptr& out) const {
   for (int i = 0; i < GetNumElement(); i++) {
     GetElement(i)->Boxplus(
@@ -57,7 +57,7 @@ void ElementVectorBase::BoxPlus(const VecCRef<>& vec,
 }
 
 void ElementVectorBase::BoxMinus(const ElementVectorBase::CPtr& ref,
-                         VecRef<> vec) const {
+                         VecRefX vec) const {
   for (int i = 0; i < GetNumElement(); i++) {
     GetElement(i)->Boxminus(
         ref->GetElement(i),
