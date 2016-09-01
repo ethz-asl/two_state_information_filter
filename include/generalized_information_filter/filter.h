@@ -74,9 +74,9 @@ class Filter {
       residuals_.at(i).preWrap_.SetElementVector(pre);
       residuals_.at(i).curWrap_.SetElementVector(cur);
       residuals_.at(i).res_->Eval(&residuals_.at(i).inn_,
-                                  &residuals_.at(i).preWrap_,
-                                  &residuals_.at(i).curWrap_,
-                                  &residuals_.at(i).noi_);
+                                  residuals_.at(i).preWrap_,
+                                  residuals_.at(i).curWrap_,
+                                  residuals_.at(i).noi_);
       residuals_.at(i).inn_.Print();
     }
   }
@@ -206,25 +206,25 @@ class Filter {
         residuals_.at(i).preWrap_.SetElementVector(&state_);
         residuals_.at(i).curWrap_.SetElementVector(&curLinState_);
         residuals_.at(i).res_->Eval(&residuals_.at(i).inn_,
-                                    &residuals_.at(i).preWrap_,
-                                    &residuals_.at(i).curWrap_,
-                                    &residuals_.at(i).noi_);
+                                    residuals_.at(i).preWrap_,
+                                    residuals_.at(i).curWrap_,
+                                    residuals_.at(i).noi_);
         residuals_.at(i).innRef_.BoxMinus(residuals_.at(i).inn_,
                                           y.block(count, 0, residuals_.at(i).innDim_, 1));
 
         // Compute Jacobians
         residuals_.at(i).res_->JacPre(residuals_.at(i).jacPre_,
-                                      &residuals_.at(i).preWrap_,
-                                      &residuals_.at(i).curWrap_,
-                                      &residuals_.at(i).noi_);
+                                      residuals_.at(i).preWrap_,
+                                      residuals_.at(i).curWrap_,
+                                      residuals_.at(i).noi_);
         residuals_.at(i).res_->JacCur(residuals_.at(i).jacCur_,
-                                      &residuals_.at(i).preWrap_,
-                                      &residuals_.at(i).curWrap_,
-                                      &residuals_.at(i).noi_);
+                                      residuals_.at(i).preWrap_,
+                                      residuals_.at(i).curWrap_,
+                                      residuals_.at(i).noi_);
         residuals_.at(i).res_->JacNoi(residuals_.at(i).jacNoi_,
-                                      &residuals_.at(i).preWrap_,
-                                      &residuals_.at(i).curWrap_,
-                                      &residuals_.at(i).noi_);
+                                      residuals_.at(i).preWrap_,
+                                      residuals_.at(i).curWrap_,
+                                      residuals_.at(i).noi_);
         residuals_.at(i).preWrap_.EmbedJacobian(JacPre,
                                                 residuals_.at(i).jacPre_,
                                                 count);

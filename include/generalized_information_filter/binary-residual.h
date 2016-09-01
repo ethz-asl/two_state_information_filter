@@ -17,21 +17,21 @@ class BinaryResidualBase {
   virtual ~BinaryResidualBase() {
   }
   virtual void Eval(ElementVectorBase* inn,
-                    const ElementVectorBase* pre,
-                    const ElementVectorBase* cur,
-                    const ElementVectorBase* noi) const = 0;
+                    const ElementVectorBase& pre,
+                    const ElementVectorBase& cur,
+                    const ElementVectorBase& noi) const = 0;
   virtual void JacPre(MatX& J,
-                      const ElementVectorBase* pre,
-                      const ElementVectorBase* cur,
-                      const ElementVectorBase* noi) const = 0;
+                      const ElementVectorBase& pre,
+                      const ElementVectorBase& cur,
+                      const ElementVectorBase& noi) const = 0;
   virtual void JacCur(MatX& J,
-                      const ElementVectorBase* pre,
-                      const ElementVectorBase* cur,
-                      const ElementVectorBase* noi) const = 0;
+                      const ElementVectorBase& pre,
+                      const ElementVectorBase& cur,
+                      const ElementVectorBase& noi) const = 0;
   virtual void JacNoi(MatX& J,
-                      const ElementVectorBase* pre,
-                      const ElementVectorBase* cur,
-                      const ElementVectorBase* noi) const = 0;
+                      const ElementVectorBase& pre,
+                      const ElementVectorBase& cur,
+                      const ElementVectorBase& noi) const = 0;
   virtual ElementVectorDefinition::Ptr InnDefinition() const = 0;
   virtual ElementVectorDefinition::Ptr PreDefinition() const = 0;
   virtual ElementVectorDefinition::Ptr CurDefinition() const = 0;
@@ -49,9 +49,9 @@ class BinaryResidualBase {
   virtual void SetMeas(const ElementVectorBase::CPtr& meas) = 0;
   virtual const MatX& GetNoiseCovariance() const = 0;
   virtual MatX& GetNoiseCovariance() = 0;
-  virtual bool TestJacs(const ElementVectorBase* pre,
-                        const ElementVectorBase* cur,
-                        const ElementVectorBase* noi,
+  virtual bool TestJacs(const ElementVectorBase& pre,
+                        const ElementVectorBase& cur,
+                        const ElementVectorBase& noi,
                         const double delta, const double th) const = 0;
   virtual bool TestJacs(int& s, const double delta, const double th) = 0;
 
@@ -138,52 +138,52 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
 
   // Wrapping from user interface to base
   void Eval(ElementVectorBase* inn,
-            const ElementVectorBase* pre,
-            const ElementVectorBase* cur,
-            const ElementVectorBase* noi) const {
-    const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
+            const ElementVectorBase& pre,
+            const ElementVectorBase& cur,
+            const ElementVectorBase& noi) const {
+    const std::array<const ElementVectorBase*, 3> ins = {&pre, &cur, &noi};
     this->EvalWrapper(inn, ins);
   }
 
-  void JacPre(MatX& J, const ElementVectorBase* pre,
-                       const ElementVectorBase* cur,
-                       const ElementVectorBase* noi) const {
-    const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
+  void JacPre(MatX& J, const ElementVectorBase& pre,
+                       const ElementVectorBase& cur,
+                       const ElementVectorBase& noi) const {
+    const std::array<const ElementVectorBase*, 3> ins = {&pre, &cur, &noi};
     this->template JacWrapper<0>(J, ins);
   }
-  void JacCur(MatX& J, const ElementVectorBase* pre,
-                       const ElementVectorBase* cur,
-                       const ElementVectorBase* noi) const {
-    const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
+  void JacCur(MatX& J, const ElementVectorBase& pre,
+                       const ElementVectorBase& cur,
+                       const ElementVectorBase& noi) const {
+    const std::array<const ElementVectorBase*, 3> ins = {&pre, &cur, &noi};
     this->template JacWrapper<1>(J, ins);
   }
 
-  void JacNoi(MatX& J, const ElementVectorBase* pre,
-                       const ElementVectorBase* cur,
-                       const ElementVectorBase* noi) const {
-    const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
+  void JacNoi(MatX& J, const ElementVectorBase& pre,
+                       const ElementVectorBase& cur,
+                       const ElementVectorBase& noi) const {
+    const std::array<const ElementVectorBase*, 3> ins = {&pre, &cur, &noi};
     this->template JacWrapper<2>(J, ins);
   }
-  void JacFDPre(MatX& J, const ElementVectorBase* pre,
-                         const ElementVectorBase* cur,
-                         const ElementVectorBase* noi,
+  void JacFDPre(MatX& J, const ElementVectorBase& pre,
+                         const ElementVectorBase& cur,
+                         const ElementVectorBase& noi,
                          const double delta) {
-    const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
+    const std::array<const ElementVectorBase*, 3> ins = {&pre, &cur, &noi};
     this->template JacFDImpl<0>(J, ins, delta);
   }
-  void JacFDCur(MatX& J, const ElementVectorBase* pre,
-                         const ElementVectorBase* cur,
-                         const ElementVectorBase* noi,
+  void JacFDCur(MatX& J, const ElementVectorBase& pre,
+                         const ElementVectorBase& cur,
+                         const ElementVectorBase& noi,
                          const double delta) {
-    const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
+    const std::array<const ElementVectorBase*, 3> ins = {&pre, &cur, &noi};
     this->template JacFDImpl<1>(J, ins, delta);
   }
 
-  void JacFDNoi(MatX& J, const ElementVectorBase* pre,
-                         const ElementVectorBase* cur,
-                         const ElementVectorBase* noi,
+  void JacFDNoi(MatX& J, const ElementVectorBase& pre,
+                         const ElementVectorBase& cur,
+                         const ElementVectorBase& noi,
                          const double delta) {
-    const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
+    const std::array<const ElementVectorBase*, 3> ins = {&pre, &cur, &noi};
     this->template JacFDImpl<2>(J, ins, delta);
   }
 
@@ -211,11 +211,11 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
     this->template SetJacBlockImpl<2, n, m>(J, B);
   }
 
-  bool TestJacs(const ElementVectorBase* pre,
-                const ElementVectorBase* cur,
-                const ElementVectorBase* noi,
+  bool TestJacs(const ElementVectorBase& pre,
+                const ElementVectorBase& cur,
+                const ElementVectorBase& noi,
                 const double delta, const double th) const {
-    const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
+    const std::array<const ElementVectorBase*, 3> ins = {&pre, &cur, &noi};
     return this->template JacTestImpl<0>(ins, delta, th)
          & this->template JacTestImpl<1>(ins, delta, th)
          & this->template JacTestImpl<2>(ins, delta, th);

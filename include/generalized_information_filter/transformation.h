@@ -32,18 +32,18 @@ class Transformation<ElementPack<Out...>, ElementPack<In...>> : public Model<
   virtual void JacTransform(MatX& J, const In&... ins) const = 0;
 
   // Wrapping from user interface to base
-  void JacFD(MatX& J, const ElementVectorBase* in, const double delta) {
-    const std::array<const ElementVectorBase*, 1> ins = {in};
+  void JacFD(MatX& J, const ElementVectorBase& in, const double delta) {
+    const std::array<const ElementVectorBase*, 1> ins = {&in};
     this->template JacFDImpl<0>(J, ins, delta);
   }
 
-  void TransformState(ElementVectorBase* out, const ElementVectorBase* in) {
-    const std::array<const ElementVectorBase*, 1> ins = {in};
+  void TransformState(ElementVectorBase* out, const ElementVectorBase& in) {
+    const std::array<const ElementVectorBase*, 1> ins = {&in};
     this->template EvalWrapper(out, ins);
   }
 
-  void TransformCovMat(MatX& outputCov, const ElementVectorBase* in, const MatX& inputCov) {
-    const std::array<const ElementVectorBase*, 1> ins = {in};
+  void TransformCovMat(MatX& outputCov, const ElementVectorBase& in, const MatX& inputCov) {
+    const std::array<const ElementVectorBase*, 1> ins = {&in};
     this->template JacWrapper<0>(J_, ins);
     outputCov = J_ * inputCov * J_.transpose();
   }
@@ -56,8 +56,8 @@ class Transformation<ElementPack<Out...>, ElementPack<In...>> : public Model<
     this->template SetJacBlockImpl<0, n, m>(J, B);
   }
 
-  bool JacTest(const ElementVectorBase* in, const double delta, const double th) const {
-    const std::array<const ElementVectorBase*, 1> ins = {in};
+  bool JacTest(const ElementVectorBase& in, const double delta, const double th) const {
+    const std::array<const ElementVectorBase*, 1> ins = {&in};
     return this->template JacTestImpl<0>(ins, delta, th);
   }
 

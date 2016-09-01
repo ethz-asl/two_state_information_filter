@@ -184,16 +184,16 @@ TEST_F(NewStateTest, constructor) {
 
   // Jacobian
   MatX J;
-  t.JacFD(J, &s1a, 1e-6);
+  t.JacFD(J, s1a, 1e-6);
   std::cout << J << std::endl;
 
   // Transformation
   ElementVector s2(t.OutputDefinition());
   MatX P1(s1a.GetDimension(), s1a.GetDimension());
   MatX P2(s2.GetDimension(), s2.GetDimension());
-  t.TransformState(&s2, &s1a);
-  t.TransformCovMat(P2, &s1a, P1);
-  t.JacTest(&s1a, 1e-6, 1e-6);
+  t.TransformState(&s2, s1a);
+  t.TransformCovMat(P2, s1a, P1);
+  t.JacTest(s1a, 1e-6, 1e-6);
 
   // Velocity Residual
   std::shared_ptr<BinaryRedidualVelocity> velRes(new BinaryRedidualVelocity());
@@ -203,7 +203,7 @@ TEST_F(NewStateTest, constructor) {
   cur.SetIdentity();
   ElementVector noi(velRes->NoiDefinition());
   noi.SetIdentity();
-  velRes->TestJacs(&pre, &cur, &noi, 1e-6, 1e-6);
+  velRes->TestJacs(pre, cur, noi, 1e-6, 1e-6);
 
   // Accelerometer Residual
   std::shared_ptr<BinaryRedidualAccelerometer> accRes(new BinaryRedidualAccelerometer());
@@ -254,7 +254,7 @@ TEST_F(NewStateTest, constructor) {
   preAcc.SetIdentity();
   curAcc.SetIdentity();
   noiAcc.SetIdentity();
-  accPre->TestJacs(&preAcc, &curAcc, &noiAcc, 1e-6, 1e-6);
+  accPre->TestJacs(preAcc, curAcc, noiAcc, 1e-6, 1e-6);
 
   // Test measurements
   Filter f2;
