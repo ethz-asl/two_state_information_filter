@@ -41,9 +41,9 @@ void ElementVectorBase::SetIdentity() {
   }
 }
 
-void ElementVectorBase::SetRandom(int& s) {
+void ElementVectorBase::SetRandom() {
   for (int i = 0; i < GetNumElement(); i++) {
-    GetElement(i)->SetRandom(s);
+    GetElement(i)->SetRandom();
   }
 }
 

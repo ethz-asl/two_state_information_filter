@@ -58,6 +58,27 @@ inline Mat3 GammaMat(const Vec3& a) {
   return kindr::getJacobianOfExponentialMap(a);
 }
 
+class NormalRandomNumberGenerator
+{
+ public:
+  void SetSeed(int s){
+    generator_.seed(s);
+  }
+  double Get(){
+    return distribution_(generator_);
+  }
+  static NormalRandomNumberGenerator& Instance()
+  {
+    static NormalRandomNumberGenerator instance;
+    return instance;
+  }
+ protected:
+  std::default_random_engine generator_;
+  std::normal_distribution<double> distribution_;
+  NormalRandomNumberGenerator(): generator_(0), distribution_(0.0,1.0){
+  }
+};
+
 }
 
 #endif /* GIF_COMMON_HPP_ */

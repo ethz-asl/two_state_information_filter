@@ -37,7 +37,7 @@ class ElementVectorBase {
   inline int GetInner(int i) const;
   void Print() const;
   void SetIdentity();
-  void SetRandom(int& s);
+  void SetRandom();
   void BoxPlus(const VecCRefX& vec, ElementVectorBase* out) const;
   void BoxMinus(const ElementVectorBase& ref, VecRefX vec) const;
   const ElementVectorDefinition* GetDefinition() const;

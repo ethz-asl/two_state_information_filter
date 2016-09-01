@@ -26,7 +26,7 @@ struct ElementTraits {
   }
   static void SetIdentity(T& x) {
   }
-  static void SetRandom(T& x, int& s) {
+  static void SetRandom(T& x) {
   }
   static void Boxplus(const T& ref, const VecCRef<kDim>& vec, T& out) {
     out = ref;   // Must be computable in-place
@@ -62,7 +62,7 @@ class ElementBase {
   virtual int GetDim() const = 0;
   virtual void Print() const = 0;
   virtual void SetIdentity() = 0;
-  virtual void SetRandom(int& s) = 0;
+  virtual void SetRandom() = 0;
   virtual void Boxplus(const VecCRefX& vec,ElementBase* out) const = 0;
   virtual void Boxminus(const ElementBase& ref, VecRefX vec) const = 0;
   virtual MatX BoxplusJacInp(const VecCRefX& vec) const = 0;
@@ -116,8 +116,8 @@ class Element : public ElementBase {
   virtual void SetIdentity() {
     Traits::SetIdentity(GetValue());
   }
-  virtual void SetRandom(int& s) {
-    Traits::SetRandom(GetValue(), s);
+  virtual void SetRandom() {
+    Traits::SetRandom(GetValue());
   }
   virtual void Boxplus(const VecCRefX& vec, ElementBase* out) const {
     Traits::Boxplus(GetValue(), vec, out->GetValue<T>());
@@ -166,10 +166,8 @@ class ElementTraits<double> {
   static void SetIdentity(double& x) {
     x = 0;
   }
-  static void SetRandom(double& x, int& s) {
-    static std::default_random_engine generator(s++);
-    static std::normal_distribution<double> distribution(0.0, 1.0);
-    x = distribution(generator);
+  static void SetRandom(double& x) {
+    x = NormalRandomNumberGenerator::Instance().Get();
   }
   static void Boxplus(const double& in, const VecCRef<kDim>& vec, double& out) {
     out = in + vec(0);
@@ -208,11 +206,9 @@ class ElementTraits<Vec<N>> {
   static void SetIdentity(Vec<N>& x) {
     x.setZero();
   }
-  static void SetRandom(Vec<N>& x, int& s) {
-    static std::default_random_engine generator(s++);
-    static std::normal_distribution<double> distribution(0.0, 1.0);
+  static void SetRandom(Vec<N>& x) {
     for (unsigned int i = 0; i < N; i++) {
-      x(i) = distribution(generator);
+      x(i) = NormalRandomNumberGenerator::Instance().Get();
     }
   }
   static void Boxplus(const Vec<N>& in, const VecCRef<kDim>& vec, Vec<N>& out) {
@@ -261,9 +257,9 @@ class ElementTraits<std::array<T, N>> {
       Traits::SetIdentity(i);
     }
   }
-  static void SetRandom(array& x, int& s) {
+  static void SetRandom(array& x) {
     for (T& i : x) {
-      Traits::SetRandom(i, s);
+      Traits::SetRandom(i);
     }
   }
   static void Boxplus(const array& in, const VecCRef<kDim>& vec, array& out) {
@@ -332,13 +328,11 @@ class ElementTraits<Quat> {
   static void SetIdentity(Quat& x) {
     x.setIdentity();
   }
-  static void SetRandom(Quat& x, int& s) {
-    static std::default_random_engine generator(s++);
-    static std::normal_distribution<double> distribution(0.0, 1.0);
-    x.toImplementation().w() = distribution(generator);
-    x.toImplementation().x() = distribution(generator);
-    x.toImplementation().y() = distribution(generator);
-    x.toImplementation().z() = distribution(generator);
+  static void SetRandom(Quat& x) {
+    x.toImplementation().w() = NormalRandomNumberGenerator::Instance().Get();
+    x.toImplementation().x() = NormalRandomNumberGenerator::Instance().Get();
+    x.toImplementation().y() = NormalRandomNumberGenerator::Instance().Get();
+    x.toImplementation().z() = NormalRandomNumberGenerator::Instance().Get();
     x.fix();
   }
   static void Boxplus(const Quat& in, const VecCRef<kDim>& vec, Quat& out) {

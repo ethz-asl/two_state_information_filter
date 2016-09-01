@@ -74,8 +74,7 @@ class Model {
                      const double th) const;
 
   template<int InIndex>
-  bool JacTestImpl(int& s, const double delta,
-                     const double th) const;
+  bool JacTestImpl(const double delta, const double th) const;
 
   template<int InIndex, int n, int m>
   void SetJacBlockImpl(MatX& J, const Mat<OutPack::template _GetStateDimension<n>(),
@@ -233,14 +232,12 @@ bool Model<Derived,OutPack,InPacks...>::JacTestImpl(
 
 template<typename Derived, typename OutPack, typename ... InPacks>
 template<int InIndex>
-bool Model<Derived,OutPack,InPacks...>::JacTestImpl(int& s,
-                                                      const double delta,
-                                                      const double th) const{
+bool Model<Derived,OutPack,InPacks...>::JacTestImpl(const double delta, const double th) const{
   std::array<ElementVectorBase::Ptr,N_> ins;
   std::array<const ElementVectorBase*,N_> insRawPtr;
   for(int i=0;i<N_;i++){
     ins[i].reset(new ElementVector(inDefinitions_[i]));
-    ins[i]->SetRandom(s);
+    ins[i]->SetRandom();
     insRawPtr[i] = ins[i].get();
   }
   JacTestImpl<InIndex>(insRawPtr,delta,th);

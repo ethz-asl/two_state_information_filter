@@ -53,7 +53,7 @@ class BinaryResidualBase {
                         const ElementVectorBase& cur,
                         const ElementVectorBase& noi,
                         const double delta, const double th) const = 0;
-  virtual bool TestJacs(int& s, const double delta, const double th) = 0;
+  virtual bool TestJacs(const double delta, const double th) = 0;
 
   const bool isUnary_;
   const bool isSplitable_;
@@ -221,14 +221,14 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
          & this->template JacTestImpl<2>(ins, delta, th);
   }
 
-  bool TestJacs(int& s, const double delta, const double th) {
+  bool TestJacs(const double delta, const double th) {
     std::shared_ptr<Meas> meas(new Meas());
-    meas->SetRandom(s);
+    meas->SetRandom();
     meas_ = meas;
     ElementVector pre(PreDefinition());
-    pre.SetRandom(s);
+    pre.SetRandom();
     ElementVector cur(CurDefinition());
-    cur.SetRandom(s);
+    cur.SetRandom();
     ElementVector noi(NoiDefinition());
     noi.SetIdentity();
     const std::array<const ElementVectorBase*, 3> ins = {&pre, &cur, &noi};

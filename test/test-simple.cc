@@ -280,13 +280,12 @@ TEST_F(NewStateTest, constructor) {
   f2.Update();
 
   // Test IMU + Pose filter
-  int s = 0;
   std::shared_ptr<IMUPrediction> imuPre(new IMUPrediction());
   imuPre->GetNoiseCovariance() = 1e-8 * imuPre->GetNoiseCovariance();
-  imuPre->TestJacs(s, 1e-6, 1e-6);
+  imuPre->TestJacs(1e-6, 1e-6);
   std::shared_ptr<PoseUpdate> poseUpd(new PoseUpdate());
   poseUpd->GetNoiseCovariance() = 1e-8 * poseUpd->GetNoiseCovariance();
-  poseUpd->TestJacs(s, 1e-6, 1e-6);
+  poseUpd->TestJacs(1e-6, 1e-6);
 
   Filter imuPoseFilter;
   int imuPreInd = imuPoseFilter.AddResidual(imuPre);
