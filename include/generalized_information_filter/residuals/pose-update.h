@@ -7,7 +7,7 @@
 namespace GIF {
 
 /*! \brief Pose Measurement
- *         Element Vector that can be used to hold a generic pose measurements (position + attitude).
+ *         ElementVector that can be used to hold a generic pose measurements (position + attitude).
  */
 class PoseMeas : public ElementVector {
  public:

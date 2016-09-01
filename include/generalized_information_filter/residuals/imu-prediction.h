@@ -7,7 +7,7 @@
 namespace GIF {
 
 /*! \brief IMU Measurement
- *         Element Vector that can be used to hold IMU measurements.
+ *         ElementVector that can be used to hold IMU measurements.
  */
 class IMUMeas : public ElementVector {
  public:
