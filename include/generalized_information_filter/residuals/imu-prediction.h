@@ -8,16 +8,16 @@ namespace GIF {
 
 class IMUMeas : public ElementVector {
  public:
-  IMUMeas(const Vec3& gyr = Vec3(0, 0, 0), const Vec3& acc = Vec3(0, 0, 0))
+  IMUMeas(const Vec3& BwB = Vec3(0, 0, 0), const Vec3& BfB = Vec3(0, 0, 0))
       : ElementVector(std::shared_ptr<ElementVectorDefinition>(
-            new ElementPack<Vec3, Vec3>({"gyr", "acc"}))),
-        gyr_(ElementVector::GetValue<Vec3>("gyr")),
-        acc_(ElementVector::GetValue<Vec3>("acc")) {
-    gyr_ = gyr;
-    acc_ = acc;
+            new ElementPack<Vec3, Vec3>({"BwB", "BfB"}))),
+        BwB_(ElementVector::GetValue<Vec3>("BwB")),
+        BfB_(ElementVector::GetValue<Vec3>("BfB")) {
+    BwB_ = BwB;
+    BfB_ = BfB;
   }
-  Vec3& gyr_;
-  Vec3& acc_;
+  Vec3& BwB_;
+  Vec3& BfB_;
 };
 
 class IMUPrediction : public Prediction<ElementPack<Vec3, Vec3, Vec3, Vec3, Quat>,
@@ -25,67 +25,67 @@ class IMUPrediction : public Prediction<ElementPack<Vec3, Vec3, Vec3, Vec3, Quat
                                         IMUMeas> {
  public:
   IMUPrediction()
-      : mtPrediction({"pos", "vel", "gyb", "acb", "att"},
-                     {"pos", "vel", "gyb", "acb", "att"}),
-        g_(0, 0, -9.81),
+      : mtPrediction({"IrIB", "BvB", "BwB_bias", "BfB_bias", "qIB"},
+                     {"IrIB", "BvB", "BwB_bias", "BfB_bias", "qIB"}),
+        Ig_(0, 0, -9.81),
         dt_(0.1){
   }
   virtual ~IMUPrediction() {
   }
-  void Predict(Vec3& posCur, Vec3& velCur, Vec3& gybCur, Vec3& acbCur, Quat& attCur,
-               const Vec3& posPre, const Vec3& velPre, const Vec3& gybPre,
-               const Vec3& acbPre, const Quat& attPre, const Vec3& posNoi,
-               const Vec3& velNoi, const Vec3& gybNoi, const Vec3& acbNoi,
-               const Vec3& attNoi) const {
-    const Vec3 gyr = meas_->gyr_ - gybPre + attNoi / sqrt(dt_);
-    const Vec3 acc = meas_->acc_ - acbPre + velNoi / sqrt(dt_);
-    const Vec3 dOmega = dt_ * gyr;
+  void Predict(Vec3& IrIB_cur, Vec3& BvB_cur, Vec3& BwB_bias_cur, Vec3& BfB_bias_cur, Quat& qIB_cur,
+               const Vec3& IrIB_pre, const Vec3& BvB_pre, const Vec3& BwB_bias_pre,
+               const Vec3& BfB_bias_pre, const Quat& qIB_pre, const Vec3& IrIB_noi,
+               const Vec3& BvB_noi, const Vec3& BwB_bias_noi, const Vec3& BfB_bias_noi,
+               const Vec3& qIB_noi) const {
+    const Vec3 BwB = meas_->BwB_ - BwB_bias_pre + qIB_noi / sqrt(dt_);
+    const Vec3 BfB = meas_->BfB_ - BfB_bias_pre + BvB_noi / sqrt(dt_);
+    const Vec3 dOmega = dt_ * BwB;
     Quat dQ = dQ.exponentialMap(dOmega);
-    posCur = posPre + dt_ * (attPre.rotate(velPre) + posNoi / sqrt(dt_));
-    velCur = (Mat3::Identity() - gSM(dOmega)) * velPre + dt_ * (acc + attPre.inverseRotate(g_));
-    gybCur = gybPre + gybNoi * sqrt(dt_);
-    acbCur = acbPre + acbNoi * sqrt(dt_);
-    attCur = attPre * dQ;
+    IrIB_cur = IrIB_pre + dt_ * (qIB_pre.rotate(BvB_pre) + IrIB_noi / sqrt(dt_));
+    BvB_cur = (Mat3::Identity() - gSM(dOmega)) * BvB_pre + dt_ * (BfB + qIB_pre.inverseRotate(Ig_));
+    BwB_bias_cur = BwB_bias_pre + BwB_bias_noi * sqrt(dt_);
+    BfB_bias_cur = BfB_bias_pre + BfB_bias_noi * sqrt(dt_);
+    qIB_cur = qIB_pre * dQ;
   }
-  void PredictJacPre(MatX& J, const Vec3& posPre, const Vec3& velPre, const Vec3& gybPre,
-                              const Vec3& acbPre, const Quat& attPre, const Vec3& posNoi,
-                              const Vec3& velNoi, const Vec3& gybNoi, const Vec3& acbNoi,
-                              const Vec3& attNoi) const {
+  void PredictJacPre(MatX& J, const Vec3& IrIB_pre, const Vec3& BvB_pre, const Vec3& BwB_bias_pre,
+                              const Vec3& BfB_bias_pre, const Quat& qIB_pre, const Vec3& IrIB_noi,
+                              const Vec3& BvB_noi, const Vec3& BwB_bias_noi,
+                              const Vec3& BfB_bias_noi, const Vec3& qIB_noi) const {
     J.setZero();
-    const Vec3 gyr = meas_->gyr_ - gybPre + attNoi / sqrt(dt_);
-    const Vec3 acc = meas_->acc_ - acbPre + velNoi / sqrt(dt_);
-    const Vec3 dOmega = dt_ * gyr;
+    const Vec3 BwB = meas_->BwB_ - BwB_bias_pre + qIB_noi / sqrt(dt_);
+    const Vec3 BfB = meas_->BfB_ - BfB_bias_pre + BvB_noi / sqrt(dt_);
+    const Vec3 dOmega = dt_ * BwB;
     SetJacBlockPre<POS, POS>(J, Mat3::Identity());
-    SetJacBlockPre<POS, VEL>(J, dt_ * RotMat(attPre).matrix());
-    SetJacBlockPre<POS, ATT>(J, -dt_ * gSM(attPre.rotate(velPre)));
+    SetJacBlockPre<POS, VEL>(J, dt_ * RotMat(qIB_pre).matrix());
+    SetJacBlockPre<POS, ATT>(J, -dt_ * gSM(qIB_pre.rotate(BvB_pre)));
     SetJacBlockPre<VEL, VEL>(J, (Mat3::Identity() - gSM(dOmega)));
-    SetJacBlockPre<VEL, GYB>(J, -dt_ * gSM(velPre));
+    SetJacBlockPre<VEL, GYB>(J, -dt_ * gSM(BvB_pre));
     SetJacBlockPre<VEL, ACB>(J, -dt_ * Mat3::Identity());
-    SetJacBlockPre<VEL, ATT>(J, dt_ * RotMat(attPre).matrix().transpose() * gSM(g_));
+    SetJacBlockPre<VEL, ATT>(J, dt_ * RotMat(qIB_pre).matrix().transpose() * gSM(Ig_));
     SetJacBlockPre<GYB, GYB>(J, Mat3::Identity());
     SetJacBlockPre<ACB, ACB>(J, Mat3::Identity());
-    SetJacBlockPre<ATT, GYB>(J, -dt_ * RotMat(attPre).matrix() * GammaMat(dOmega));
+    SetJacBlockPre<ATT, GYB>(J, -dt_ * RotMat(qIB_pre).matrix() * GammaMat(dOmega));
     SetJacBlockPre<ATT, ATT>(J, Mat3::Identity());
   }
-  void PredictJacNoi(MatX& J, const Vec3& posPre, const Vec3& velPre, const Vec3& gybPre,
-                              const Vec3& acbPre, const Quat& attPre, const Vec3& posNoi,
-                              const Vec3& velNoi, const Vec3& gybNoi, const Vec3& acbNoi,
-                              const Vec3& attNoi) const {
+  void PredictJacNoi(MatX& J, const Vec3& IrIB_pre, const Vec3& BvB_pre, const Vec3& BwB_bias_pre,
+                              const Vec3& BfB_bias_pre, const Quat& qIB_pre, const Vec3& IrIB_noi,
+                              const Vec3& BvB_noi, const Vec3& BwB_bias_noi,
+                              const Vec3& BfB_bias_noi, const Vec3& qIB_noi) const {
     J.setZero();
-    const Vec3 gyr = meas_->gyr_ - gybPre + attNoi / sqrt(dt_);
-    const Vec3 acc = meas_->acc_ - acbPre + velNoi / sqrt(dt_);
-    const Vec3 dOmega = dt_ * gyr;
+    const Vec3 BwB = meas_->BwB_ - BwB_bias_pre + qIB_noi / sqrt(dt_);
+    const Vec3 BfB = meas_->BfB_ - BfB_bias_pre + BvB_noi / sqrt(dt_);
+    const Vec3 dOmega = dt_ * BwB;
     SetJacBlockNoi<POS, POS>(J, sqrt(dt_) * Mat3::Identity());
     SetJacBlockNoi<VEL, VEL>(J, sqrt(dt_) * Mat3::Identity());
-    SetJacBlockNoi<VEL, ATT>(J, sqrt(dt_) * gSM(velPre));
+    SetJacBlockNoi<VEL, ATT>(J, sqrt(dt_) * gSM(BvB_pre));
     SetJacBlockNoi<GYB, GYB>(J, sqrt(dt_) * Mat3::Identity());
     SetJacBlockNoi<ACB, ACB>(J, sqrt(dt_) * Mat3::Identity());
-    SetJacBlockNoi<ATT, ATT>(J, sqrt(dt_) * RotMat(attPre).matrix() * GammaMat(dOmega));
+    SetJacBlockNoi<ATT, ATT>(J, sqrt(dt_) * RotMat(qIB_pre).matrix() * GammaMat(dOmega));
   }
 
  protected:
   double dt_;
-  const Vec3 g_;
+  const Vec3 Ig_;
   enum Elements {POS, VEL, GYB, ACB, ATT};
 };
 

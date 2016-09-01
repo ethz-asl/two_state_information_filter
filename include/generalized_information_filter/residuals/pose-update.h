@@ -8,44 +8,44 @@ namespace GIF {
 
 class PoseMeas : public ElementVector {
  public:
-  PoseMeas(const Vec3& pos = Vec3(0, 0, 0), const Quat& att = Quat())
+  PoseMeas(const Vec3& IrIB = Vec3(0, 0, 0), const Quat& qIB = Quat())
       : ElementVector(std::shared_ptr<ElementVectorDefinition>(
-            new ElementPack<Vec3, Quat>({ "pos", "att" }))),
-        pos_(ElementVector::GetValue<Vec3>("pos")),
-        att_(ElementVector::GetValue<Quat>("att")) {
-    pos_ = pos;
-    att_ = att;
+            new ElementPack<Vec3, Quat>({ "IrIB", "qIB" }))),
+        IrIB_(ElementVector::GetValue<Vec3>("IrIB")),
+        qIB_(ElementVector::GetValue<Quat>("qIB")) {
+    IrIB_ = IrIB;
+    qIB_ = qIB;
   }
-  Vec3& pos_;
-  Quat& att_;
+  Vec3& IrIB_;
+  Quat& qIB_;
 };
 
 class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
     ElementPack<Vec3, Quat>, ElementPack<Vec3, Vec3>, PoseMeas> {
  public:
   PoseUpdate()
-      : mtUnaryUpdate( { "pos", "att" }, { "pos", "att" }, { "pos", "att" }) {
+      : mtUnaryUpdate( { "IrIB", "qIB" }, { "IrIB", "qIB" }, { "IrIB", "qIB" }) {
     dt_ = 0.1;
   }
 
   virtual ~PoseUpdate() {
   }
 
-  void Eval(Vec3& posInn, Quat& attInn, const Vec3& posSta,
-            const Quat& attSta, const Vec3& posNoi,
-            const Vec3& attNoi) const {
-    posInn = posSta - meas_->pos_ + posNoi;
-    Quat dQ = dQ.exponentialMap(attNoi);
-    attInn = dQ * attSta * meas_->att_.inverted();
+  void Eval(Vec3& pos_inn, Quat& att_inn, const Vec3& IrIB_cur,
+            const Quat& qIB_cur, const Vec3& pos_noi,
+            const Vec3& att_noi) const {
+    pos_inn = IrIB_cur - meas_->IrIB_ + pos_noi;
+    Quat dQ = dQ.exponentialMap(att_noi);
+    att_inn = dQ * qIB_cur * meas_->qIB_.inverted();
   }
-  void JacCur(MatX& J, const Vec3& posSta, const Quat& attSta,
-                       const Vec3& posNoi, const Vec3& attNoi) const {
+  void JacCur(MatX& J, const Vec3& IrIB_cur, const Quat& qIB_cur,
+                       const Vec3& pos_noi, const Vec3& att_noi) const {
     J.setZero();
     SetJacBlockCur<POS, POS>(J, Mat3::Identity());
     SetJacBlockCur<ATT, ATT>(J, Mat3::Identity());
   }
-  void JacNoi(MatX& J, const Vec3& posSta, const Quat& attSta,
-                       const Vec3& posNoi, const Vec3& attNoi) const {
+  void JacNoi(MatX& J, const Vec3& IrIB_cur, const Quat& qIB_cur,
+                       const Vec3& pos_noi, const Vec3& att_noi) const {
     J.setZero();
     SetJacBlockNoi<POS, POS>(J, Mat3::Identity());
     SetJacBlockNoi<ATT, ATT>(J, Mat3::Identity());
