@@ -15,7 +15,7 @@ MeasurementTimeline::MeasurementTimeline(const bool ignoreFirst,
 MeasurementTimeline::~MeasurementTimeline() {
 }
 
-void MeasurementTimeline::addMeas(const std::shared_ptr<const ElementVectorBase>& meas,
+void MeasurementTimeline::AddMeasurement(const std::shared_ptr<const ElementVectorBase>& meas,
                                   const TimePoint& t) {
   // Discard first measurement in binary case
   if (ignoreFirst_ && lastProcessedTime_ == TimePoint::min()) {
@@ -37,7 +37,7 @@ void MeasurementTimeline::addMeas(const std::shared_ptr<const ElementVectorBase>
   }
 }
 
-bool MeasurementTimeline::getMeas(const TimePoint& t,
+bool MeasurementTimeline::GetMeasurement(const TimePoint& t,
                                   std::shared_ptr<const ElementVectorBase>& meas) {
   auto it = measMap_.find(t);
   if (it == measMap_.end()) {
@@ -48,24 +48,24 @@ bool MeasurementTimeline::getMeas(const TimePoint& t,
   }
 }
 
-void MeasurementTimeline::removeProcessedFirst() {
+void MeasurementTimeline::RemoveProcessedFirst() {
   assert(measMap_.size() > 0);
   lastProcessedTime_ = measMap_.begin()->first;
   measMap_.erase(measMap_.begin());
 }
 
-void MeasurementTimeline::removeProcessedMeas(const TimePoint& t) {
+void MeasurementTimeline::RemoveProcessedMeas(const TimePoint& t) {
   assert(measMap_.count(t) > 0);
   measMap_.erase(t);
   lastProcessedTime_ = t;
 }
 
-void MeasurementTimeline::reset() {
+void MeasurementTimeline::Reset() {
   measMap_.clear();
   lastProcessedTime_ = TimePoint::min();
 }
 
-TimePoint MeasurementTimeline::getLastTime() const {
+TimePoint MeasurementTimeline::GetLastTime() const {
   if (!measMap_.empty()) {
     return measMap_.rbegin()->first;
   } else {
@@ -73,7 +73,7 @@ TimePoint MeasurementTimeline::getLastTime() const {
   }
 }
 
-TimePoint MeasurementTimeline::getMaximalUpdateTime(
+TimePoint MeasurementTimeline::GetMaximalUpdateTime(
     const TimePoint& currentTime) const {
   TimePoint maximalUpdateTime = currentTime - maxWaitTime_;
   if (!measMap_.empty()) {
@@ -86,7 +86,7 @@ TimePoint MeasurementTimeline::getMaximalUpdateTime(
   return maximalUpdateTime;
 }
 
-void MeasurementTimeline::getAllInRange(std::set<TimePoint>& times,
+void MeasurementTimeline::GetAllInRange(std::set<TimePoint>& times,
                                         const TimePoint& start,
                                         const TimePoint& end) const {
   auto it = measMap_.upper_bound(start);
@@ -96,7 +96,7 @@ void MeasurementTimeline::getAllInRange(std::set<TimePoint>& times,
   }
 }
 
-void MeasurementTimeline::getLastInRange(std::set<TimePoint>& times,
+void MeasurementTimeline::GetLastInRange(std::set<TimePoint>& times,
                                          const TimePoint& start,
                                          const TimePoint& end) const {
   auto it = measMap_.upper_bound(end);
@@ -108,16 +108,16 @@ void MeasurementTimeline::getLastInRange(std::set<TimePoint>& times,
   }
 }
 
-void MeasurementTimeline::split(
+void MeasurementTimeline::Split(
     const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
     const BinaryResidualBase* res) {
   assert(t0 <= t1 && t1 <= t2);
-  addMeas(std::shared_ptr<const ElementVectorBase>(), t1);
-  res->splitMeasurements(t0, t1, t2, measMap_.at(t2), measMap_.at(t1),
+  AddMeasurement(std::shared_ptr<const ElementVectorBase>(), t1);
+  res->SplitMeasurements(t0, t1, t2, measMap_.at(t2), measMap_.at(t1),
                          measMap_.at(t2));
 }
 
-void MeasurementTimeline::split(
+void MeasurementTimeline::Split(
     const std::set<TimePoint>& times,
     const BinaryResidualBase* res) {
   for (auto t : times) {
@@ -132,19 +132,19 @@ void MeasurementTimeline::split(
     }
     TimePoint previous =
         (it == measMap_.begin()) ? lastProcessedTime_ : std::prev(it)->first;
-    split(previous, t, it->first, res);
+    Split(previous, t, it->first, res);
   }
 }
 
-void MeasurementTimeline::merge(
+void MeasurementTimeline::Merge(
     const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
     const BinaryResidualBase* res) {
   assert(t0 <= t1 && t1 <= t2);
-  res->mergeMeasurements(t0, t1, t2, measMap_.at(t1), measMap_.at(t2), measMap_.at(t2));
+  res->MergeMeasurements(t0, t1, t2, measMap_.at(t1), measMap_.at(t2), measMap_.at(t2));
   measMap_.erase(t1);  // does not count as processed
 }
 
-void MeasurementTimeline::mergeUndesired(
+void MeasurementTimeline::MergeUndesired(
     const std::set<TimePoint>& times,
     const BinaryResidualBase* res) {
   // Merge measurements such that only timepoints remain which are in times or
@@ -167,17 +167,17 @@ void MeasurementTimeline::mergeUndesired(
     TimePoint previous =
         (it == measMap_.begin()) ? lastProcessedTime_ : std::prev(it)->first;
     ++it;  // Needs to be increment before erase
-    merge(previous, std::prev(it)->first, it->first, res);
+    Merge(previous, std::prev(it)->first, it->first, res);
   }
 }
 
-void MeasurementTimeline::removeOutdated(const TimePoint& time) {
+void MeasurementTimeline::RemoveOutdated(const TimePoint& time) {
   while (!measMap_.empty() && measMap_.begin()->first <= time) {
-    removeProcessedFirst();
+    RemoveProcessedFirst();
   }
 }
 
-void MeasurementTimeline::print(const TimePoint& start, int startOffset,
+void MeasurementTimeline::Print(const TimePoint& start, int startOffset,
                                 double resolution) const {
   const int width =
       measMap_.empty() ?

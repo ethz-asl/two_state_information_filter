@@ -16,28 +16,28 @@ class MeasurementTimeline {
                           fromSec(0.1),
                       const Duration& minWaitTime = Duration::zero());
   virtual ~MeasurementTimeline();
-  void addMeas(const std::shared_ptr<const ElementVectorBase>& meas,
+  void AddMeasurement(const std::shared_ptr<const ElementVectorBase>& meas,
                const TimePoint& t);
-  bool getMeas(const TimePoint& t, std::shared_ptr<const ElementVectorBase>& meas);
-  void removeProcessedFirst();
-  void removeProcessedMeas(const TimePoint& t);
-  void reset();
-  TimePoint getLastTime() const;
-  TimePoint getMaximalUpdateTime(const TimePoint& currentTime) const;
-  void getAllInRange(std::set<TimePoint>& times, const TimePoint& start,
+  bool GetMeasurement(const TimePoint& t, std::shared_ptr<const ElementVectorBase>& meas);
+  void RemoveProcessedFirst();
+  void RemoveProcessedMeas(const TimePoint& t);
+  void Reset();
+  TimePoint GetLastTime() const;
+  TimePoint GetMaximalUpdateTime(const TimePoint& currentTime) const;
+  void GetAllInRange(std::set<TimePoint>& times, const TimePoint& start,
                      const TimePoint& end) const;
-  void getLastInRange(std::set<TimePoint>& times, const TimePoint& start,
+  void GetLastInRange(std::set<TimePoint>& times, const TimePoint& start,
                       const TimePoint& end) const;
-  void split(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
+  void Split(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
              const BinaryResidualBase* res);
-  void split(const std::set<TimePoint>& times,
+  void Split(const std::set<TimePoint>& times,
              const BinaryResidualBase* res);
-  void merge(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
+  void Merge(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
              const BinaryResidualBase* res);
-  void mergeUndesired(const std::set<TimePoint>& times,
+  void MergeUndesired(const std::set<TimePoint>& times,
                       const BinaryResidualBase* res);
-  void removeOutdated(const TimePoint& time);
-  void print(const TimePoint& start = TimePoint::min(), int startOffset = 0,
+  void RemoveOutdated(const TimePoint& time);
+  void Print(const TimePoint& start = TimePoint::min(), int startOffset = 0,
              double resolution = 0.01) const;
  protected:
   std::map<TimePoint, std::shared_ptr<const ElementVectorBase>> measMap_;

@@ -12,22 +12,22 @@ class ResidualStruct {
   ResidualStruct(const std::shared_ptr<BinaryResidualBase>& res,
                  const std::shared_ptr<ElementVectorDefinition>& stateDefinition):
                      mt_(!res->isUnary_),
-                     preWrap_(res->preDefinition(), stateDefinition),
-                     curWrap_(res->curDefinition(), stateDefinition),
-                     inn_(res->innDefinition()),
-                     innRef_(res->innDefinition()),
-                     noi_(res->noiDefinition()){
-    stateDefinition->Extend(*res->preDefinition());
-    stateDefinition->Extend(*res->curDefinition());
+                     preWrap_(res->PreDefinition(), stateDefinition),
+                     curWrap_(res->CurDefinition(), stateDefinition),
+                     inn_(res->InnDefinition()),
+                     innRef_(res->InnDefinition()),
+                     noi_(res->NoiDefinition()){
+    stateDefinition->Extend(*res->PreDefinition());
+    stateDefinition->Extend(*res->CurDefinition());
     res_ = res;
     preWrap_.ComputeMap();
     curWrap_.ComputeMap();
     innRef_.SetIdentity();
     noi_.SetIdentity();
-    innDim_ = res->innDefinition()->GetStateDimension();
-    jacPre_.resize(innDim_, res->preDefinition()->GetStateDimension());
-    jacCur_.resize(innDim_, res->curDefinition()->GetStateDimension());
-    jacNoi_.resize(innDim_, res->noiDefinition()->GetStateDimension());
+    innDim_ = res->InnDefinition()->GetStateDimension();
+    jacPre_.resize(innDim_, res->PreDefinition()->GetStateDimension());
+    jacCur_.resize(innDim_, res->CurDefinition()->GetStateDimension());
+    jacNoi_.resize(innDim_, res->NoiDefinition()->GetStateDimension());
   }
   ~ResidualStruct() {
   }
@@ -49,12 +49,12 @@ class Filter {
  public:
   Filter(): stateDefinition_(new ElementVectorDefinition()),
       state_(stateDefinition_), curLinState_(stateDefinition_) {
-    init();
+    Init();
   }
   virtual ~Filter() {
   }
 
-  void init(const TimePoint& t = TimePoint::min()) {  // TODO: pass optional State
+  void Init(const TimePoint& t = TimePoint::min()) {  // TODO: pass optional State
     startTime_ = t;
     time_ = t;
     state_.Construct();
@@ -64,16 +64,16 @@ class Filter {
     cov_.setIdentity();
   }
 
-  int addRes(const std::shared_ptr<BinaryResidualBase>& res, const std::string& name = "") {
+  int AddResidual(const std::shared_ptr<BinaryResidualBase>& res, const std::string& name = "") {
     residuals_.emplace_back(res, stateDefinition_);
     return residuals_.size() - 1;
   }
 
-  void evalRes(const ElementVectorBase* pre, const ElementVectorBase* cur) {
+  void EvalResidual(const ElementVectorBase* pre, const ElementVectorBase* cur) {
     for (int i = 0; i < residuals_.size(); i++) {
       residuals_.at(i).preWrap_.SetElementVector(pre);
       residuals_.at(i).curWrap_.SetElementVector(cur);
-      residuals_.at(i).res_->eval(&residuals_.at(i).inn_,
+      residuals_.at(i).res_->Eval(&residuals_.at(i).inn_,
                                   &residuals_.at(i).preWrap_,
                                   &residuals_.at(i).curWrap_,
                                   &residuals_.at(i).noi_);
@@ -81,38 +81,38 @@ class Filter {
     }
   }
 
-  std::shared_ptr<ElementVectorDefinition> stateDefinition() const {
+  std::shared_ptr<ElementVectorDefinition> StateDefinition() const {
     return stateDefinition_;
   }
 
-  TimePoint getCurrentTimeFromMeasurements() const {
+  TimePoint GetCurrentTimeFromMeasurements() const {
     TimePoint currentTime = TimePoint::min();
     for (int i = 0; i < residuals_.size(); i++) {
-      currentTime = std::max(currentTime, residuals_.at(i).mt_.getLastTime());
+      currentTime = std::max(currentTime, residuals_.at(i).mt_.GetLastTime());
     }
     return currentTime;
   }
 
-  TimePoint getMaxUpdateTime(const TimePoint& currentTime) const {
+  TimePoint GetMaxUpdateTime(const TimePoint& currentTime) const {
     TimePoint maxUpdateTime = currentTime;
     for (int i = 0; i < residuals_.size(); i++) {
       maxUpdateTime = std::min(maxUpdateTime,
-                               residuals_.at(i).mt_.getMaximalUpdateTime(currentTime));
+                               residuals_.at(i).mt_.GetMaximalUpdateTime(currentTime));
     }
     return maxUpdateTime;
   }
 
-  void getMeasurementTimeList(std::set<TimePoint>& times,
+  void GetMeasurementTimeList(std::set<TimePoint>& times,
                               const TimePoint& maxUpdateTime,
                               const bool includeMax = false) const {
     for (int i = 0; i < residuals_.size(); i++) {
       if (!residuals_.at(i).res_->isMergeable_) {
         // Add all non-mergeable measurement times
-        residuals_.at(i).mt_.getAllInRange(times, time_, maxUpdateTime);
+        residuals_.at(i).mt_.GetAllInRange(times, time_, maxUpdateTime);
       } else if (!residuals_.at(i).res_->isSplitable_
           && residuals_.at(i).res_->isUnary_) {
         // For the special case of unary and mergeable residuals add the last measurement time
-        residuals_.at(i).mt_.getLastInRange(times, time_, maxUpdateTime);
+        residuals_.at(i).mt_.GetLastInRange(times, time_, maxUpdateTime);
       }
     }
     if (includeMax) {
@@ -120,26 +120,26 @@ class Filter {
     }
   }
 
-  void splitAndMergeMeasurements(const std::set<TimePoint>& times) {
+  void SplitAndMergeMeasurements(const std::set<TimePoint>& times) {
     for (int i = 0; i < residuals_.size(); i++) {
       if (residuals_.at(i).res_->isSplitable_
           && !residuals_.at(i).res_->isUnary_) {
         // First insert all (splitable + !unary)
-        residuals_.at(i).mt_.split(times, residuals_.at(i).res_.get());
+        residuals_.at(i).mt_.Split(times, residuals_.at(i).res_.get());
       }
       if (residuals_.at(i).res_->isMergeable_) {
         // Then remove all undesired (mergeable)
-        residuals_.at(i).mt_.mergeUndesired(times, residuals_.at(i).res_.get());
+        residuals_.at(i).mt_.MergeUndesired(times, residuals_.at(i).res_.get());
       }
     }
   }
 
-  void addMeas(const int i, const std::shared_ptr<const ElementVectorBase>& meas,
+  void AddMeasurement(const int i, const std::shared_ptr<const ElementVectorBase>& meas,
                const TimePoint& t) {
-    residuals_.at(i).mt_.addMeas(meas, t);
+    residuals_.at(i).mt_.AddMeasurement(meas, t);
   }
 
-  void printMeasurementTimelines(const TimePoint& start = TimePoint::min(),
+  void PrintMeasurementTimelines(const TimePoint& start = TimePoint::min(),
                                  int startOffset = 0,
                                  double resolution = 0.01) {
     for (int i = 0; i < startOffset; i++) {
@@ -147,37 +147,37 @@ class Filter {
     }
     std::cout << "|" << std::endl;
     for (int i = 0; i < residuals_.size(); i++) {
-      residuals_.at(i).mt_.print(start, startOffset, resolution);
+      residuals_.at(i).mt_.Print(start, startOffset, resolution);
     }
   }
 
-  void update() {
+  void Update() {
     // Remove outdated
     for (int i = 0; i < residuals_.size(); i++) {
-      residuals_.at(i).mt_.removeOutdated(time_);
+      residuals_.at(i).mt_.RemoveOutdated(time_);
     }
-    printMeasurementTimelines(time_, 20);
+    PrintMeasurementTimelines(time_, 20);
     std::cout << "stateTime:\t" << toSec(time_ - startTime_) << std::endl;
-    TimePoint currentTime = getCurrentTimeFromMeasurements();
+    TimePoint currentTime = GetCurrentTimeFromMeasurements();
     std::cout << "currentTime:\t" << toSec(currentTime - startTime_) << std::endl;
-    TimePoint maxUpdateTime = getMaxUpdateTime(currentTime);
+    TimePoint maxUpdateTime = GetMaxUpdateTime(currentTime);
     std::cout << "maxUpdateTime:\t" << toSec(maxUpdateTime - startTime_) << std::endl;
     std::set<TimePoint> times;
-    getMeasurementTimeList(times, maxUpdateTime, false);
+    GetMeasurementTimeList(times, maxUpdateTime, false);
     std::cout << "updateTimes:\t";
     for (auto t : times) {
       std::cout << toSec(t - startTime_) << "\t";
     }
     std::cout << std::endl;
-    splitAndMergeMeasurements(times);
-    printMeasurementTimelines(time_, 20);
+    SplitAndMergeMeasurements(times);
+    PrintMeasurementTimelines(time_, 20);
 
     for (auto t : times) {
-      makeUpdateStep(t);
+      MakeUpdateStep(t);
     }
   }
 
-  void makeUpdateStep(const TimePoint& t) {
+  void MakeUpdateStep(const TimePoint& t) {
     // Compute linearisation point
     curLinState_ = state_;
 
@@ -186,26 +186,26 @@ class Filter {
     std::vector<bool> hasMeas(residuals_.size(), false);
     std::shared_ptr<const ElementVectorBase> meas;
     for (int i = 0; i < residuals_.size(); i++) {
-      hasMeas.at(i) = residuals_.at(i).mt_.getMeas(t, meas);
+      hasMeas.at(i) = residuals_.at(i).mt_.GetMeasurement(t, meas);
       if (hasMeas.at(i)) {
-        innDim += residuals_.at(i).res_->innDefinition()->GetStateDimension();
+        innDim += residuals_.at(i).res_->InnDefinition()->GetStateDimension();
       }
     }
     VecX y(innDim);
-    MatX jacPre(innDim, stateDefinition_->GetStateDimension());
-    MatX jacCur(innDim, stateDefinition_->GetStateDimension());
-    jacPre.setZero();
-    jacCur.setZero();
+    MatX JacPre(innDim, stateDefinition_->GetStateDimension());
+    MatX JacCur(innDim, stateDefinition_->GetStateDimension());
+    JacPre.setZero();
+    JacCur.setZero();
     MatX Winv(innDim, innDim);
     Winv.setZero();
     int count = 0;
     for (int i = 0; i < residuals_.size(); i++) {
       if (hasMeas.at(i)) {
-        residuals_.at(i).mt_.getMeas(t, meas);
-        residuals_.at(i).res_->setMeas(meas);
+        residuals_.at(i).mt_.GetMeasurement(t, meas);
+        residuals_.at(i).res_->SetMeas(meas);
         residuals_.at(i).preWrap_.SetElementVector(&state_);
         residuals_.at(i).curWrap_.SetElementVector(&curLinState_);
-        residuals_.at(i).res_->eval(&residuals_.at(i).inn_,
+        residuals_.at(i).res_->Eval(&residuals_.at(i).inn_,
                                     &residuals_.at(i).preWrap_,
                                     &residuals_.at(i).curWrap_,
                                     &residuals_.at(i).noi_);
@@ -213,27 +213,27 @@ class Filter {
                                           y.block(count, 0, residuals_.at(i).innDim_, 1));
 
         // Compute Jacobians
-        residuals_.at(i).res_->jacPre(residuals_.at(i).jacPre_,
+        residuals_.at(i).res_->JacPre(residuals_.at(i).jacPre_,
                                       &residuals_.at(i).preWrap_,
                                       &residuals_.at(i).curWrap_,
                                       &residuals_.at(i).noi_);
-        residuals_.at(i).res_->jacCur(residuals_.at(i).jacCur_,
+        residuals_.at(i).res_->JacCur(residuals_.at(i).jacCur_,
                                       &residuals_.at(i).preWrap_,
                                       &residuals_.at(i).curWrap_,
                                       &residuals_.at(i).noi_);
-        residuals_.at(i).res_->jacNoi(residuals_.at(i).jacNoi_,
+        residuals_.at(i).res_->JacNoi(residuals_.at(i).jacNoi_,
                                       &residuals_.at(i).preWrap_,
                                       &residuals_.at(i).curWrap_,
                                       &residuals_.at(i).noi_);
-        residuals_.at(i).preWrap_.EmbedJacobian(jacPre,
+        residuals_.at(i).preWrap_.EmbedJacobian(JacPre,
                                                 residuals_.at(i).jacPre_,
                                                 count);
-        residuals_.at(i).curWrap_.EmbedJacobian(jacCur,
+        residuals_.at(i).curWrap_.EmbedJacobian(JacCur,
                                                 residuals_.at(i).jacCur_,
                                                 count);
         Winv.block(count, count, residuals_.at(i).innDim_,
                    residuals_.at(i).innDim_) = (residuals_.at(i).jacNoi_
-            * residuals_.at(i).res_->getR()
+            * residuals_.at(i).res_->GetNoiseCovariance()
             * residuals_.at(i).jacNoi_.transpose()).inverse();
 
         // Increment counter
@@ -242,19 +242,19 @@ class Filter {
     }
     std::cout << "Innovation:\t" << y.transpose() << std::endl;
 
-    // Compute Kalman update // TODO: make more efficient
-    MatX D = cov_.inverse() + jacPre.transpose() * Winv * jacPre;
-    MatX S = jacCur.transpose()
-        * (Winv - Winv * jacPre * D.inverse() * jacPre.transpose() * Winv);
-    cov_ = (S * jacCur).inverse();
+    // Compute Kalman Update // TODO: make more efficient
+    MatX D = cov_.inverse() + JacPre.transpose() * Winv * JacPre;
+    MatX S = JacCur.transpose()
+        * (Winv - Winv * JacPre * D.inverse() * JacPre.transpose() * Winv);
+    cov_ = (S * JacCur).inverse();
     VecX dx = cov_ * S * y;
 
-    // Apply Kalman update
+    // Apply Kalman Update
     curLinState_.BoxPlus(dx, &state_);
-    std::cout << "state after update:" << std::endl;
+    std::cout << "state after Update:" << std::endl;
     state_.Print();
 
-    // Remove measurements and update timepoint
+    // Remove measurements and Update timepoint
     time_ = t;
   }
 

@@ -28,47 +28,44 @@ class Transformation<ElementPack<Out...>, ElementPack<In...>> : public Model<
 
 
   // User implementations
-  virtual void evalTransform(Out&... outs, const In&... ins) const = 0;
-  virtual void jacTransform(MatX& J, const In&... ins) const = 0;
+  virtual void Transform(Out&... outs, const In&... ins) const = 0;
+  virtual void JacTransform(MatX& J, const In&... ins) const = 0;
 
   // Wrapping from user interface to base
-  void jacFD(MatX& J, const ElementVectorBase* in, const double delta) {
+  void JacFD(MatX& J, const ElementVectorBase* in, const double delta) {
     const std::array<const ElementVectorBase*, 1> ins = {in};
-    this->template _jacFD<0>(J, ins, delta);
+    this->template JacFDImpl<0>(J, ins, delta);
   }
 
-  void transformState(ElementVectorBase* out, const ElementVectorBase* in) {
+  void TransformState(ElementVectorBase* out, const ElementVectorBase* in) {
     const std::array<const ElementVectorBase*, 1> ins = {in};
-    this->template _eval(out, ins);
+    this->template EvalWrapper(out, ins);
   }
 
-  void transformCovMat(MatX& outputCov,
-                       const ElementVectorBase* in,
-                       const MatX& inputCov) {
+  void TransformCovMat(MatX& outputCov, const ElementVectorBase* in, const MatX& inputCov) {
     const std::array<const ElementVectorBase*, 1> ins = {in};
-    this->template _jac<0>(J_, ins);
+    this->template JacWrapper<0>(J_, ins);
     outputCov = J_ * inputCov * J_.transpose();
   }
 
   template<int n, int m>
-  void setJacBlock(
+  void SetJacBlock(
         MatX& J,
         const Eigen::Matrix<double, ElementPack<Out...>::template _GetStateDimension<n>(),
         ElementPack<In...>::template _GetStateDimension<m>()>& B) const {
-    this->template _setJacBlock<0, n, m>(J, B);
+    this->template SetJacBlockImpl<0, n, m>(J, B);
   }
 
-  bool testJac(const ElementVectorBase* in, const double delta,
-               const double th) const {
+  bool JacTest(const ElementVectorBase* in, const double delta, const double th) const {
     const std::array<const ElementVectorBase*, 1> ins = {in};
-    return this->template _testJacInput<0>(ins, delta, th);
+    return this->template JacTestImpl<0>(ins, delta, th);
   }
 
   // Access to definitions
-  std::shared_ptr<ElementVectorDefinition> outputDefinition() {
+  std::shared_ptr<ElementVectorDefinition> OutputDefinition() {
     return this->outDefinition_;
   }
-  std::shared_ptr<ElementVectorDefinition> inputDefinition() {
+  std::shared_ptr<ElementVectorDefinition> InputDefinition() {
     return this->inDefinitions_[0];
   }
 
@@ -76,13 +73,13 @@ class Transformation<ElementPack<Out...>, ElementPack<In...>> : public Model<
   friend mtBase;
 
   // Wrapping from base to user implementation
-  void eval(Out&... outs, const In&... ins) const {
-    evalTransform(outs..., ins...);
+  void Eval(Out&... outs, const In&... ins) const {
+    Transform(outs..., ins...);
   }
 
   template<int j, typename std::enable_if<(j == 0)>::type* = nullptr>
-  void jac(MatX& J, const In&... ins) const {
-    jacTransform(J, ins...);
+  void Jac(MatX& J, const In&... ins) const {
+    JacTransform(J, ins...);
   }
 
   MatX J_;

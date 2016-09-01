@@ -33,7 +33,7 @@ class UnaryUpdate<ElementPack<Inn...>, ElementPack<Sta...>, ElementPack<Noi...>,
   }
 
  protected:
-  void jacPre(MatX& J, const Sta&... sta, const Noi&... noi) const {
+  void JacPre(MatX& J, const Sta&... sta, const Noi&... noi) const {
     J.setZero();
   }
 };

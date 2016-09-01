@@ -32,7 +32,7 @@ class IMUPrediction : public Prediction<ElementPack<Vec3, Vec3, Vec3, Vec3, Quat
   }
   virtual ~IMUPrediction() {
   }
-  void predict(Vec3& posCur, Vec3& velCur, Vec3& gybCur, Vec3& acbCur, Quat& attCur,
+  void Predict(Vec3& posCur, Vec3& velCur, Vec3& gybCur, Vec3& acbCur, Quat& attCur,
                const Vec3& posPre, const Vec3& velPre, const Vec3& gybPre,
                const Vec3& acbPre, const Quat& attPre, const Vec3& posNoi,
                const Vec3& velNoi, const Vec3& gybNoi, const Vec3& acbNoi,
@@ -47,7 +47,7 @@ class IMUPrediction : public Prediction<ElementPack<Vec3, Vec3, Vec3, Vec3, Quat
     acbCur = acbPre + acbNoi * sqrt(dt_);
     attCur = attPre * dQ;
   }
-  void predictJacPre(MatX& J, const Vec3& posPre, const Vec3& velPre, const Vec3& gybPre,
+  void PredictJacPre(MatX& J, const Vec3& posPre, const Vec3& velPre, const Vec3& gybPre,
                               const Vec3& acbPre, const Quat& attPre, const Vec3& posNoi,
                               const Vec3& velNoi, const Vec3& gybNoi, const Vec3& acbNoi,
                               const Vec3& attNoi) const {
@@ -55,19 +55,19 @@ class IMUPrediction : public Prediction<ElementPack<Vec3, Vec3, Vec3, Vec3, Quat
     const Vec3 gyr = meas_->gyr_ - gybPre + attNoi / sqrt(dt_);
     const Vec3 acc = meas_->acc_ - acbPre + velNoi / sqrt(dt_);
     const Vec3 dOmega = dt_ * gyr;
-    setJacBlockPre<POS, POS>(J, Mat3::Identity());
-    setJacBlockPre<POS, VEL>(J, dt_ * RotMat(attPre).matrix());
-    setJacBlockPre<POS, ATT>(J, -dt_ * gSM(attPre.rotate(velPre)));
-    setJacBlockPre<VEL, VEL>(J, (Mat3::Identity() - gSM(dOmega)));
-    setJacBlockPre<VEL, GYB>(J, -dt_ * gSM(velPre));
-    setJacBlockPre<VEL, ACB>(J, -dt_ * Mat3::Identity());
-    setJacBlockPre<VEL, ATT>(J, dt_ * RotMat(attPre).matrix().transpose() * gSM(g_));
-    setJacBlockPre<GYB, GYB>(J, Mat3::Identity());
-    setJacBlockPre<ACB, ACB>(J, Mat3::Identity());
-    setJacBlockPre<ATT, GYB>(J, -dt_ * RotMat(attPre).matrix() * GammaMat(dOmega));
-    setJacBlockPre<ATT, ATT>(J, Mat3::Identity());
+    SetJacBlockPre<POS, POS>(J, Mat3::Identity());
+    SetJacBlockPre<POS, VEL>(J, dt_ * RotMat(attPre).matrix());
+    SetJacBlockPre<POS, ATT>(J, -dt_ * gSM(attPre.rotate(velPre)));
+    SetJacBlockPre<VEL, VEL>(J, (Mat3::Identity() - gSM(dOmega)));
+    SetJacBlockPre<VEL, GYB>(J, -dt_ * gSM(velPre));
+    SetJacBlockPre<VEL, ACB>(J, -dt_ * Mat3::Identity());
+    SetJacBlockPre<VEL, ATT>(J, dt_ * RotMat(attPre).matrix().transpose() * gSM(g_));
+    SetJacBlockPre<GYB, GYB>(J, Mat3::Identity());
+    SetJacBlockPre<ACB, ACB>(J, Mat3::Identity());
+    SetJacBlockPre<ATT, GYB>(J, -dt_ * RotMat(attPre).matrix() * GammaMat(dOmega));
+    SetJacBlockPre<ATT, ATT>(J, Mat3::Identity());
   }
-  void predictJacNoi(MatX& J, const Vec3& posPre, const Vec3& velPre, const Vec3& gybPre,
+  void PredictJacNoi(MatX& J, const Vec3& posPre, const Vec3& velPre, const Vec3& gybPre,
                               const Vec3& acbPre, const Quat& attPre, const Vec3& posNoi,
                               const Vec3& velNoi, const Vec3& gybNoi, const Vec3& acbNoi,
                               const Vec3& attNoi) const {
@@ -75,12 +75,12 @@ class IMUPrediction : public Prediction<ElementPack<Vec3, Vec3, Vec3, Vec3, Quat
     const Vec3 gyr = meas_->gyr_ - gybPre + attNoi / sqrt(dt_);
     const Vec3 acc = meas_->acc_ - acbPre + velNoi / sqrt(dt_);
     const Vec3 dOmega = dt_ * gyr;
-    setJacBlockNoi<POS, POS>(J, sqrt(dt_) * Mat3::Identity());
-    setJacBlockNoi<VEL, VEL>(J, sqrt(dt_) * Mat3::Identity());
-    setJacBlockNoi<VEL, ATT>(J, sqrt(dt_) * gSM(velPre));
-    setJacBlockNoi<GYB, GYB>(J, sqrt(dt_) * Mat3::Identity());
-    setJacBlockNoi<ACB, ACB>(J, sqrt(dt_) * Mat3::Identity());
-    setJacBlockNoi<ATT, ATT>(J, sqrt(dt_) * RotMat(attPre).matrix() * GammaMat(dOmega));
+    SetJacBlockNoi<POS, POS>(J, sqrt(dt_) * Mat3::Identity());
+    SetJacBlockNoi<VEL, VEL>(J, sqrt(dt_) * Mat3::Identity());
+    SetJacBlockNoi<VEL, ATT>(J, sqrt(dt_) * gSM(velPre));
+    SetJacBlockNoi<GYB, GYB>(J, sqrt(dt_) * Mat3::Identity());
+    SetJacBlockNoi<ACB, ACB>(J, sqrt(dt_) * Mat3::Identity());
+    SetJacBlockNoi<ATT, ATT>(J, sqrt(dt_) * RotMat(attPre).matrix() * GammaMat(dOmega));
   }
 
  protected:

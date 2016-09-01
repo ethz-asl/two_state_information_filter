@@ -20,56 +20,56 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
   Prediction(const std::array<std::string, ElementPack<Sta...>::n_>& namesSta,
              const std::array<std::string, ElementPack<Noi...>::n_>& namesNoi)
       : mtBinaryRedidual(namesSta, namesSta, namesSta, namesNoi, false, true, true),
-        prediction_(this->curDefinition()) {
+        prediction_(this->CurDefinition()) {
   }
 
   virtual ~Prediction() {}
 
   // User implementations
-  virtual void predict(Sta&... cur, const Sta&... pre, const Noi&... noi) const = 0;
-  virtual void predictJacPre(MatX& J, const Sta&... pre, const Noi&... noi) const = 0;
-  virtual void predictJacNoi(MatX& J, const Sta&... pre, const Noi&... noi) const = 0;
+  virtual void Predict(Sta&... cur, const Sta&... pre, const Noi&... noi) const = 0;
+  virtual void PredictJacPre(MatX& J, const Sta&... pre, const Noi&... noi) const = 0;
+  virtual void PredictJacNoi(MatX& J, const Sta&... pre, const Noi&... noi) const = 0;
 
  protected:
   template<typename ... Ts,
            typename std::enable_if<(sizeof...(Ts)<ElementPack<Sta...>::n_)>::type* = nullptr>
-  void _predict(ElementVectorBase* cur,
+  void PredictWrapper(ElementVectorBase* cur,
                 const Sta&... pre, const Noi&... noi, Ts&... elements) const {
-    assert(cur->MatchesDefinition(*this->curDefinition()));
+    assert(cur->MatchesDefinition(*this->CurDefinition()));
     static constexpr int innerIndex = sizeof...(Ts);
     typedef typename ElementPack<Sta...>::Tuple Tuple;
     typedef typename std::tuple_element<innerIndex,Tuple>::type mtElementType;
-    _predict(cur, pre..., noi..., elements..., cur->template GetValue<mtElementType>(innerIndex));
+    PredictWrapper(cur, pre..., noi..., elements..., cur->template GetValue<mtElementType>(innerIndex));
   }
 
   template<typename... Ts,
            typename std::enable_if<(sizeof...(Ts)==ElementPack<Sta...>::n_)>::type* = nullptr>
-  void _predict(ElementVectorBase* cur,
+  void PredictWrapper(ElementVectorBase* cur,
                 const Sta&... pre, const Noi&... noi, Ts&... elements) const {
-    predict(elements..., pre..., noi...);
+    Predict(elements..., pre..., noi...);
   }
 
   // Wrapping from BinaryResidual to Prediction implementation
-  void eval(Sta&... inn, const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
+  void Eval(Sta&... inn, const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
     // First compute prediction
-    _predict(&prediction_, pre..., noi...);
+    PredictWrapper(&prediction_, pre..., noi...);
     // Then evaluate difference to posterior
-    computeInnovation(inn...,cur...,&prediction_);
+    ComputeInnovation(inn...,cur...,&prediction_);
   }
-  void jacPre(MatX& J, const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
-    predictJacPre(J,pre...,noi...);
+  void JacPre(MatX& J, const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
+    PredictJacPre(J,pre...,noi...);
   }
-  void jacCur(MatX& J, const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
+  void JacCur(MatX& J, const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
     J.setZero();
-    _predict(&prediction_, pre..., noi...);
-    computeCurJacobian(J,&prediction_,cur...);
+    PredictWrapper(&prediction_, pre..., noi...);
+    ComputeCurJacobian(J,&prediction_,cur...);
   }
-  void jacNoi(MatX& J, const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
-    predictJacNoi(J,pre...,noi...);
+  void JacNoi(MatX& J, const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
+    PredictJacNoi(J,pre...,noi...);
   }
 
   template<int i = 0, typename std::enable_if<(i<sizeof...(Sta))>::type* = nullptr>
-  inline void computeInnovation(Sta&... inn, const Sta&... cur,
+  inline void ComputeInnovation(Sta&... inn, const Sta&... cur,
                                 const ElementVectorBase* prediction) const {
     typedef typename std::tuple_element<i, typename ElementPack<Sta...>::Tuple>::type mtElementType;
     typedef ElementTraits<mtElementType> Trait;
@@ -84,16 +84,16 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
     Trait::Boxplus(Trait::Identity(),
                    vec,
                    std::get<i>(std::forward_as_tuple(inn...)));
-    computeInnovation<i+1>(inn...,cur...,prediction);
+    ComputeInnovation<i+1>(inn...,cur...,prediction);
   }
   template<int i = 0, typename std::enable_if<(i>=sizeof...(Sta))>::type* = nullptr>
-  inline void computeInnovation(Sta&... inn, const Sta&... cur,
+  inline void ComputeInnovation(Sta&... inn, const Sta&... cur,
                                 const ElementVectorBase* prediction) const {}
 
   template<int i = 0, int j = 0, typename std::enable_if<(i<sizeof...(Sta))>::type* = nullptr>
-  void computeCurJacobian(MatX& J, ElementVectorBase* prediction,
+  void ComputeCurJacobian(MatX& J, ElementVectorBase* prediction,
                           const Sta&... cur) const{
-    assert(prediction->MatchesDefinition(*this->curDefinition()));
+    assert(prediction->MatchesDefinition(*this->CurDefinition()));
     typedef typename std::tuple_element<i,typename ElementPack<Sta...>::Tuple>::type mtElementType;
     typedef ElementTraits<mtElementType> Trait;
     Eigen::Matrix<double,Trait::d_,1> vec;
@@ -103,10 +103,10 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
     J.template block<Trait::d_, Trait::d_>(j,j) = Trait::BoxplusJacVec(Trait::Identity(),vec) *
       Trait::BoxminusJacRef(prediction->template GetValue<mtElementType>(i),
                             std::get<i>(std::forward_as_tuple(cur...)));
-    computeCurJacobian<i+1,j+Trait::d_>(J,prediction,cur...);
+    ComputeCurJacobian<i+1,j+Trait::d_>(J,prediction,cur...);
   }
   template<int i = 0, int j = 0, typename std::enable_if<(i>=sizeof...(Sta))>::type* = nullptr>
-  void computeCurJacobian(MatX& J, ElementVectorBase* prediction, const Sta&... cur) const{}
+  void ComputeCurJacobian(MatX& J, ElementVectorBase* prediction, const Sta&... cur) const{}
 
  protected:
   mutable ElementVector prediction_;

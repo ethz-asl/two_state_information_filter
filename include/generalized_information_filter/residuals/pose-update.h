@@ -31,24 +31,24 @@ class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
   virtual ~PoseUpdate() {
   }
 
-  void eval(Vec3& posInn, Quat& attInn, const Vec3& posSta,
+  void Eval(Vec3& posInn, Quat& attInn, const Vec3& posSta,
             const Quat& attSta, const Vec3& posNoi,
             const Vec3& attNoi) const {
     posInn = posSta - meas_->pos_ + posNoi;
     Quat dQ = dQ.exponentialMap(attNoi);
     attInn = dQ * attSta * meas_->att_.inverted();
   }
-  void jacCur(MatX& J, const Vec3& posSta, const Quat& attSta,
+  void JacCur(MatX& J, const Vec3& posSta, const Quat& attSta,
                        const Vec3& posNoi, const Vec3& attNoi) const {
     J.setZero();
-    setJacBlockCur<POS, POS>(J, Mat3::Identity());
-    setJacBlockCur<ATT, ATT>(J, Mat3::Identity());
+    SetJacBlockCur<POS, POS>(J, Mat3::Identity());
+    SetJacBlockCur<ATT, ATT>(J, Mat3::Identity());
   }
-  void jacNoi(MatX& J, const Vec3& posSta, const Quat& attSta,
+  void JacNoi(MatX& J, const Vec3& posSta, const Quat& attSta,
                        const Vec3& posNoi, const Vec3& attNoi) const {
     J.setZero();
-    setJacBlockNoi<POS, POS>(J, Mat3::Identity());
-    setJacBlockNoi<ATT, ATT>(J, Mat3::Identity());
+    SetJacBlockNoi<POS, POS>(J, Mat3::Identity());
+    SetJacBlockNoi<ATT, ATT>(J, Mat3::Identity());
   }
 
  protected:

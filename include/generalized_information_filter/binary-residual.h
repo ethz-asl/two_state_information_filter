@@ -16,44 +16,44 @@ class BinaryResidualBase {
   }
   virtual ~BinaryResidualBase() {
   }
-  virtual void eval(ElementVectorBase* inn,
+  virtual void Eval(ElementVectorBase* inn,
                     const ElementVectorBase* pre,
                     const ElementVectorBase* cur,
                     const ElementVectorBase* noi) const = 0;
-  virtual void jacPre(MatX& J,
+  virtual void JacPre(MatX& J,
                       const ElementVectorBase* pre,
                       const ElementVectorBase* cur,
                       const ElementVectorBase* noi) const = 0;
-  virtual void jacCur(MatX& J,
+  virtual void JacCur(MatX& J,
                       const ElementVectorBase* pre,
                       const ElementVectorBase* cur,
                       const ElementVectorBase* noi) const = 0;
-  virtual void jacNoi(MatX& J,
+  virtual void JacNoi(MatX& J,
                       const ElementVectorBase* pre,
                       const ElementVectorBase* cur,
                       const ElementVectorBase* noi) const = 0;
-  virtual ElementVectorDefinition::Ptr innDefinition() const = 0;
-  virtual ElementVectorDefinition::Ptr preDefinition() const = 0;
-  virtual ElementVectorDefinition::Ptr curDefinition() const = 0;
-  virtual ElementVectorDefinition::Ptr noiDefinition() const = 0;
-  virtual void splitMeasurements(
+  virtual ElementVectorDefinition::Ptr InnDefinition() const = 0;
+  virtual ElementVectorDefinition::Ptr PreDefinition() const = 0;
+  virtual ElementVectorDefinition::Ptr CurDefinition() const = 0;
+  virtual ElementVectorDefinition::Ptr NoiDefinition() const = 0;
+  virtual void SplitMeasurements(
       const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
       const ElementVectorBase::CPtr& in,
       ElementVectorBase::CPtr& out1,
       ElementVectorBase::CPtr& out2) const = 0;
-  virtual void mergeMeasurements(
+  virtual void MergeMeasurements(
       const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
       const ElementVectorBase::CPtr& in1,
       const ElementVectorBase::CPtr& in2,
       ElementVectorBase::CPtr& out) const = 0;
-  virtual void setMeas(const ElementVectorBase::CPtr& meas) = 0;
-  virtual const MatX& getR() const = 0;
-  virtual MatX& getR() = 0;
-  virtual bool testJacs(const ElementVectorBase* pre,
+  virtual void SetMeas(const ElementVectorBase::CPtr& meas) = 0;
+  virtual const MatX& GetNoiseCovariance() const = 0;
+  virtual MatX& GetNoiseCovariance() = 0;
+  virtual bool TestJacs(const ElementVectorBase* pre,
                         const ElementVectorBase* cur,
                         const ElementVectorBase* noi,
                         const double delta, const double th) const = 0;
-  virtual bool testJacs(int& s, const double delta, const double th) = 0;
+  virtual bool TestJacs(int& s, const double delta, const double th) = 0;
 
   const bool isUnary_;
   const bool isSplitable_;
@@ -87,14 +87,14 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
         : mtBase(namesInn, std::forward_as_tuple(namesPre, namesCur, namesNoi)),
           BinaryResidualBase(isUnary, isSplitable, isMergeable),
           meas_(new Meas()) {
-    R_.resize(noiDefinition()->GetStateDimension(), noiDefinition()->GetStateDimension());
+    R_.resize(NoiDefinition()->GetStateDimension(), NoiDefinition()->GetStateDimension());
     R_.setIdentity();
   }
   virtual ~BinaryResidual() {
   }
 
   // Set measurement
-  void setMeas(const ElementVectorBase::CPtr& meas) {
+  void SetMeas(const ElementVectorBase::CPtr& meas) {
     meas_ = std::dynamic_pointer_cast<const Meas>(meas);
     if (!meas_) {
       assert("ERROR: Passing wrong measurement type" == 0);
@@ -102,7 +102,7 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
     }
   }
 
-  void splitMeasurements(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
+  void SplitMeasurements(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
                          const ElementVectorBase::CPtr& in,
                          ElementVectorBase::CPtr& out1,
                          ElementVectorBase::CPtr& out2) const {
@@ -115,7 +115,7 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
     }
   }
 
-  void mergeMeasurements(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
+  void MergeMeasurements(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
                          const ElementVectorBase::CPtr& in1,
                          const ElementVectorBase::CPtr& in2,
                          ElementVectorBase::CPtr& out) const {
@@ -131,131 +131,131 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
   }
 
   // User implementations
-  virtual void eval(Inn&... inn, const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
-  virtual void jacPre(MatX& J,   const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
-  virtual void jacCur(MatX& J,   const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
-  virtual void jacNoi(MatX& J,   const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
+  virtual void Eval(Inn&... inn, const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
+  virtual void JacPre(MatX& J,   const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
+  virtual void JacCur(MatX& J,   const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
+  virtual void JacNoi(MatX& J,   const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
 
   // Wrapping from user interface to base
-  void eval(ElementVectorBase* inn,
+  void Eval(ElementVectorBase* inn,
             const ElementVectorBase* pre,
             const ElementVectorBase* cur,
             const ElementVectorBase* noi) const {
     const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
-    this->_eval(inn, ins);
+    this->EvalWrapper(inn, ins);
   }
 
-  void jacPre(MatX& J, const ElementVectorBase* pre,
+  void JacPre(MatX& J, const ElementVectorBase* pre,
                        const ElementVectorBase* cur,
                        const ElementVectorBase* noi) const {
     const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
-    this->template _jac<0>(J, ins);
+    this->template JacWrapper<0>(J, ins);
   }
-  void jacCur(MatX& J, const ElementVectorBase* pre,
+  void JacCur(MatX& J, const ElementVectorBase* pre,
                        const ElementVectorBase* cur,
                        const ElementVectorBase* noi) const {
     const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
-    this->template _jac<1>(J, ins);
+    this->template JacWrapper<1>(J, ins);
   }
 
-  void jacNoi(MatX& J, const ElementVectorBase* pre,
+  void JacNoi(MatX& J, const ElementVectorBase* pre,
                        const ElementVectorBase* cur,
                        const ElementVectorBase* noi) const {
     const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
-    this->template _jac<2>(J, ins);
+    this->template JacWrapper<2>(J, ins);
   }
-  void jacFDPre(MatX& J, const ElementVectorBase* pre,
+  void JacFDPre(MatX& J, const ElementVectorBase* pre,
                          const ElementVectorBase* cur,
                          const ElementVectorBase* noi,
                          const double delta) {
     const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
-    this->template _jacFD<0>(J, ins, delta);
+    this->template JacFDImpl<0>(J, ins, delta);
   }
-  void jacFDCur(MatX& J, const ElementVectorBase* pre,
+  void JacFDCur(MatX& J, const ElementVectorBase* pre,
                          const ElementVectorBase* cur,
                          const ElementVectorBase* noi,
                          const double delta) {
     const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
-    this->template _jacFD<1>(J, ins, delta);
+    this->template JacFDImpl<1>(J, ins, delta);
   }
 
-  void jacFDNoi(MatX& J, const ElementVectorBase* pre,
+  void JacFDNoi(MatX& J, const ElementVectorBase* pre,
                          const ElementVectorBase* cur,
                          const ElementVectorBase* noi,
                          const double delta) {
     const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
-    this->template _jacFD<2>(J, ins, delta);
+    this->template JacFDImpl<2>(J, ins, delta);
   }
 
   template<int n, int m>
-  void setJacBlockPre(
+  void SetJacBlockPre(
       MatX& J,
       const Mat<ElementPack<Inn...>::template _GetStateDimension<n>(),
                 ElementPack<Pre...>::template _GetStateDimension<m>()>& B) const {
-    this->template _setJacBlock<0, n, m>(J, B);
+    this->template SetJacBlockImpl<0, n, m>(J, B);
   }
 
   template<int n, int m>
-  void setJacBlockCur(
+  void SetJacBlockCur(
       MatX& J,
       const Mat<ElementPack<Inn...>::template _GetStateDimension<n>(),
                 ElementPack<Cur...>::template _GetStateDimension<m>()>& B) const {
-    this->template _setJacBlock<1, n, m>(J, B);
+    this->template SetJacBlockImpl<1, n, m>(J, B);
   }
 
   template<int n, int m>
-  void setJacBlockNoi(
+  void SetJacBlockNoi(
       MatX& J,
       const Mat<ElementPack<Inn...>::template _GetStateDimension<n>(),
                 ElementPack<Noi...>::template _GetStateDimension<m>()>& B) const {
-    this->template _setJacBlock<2, n, m>(J, B);
+    this->template SetJacBlockImpl<2, n, m>(J, B);
   }
 
-  bool testJacs(const ElementVectorBase* pre,
+  bool TestJacs(const ElementVectorBase* pre,
                 const ElementVectorBase* cur,
                 const ElementVectorBase* noi,
                 const double delta, const double th) const {
     const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
-    return this->template _testJacInput<0>(ins, delta, th)
-         & this->template _testJacInput<1>(ins, delta, th)
-         & this->template _testJacInput<2>(ins, delta, th);
+    return this->template JacTestImpl<0>(ins, delta, th)
+         & this->template JacTestImpl<1>(ins, delta, th)
+         & this->template JacTestImpl<2>(ins, delta, th);
   }
 
-  bool testJacs(int& s, const double delta, const double th) {
+  bool TestJacs(int& s, const double delta, const double th) {
     std::shared_ptr<Meas> meas(new Meas());
     meas->SetRandom(s);
     meas_ = meas;
-    ElementVector pre(preDefinition());
+    ElementVector pre(PreDefinition());
     pre.SetRandom(s);
-    ElementVector cur(curDefinition());
+    ElementVector cur(CurDefinition());
     cur.SetRandom(s);
-    ElementVector noi(noiDefinition());
+    ElementVector noi(NoiDefinition());
     noi.SetIdentity();
     const std::array<const ElementVectorBase*, 3> ins = {&pre, &cur, &noi};
-    return this->template _testJacInput<0>(ins, delta, th)
-         & this->template _testJacInput<1>(ins, delta, th)
-         & this->template _testJacInput<2>(ins, delta, th);
+    return this->template JacTestImpl<0>(ins, delta, th)
+         & this->template JacTestImpl<1>(ins, delta, th)
+         & this->template JacTestImpl<2>(ins, delta, th);
   }
 
   // Access to definitions
-  ElementVectorDefinition::Ptr innDefinition() const {
+  ElementVectorDefinition::Ptr InnDefinition() const {
     return this->outDefinition_;
   }
-  ElementVectorDefinition::Ptr preDefinition() const {
+  ElementVectorDefinition::Ptr PreDefinition() const {
     return this->inDefinitions_[0];
   }
-  ElementVectorDefinition::Ptr curDefinition() const {
+  ElementVectorDefinition::Ptr CurDefinition() const {
     return this->inDefinitions_[1];
   }
-  ElementVectorDefinition::Ptr noiDefinition() const {
+  ElementVectorDefinition::Ptr NoiDefinition() const {
     return this->inDefinitions_[2];
   }
 
   // Get Noise Matrix
-  const MatX& getR() const {
+  const MatX& GetNoiseCovariance() const {
     return R_;
   }
-  MatX& getR() {
+  MatX& GetNoiseCovariance() {
     return R_;
   }
 
@@ -266,16 +266,16 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
 
   // Wrapping from base (model) to user implementation
   template<int j, typename std::enable_if<(j == 0)>::type* = nullptr>
-  void jac(MatX& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
-    jacPre(J, pre..., cur..., noi...);
+  void Jac(MatX& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
+    JacPre(J, pre..., cur..., noi...);
   }
   template<int j, typename std::enable_if<(j == 1)>::type* = nullptr>
-  void jac(MatX& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
-    jacCur(J, pre..., cur..., noi...);
+  void Jac(MatX& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
+    JacCur(J, pre..., cur..., noi...);
   }
   template<int j, typename std::enable_if<(j == 2)>::type* = nullptr>
-  void jac(MatX& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
-    jacNoi(J, pre..., cur..., noi...);
+  void Jac(MatX& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
+    JacNoi(J, pre..., cur..., noi...);
   }
 
 };
