@@ -6,6 +6,10 @@
 
 namespace GIF {
 
+/*! \brief Transformation
+ *         Simple input-output transformation. Mainly used for transforming state and covariance
+ *         into different representation.
+ */
 template<typename PackOut, typename PackIn>
 class Transformation;
 

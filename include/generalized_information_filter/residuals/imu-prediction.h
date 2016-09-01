@@ -6,6 +6,9 @@
 
 namespace GIF {
 
+/*! \brief IMU Measurement
+ *         Element Vector that can be used to hold IMU measurements.
+ */
 class IMUMeas : public ElementVector {
  public:
   IMUMeas(const Vec3& BwB = Vec3(0, 0, 0), const Vec3& BfB = Vec3(0, 0, 0))
@@ -20,6 +23,12 @@ class IMUMeas : public ElementVector {
   Vec3& BfB_;
 };
 
+/*! \brief IMU Prediction.
+ *         Predicts the current state based on the previous state and the IMU measurement.
+ *         Coordinate frames: I (world), B (IMU).
+ *         Chosen state parametrisation: Position (IrIB), Velocity (BvB), Attitude (qIB),
+ *                                       Gyroscope bias (BwB_bias), Accelerometer bias (BfB_bias).
+ */
 class IMUPrediction : public Prediction<ElementPack<Vec3, Vec3, Vec3, Vec3, Quat>,
                                         ElementPack<Vec3, Vec3, Vec3, Vec3, Vec3>,
                                         IMUMeas> {

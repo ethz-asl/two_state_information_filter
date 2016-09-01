@@ -58,6 +58,9 @@ inline Mat3 GammaMat(const Vec3& a) {
   return kindr::getJacobianOfExponentialMap(a);
 }
 
+/*! \brief Normal Random Number Generator
+ *         Singleton class for generating normal random numbers (N(0,1)). Allows setting of seed.
+ */
 class NormalRandomNumberGenerator
 {
  public:

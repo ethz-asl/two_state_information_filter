@@ -6,6 +6,9 @@
 
 namespace GIF {
 
+/*! \brief Pose Measurement
+ *         Element Vector that can be used to hold a generic pose measurements (position + attitude).
+ */
 class PoseMeas : public ElementVector {
  public:
   PoseMeas(const Vec3& IrIB = Vec3(0, 0, 0), const Quat& qIB = Quat())
@@ -20,6 +23,11 @@ class PoseMeas : public ElementVector {
   Quat& qIB_;
 };
 
+/*! \brief Pose Update
+ *         Builds a residual between current state pose and measured pose.
+ *         Coordinate frames: I (world), B (IMU).
+ *         Chosen state parametrisation: Position (IrIB), Attitude (qIB).
+ */
 class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
     ElementPack<Vec3, Quat>, ElementPack<Vec3, Vec3>, PoseMeas> {
  public:

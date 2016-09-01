@@ -10,41 +10,39 @@ namespace GIF {
 
 class BinaryResidualBase;
 
+/*! \brief MeasurementTimeline
+ *         Class for managing measurements in a timeline. Provides various helpers.
+ */
 class MeasurementTimeline {
  public:
-  MeasurementTimeline(const bool ignoreFirst, const Duration& maxWaitTime =
-                          fromSec(0.1),
-                      const Duration& minWaitTime = Duration::zero());
+  MeasurementTimeline(const bool ignore_first, const Duration& max_wait_time,
+                      const Duration& min_wait_time);
   virtual ~MeasurementTimeline();
-  void AddMeasurement(const std::shared_ptr<const ElementVectorBase>& meas,
-               const TimePoint& t);
+  void AddMeasurement(const std::shared_ptr<const ElementVectorBase>& meas, const TimePoint& t);
   bool GetMeasurement(const TimePoint& t, std::shared_ptr<const ElementVectorBase>& meas);
   void RemoveProcessedFirst();
   void RemoveProcessedMeas(const TimePoint& t);
   void Reset();
   TimePoint GetLastTime() const;
-  TimePoint GetMaximalUpdateTime(const TimePoint& currentTime) const;
+  TimePoint GetMaximalUpdateTime(const TimePoint& current_time) const;
   void GetAllInRange(std::set<TimePoint>& times, const TimePoint& start,
                      const TimePoint& end) const;
   void GetLastInRange(std::set<TimePoint>& times, const TimePoint& start,
                       const TimePoint& end) const;
   void Split(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
              const BinaryResidualBase* res);
-  void Split(const std::set<TimePoint>& times,
-             const BinaryResidualBase* res);
+  void Split(const std::set<TimePoint>& times, const BinaryResidualBase* res);
   void Merge(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
              const BinaryResidualBase* res);
-  void MergeUndesired(const std::set<TimePoint>& times,
-                      const BinaryResidualBase* res);
+  void MergeUndesired(const std::set<TimePoint>& times, const BinaryResidualBase* res);
   void RemoveOutdated(const TimePoint& time);
-  void Print(const TimePoint& start = TimePoint::min(), int startOffset = 0,
-             double resolution = 0.01) const;
+  void Print(const TimePoint& start, int start_offset, double resolution) const;
  protected:
-  std::map<TimePoint, std::shared_ptr<const ElementVectorBase>> measMap_;
-  Duration maxWaitTime_;
-  Duration minWaitTime_;
-  TimePoint lastProcessedTime_;
-  bool ignoreFirst_;
+  std::map<TimePoint, std::shared_ptr<const ElementVectorBase>> meas_map_;
+  Duration max_wait_time_;
+  Duration min_wait_time_;
+  TimePoint last_processed_time_;
+  bool ignore_first_;
 };
 
 }

@@ -7,11 +7,16 @@
 
 namespace GIF {
 
+/*! \brief Residual Struct
+ *         Contains various object and temporaries associated with a specific residual.
+ */
 class ResidualStruct {
  public:
   ResidualStruct(const std::shared_ptr<BinaryResidualBase>& res,
-                 const std::shared_ptr<ElementVectorDefinition>& stateDefinition):
-                     mt_(!res->isUnary_),
+                 const std::shared_ptr<ElementVectorDefinition>& stateDefinition,
+                 const Duration& maxWaitTime,
+                 const Duration& minWaitTime):
+                     mt_(!res->isUnary_, maxWaitTime, minWaitTime),
                      preWrap_(res->PreDefinition(), stateDefinition),
                      curWrap_(res->CurDefinition(), stateDefinition),
                      inn_(res->InnDefinition()),
@@ -45,12 +50,19 @@ class ResidualStruct {
   int innDim_;
 };
 
+/*! \brief Filter
+ *         Handles residuals. Builds state defintion. Contains measurements timelines. Implements
+ *         timing logic.
+ */
 class Filter {
  public:
   Filter(): stateDefinition_(new ElementVectorDefinition()),
-      state_(stateDefinition_), curLinState_(stateDefinition_) {
+            state_(stateDefinition_), curLinState_(stateDefinition_) {
     Init();
+    max_wait_time_default_ = fromSec(0.1);
+    min_wait_time_default_ = fromSec(0.0);
   }
+
   virtual ~Filter() {
   }
 
@@ -65,7 +77,7 @@ class Filter {
   }
 
   int AddResidual(const std::shared_ptr<BinaryResidualBase>& res, const std::string& name = "") {
-    residuals_.emplace_back(res, stateDefinition_);
+    residuals_.emplace_back(res, stateDefinition_,max_wait_time_default_,min_wait_time_default_);
     return residuals_.size() - 1;
   }
 
@@ -109,8 +121,7 @@ class Filter {
       if (!residuals_.at(i).res_->isMergeable_) {
         // Add all non-mergeable measurement times
         residuals_.at(i).mt_.GetAllInRange(times, time_, maxUpdateTime);
-      } else if (!residuals_.at(i).res_->isSplitable_
-          && residuals_.at(i).res_->isUnary_) {
+      } else if (!residuals_.at(i).res_->isSplitable_ && residuals_.at(i).res_->isUnary_) {
         // For the special case of unary and mergeable residuals add the last measurement time
         residuals_.at(i).mt_.GetLastInRange(times, time_, maxUpdateTime);
       }
@@ -122,8 +133,7 @@ class Filter {
 
   void SplitAndMergeMeasurements(const std::set<TimePoint>& times) {
     for (int i = 0; i < residuals_.size(); i++) {
-      if (residuals_.at(i).res_->isSplitable_
-          && !residuals_.at(i).res_->isUnary_) {
+      if (residuals_.at(i).res_->isSplitable_ && !residuals_.at(i).res_->isUnary_) {
         // First insert all (splitable + !unary)
         residuals_.at(i).mt_.Split(times, residuals_.at(i).res_.get());
       }
@@ -135,13 +145,11 @@ class Filter {
   }
 
   void AddMeasurement(const int i, const std::shared_ptr<const ElementVectorBase>& meas,
-               const TimePoint& t) {
+                      const TimePoint& t) {
     residuals_.at(i).mt_.AddMeasurement(meas, t);
   }
 
-  void PrintMeasurementTimelines(const TimePoint& start = TimePoint::min(),
-                                 int startOffset = 0,
-                                 double resolution = 0.01) {
+  void PrintMeasurementTimelines(const TimePoint& start, int startOffset, double resolution) {
     for (int i = 0; i < startOffset; i++) {
       std::cout << " ";
     }
@@ -156,7 +164,7 @@ class Filter {
     for (int i = 0; i < residuals_.size(); i++) {
       residuals_.at(i).mt_.RemoveOutdated(time_);
     }
-    PrintMeasurementTimelines(time_, 20);
+    PrintMeasurementTimelines(time_, 20, 0.01);
     std::cout << "stateTime:\t" << toSec(time_ - startTime_) << std::endl;
     TimePoint currentTime = GetCurrentTimeFromMeasurements();
     std::cout << "currentTime:\t" << toSec(currentTime - startTime_) << std::endl;
@@ -170,7 +178,7 @@ class Filter {
     }
     std::cout << std::endl;
     SplitAndMergeMeasurements(times);
-    PrintMeasurementTimelines(time_, 20);
+    PrintMeasurementTimelines(time_, 20, 0.01);
 
     for (const auto& t : times) {
       MakeUpdateStep(t);
@@ -233,8 +241,8 @@ class Filter {
                                                 count);
         Winv.block(count, count, residuals_.at(i).innDim_,
                    residuals_.at(i).innDim_) = (residuals_.at(i).jacNoi_
-            * residuals_.at(i).res_->GetNoiseCovariance()
-            * residuals_.at(i).jacNoi_.transpose()).inverse();
+                                               * residuals_.at(i).res_->GetNoiseCovariance()
+                                               * residuals_.at(i).jacNoi_.transpose()).inverse();
 
         // Increment counter
         count += residuals_.at(i).innDim_;
@@ -265,6 +273,8 @@ class Filter {
   ElementVector state_;
   ElementVector curLinState_;
   MatX cov_;
+  Duration max_wait_time_default_;
+  Duration min_wait_time_default_;
 
 };
 

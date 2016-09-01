@@ -6,6 +6,9 @@
 
 namespace GIF {
 
+/*! \brief Prediction
+ *         Derives from BinaryResidual but enforces identity Jacobian on current state.
+ */
 template<typename PackSta, typename PackNoi, typename Meas>
 class Prediction;
 
@@ -34,12 +37,13 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
   template<typename ... Ts,
            typename std::enable_if<(sizeof...(Ts)<ElementPack<Sta...>::n_)>::type* = nullptr>
   void PredictWrapper(ElementVectorBase* cur,
-                const Sta&... pre, const Noi&... noi, Ts&... elements) const {
+                      const Sta&... pre, const Noi&... noi, Ts&... elements) const {
     assert(cur->MatchesDefinition(*this->CurDefinition()));
     static constexpr int innerIndex = sizeof...(Ts);
     typedef typename ElementPack<Sta...>::Tuple Tuple;
     typedef typename std::tuple_element<innerIndex,Tuple>::type mtElementType;
-    PredictWrapper(cur, pre..., noi..., elements..., cur->template GetValue<mtElementType>(innerIndex));
+    PredictWrapper(cur, pre..., noi..., elements...,
+                   cur->template GetValue<mtElementType>(innerIndex));
   }
 
   template<typename... Ts,
@@ -61,7 +65,7 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
   }
   void JacCur(MatX& J, const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
     J.setZero();
-    PredictWrapper(&prediction_, pre..., noi...);
+    PredictWrapper(&prediction_, pre..., noi...); // TODO: cash or avoid
     ComputeCurJacobian(J,&prediction_,cur...);
   }
   void JacNoi(MatX& J, const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
@@ -75,15 +79,12 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
     typedef ElementTraits<mtElementType> Trait;
 
     // inn = I+(pred-cur)
-    // TODO: make more efficient (could be done directly on Boxminus, but then
-    // jacobian becomes more annoying)
+    // TODO: make more efficient (could be done directly on Boxminus, but then jacobian becomes more annoying)
     Eigen::Matrix<double,Trait::kDim,1> vec;
     Trait::Boxminus(prediction->template GetValue<mtElementType>(i),
                     std::get<i>(std::forward_as_tuple(cur...)),
                     vec);
-    Trait::Boxplus(Trait::Identity(),
-                   vec,
-                   std::get<i>(std::forward_as_tuple(inn...)));
+    Trait::Boxplus(Trait::Identity(), vec, std::get<i>(std::forward_as_tuple(inn...)));
     ComputeInnovation<i+1>(inn...,cur...,prediction);
   }
   template<int i = 0, typename std::enable_if<(i>=sizeof...(Sta))>::type* = nullptr>
