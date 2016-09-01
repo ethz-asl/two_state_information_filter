@@ -146,12 +146,12 @@ const ElementBase* ElementVector::GetElement(int i) const {
 
 ElementBase* ElementVectorWrapper::GetElement(int i) {
   assert(element_vector_ != nullptr);
-  return element_vector_->GetElement(indexMap_[i]);
+  return element_vector_->GetElement(indexMap_.at(i));
 }
 
 const ElementBase* ElementVectorWrapper::GetElement(int i) const {
   assert(const_element_vector_ != nullptr);
-  return const_element_vector_->GetElement(indexMap_[i]);
+  return const_element_vector_->GetElement(indexMap_.at(i));
 }
 
 }

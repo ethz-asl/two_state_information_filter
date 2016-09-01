@@ -188,7 +188,7 @@ void MeasurementTimeline::Print(const TimePoint& start, int startOffset,
   for (auto it = measMap_.begin(); it != measMap_.end(); ++it) {
     const int x = startOffset + ceil(toSec(it->first - start) / resolution);
     if (x >= 0) {
-      counts[x]++;
+      counts.at(x)++;
     }
   }
   for (const auto& c : counts) {

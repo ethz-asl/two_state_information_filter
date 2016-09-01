@@ -268,12 +268,12 @@ class ElementTraits<std::array<T, N>> {
   }
   static void Boxplus(const array& in, const VecCRef<kDim>& vec, array& out) {
     for (int i = 0; i < N; i++) {
-      Traits::Boxplus(in[i], vec.template block<kElementDim, 1>(i * kElementDim, 0), out[i]);
+      Traits::Boxplus(in.at(i), vec.template block<kElementDim, 1>(i * kElementDim, 0), out.at(i));
     }
   }
   static void Boxminus(const array& in, const array& ref, VecRef<kDim> vec) {
     for (int i = 0; i < N; i++) {
-      Traits::Boxminus(in[i], ref[i], vec.template block<kElementDim, 1>(i * kElementDim, 0));
+      Traits::Boxminus(in.at(i), ref.at(i), vec.template block<kElementDim, 1>(i * kElementDim, 0));
     }
   }
   static Mat<kDim> BoxplusJacInp(const array& in, const VecCRef<kDim>& vec) {
@@ -281,7 +281,7 @@ class ElementTraits<std::array<T, N>> {
     J.setZero();
     for (int i = 0; i < N; i++) {
       J.template block<kElementDim, kElementDim>(i * kElementDim, i * kElementDim) =
-          Traits::BoxplusJacInp(in[i], vec.template block<kElementDim, 1>(i * kElementDim, 0));
+          Traits::BoxplusJacInp(in.at(i), vec.template block<kElementDim, 1>(i * kElementDim, 0));
     }
     return J;
   }
@@ -290,7 +290,7 @@ class ElementTraits<std::array<T, N>> {
     J.setZero();
     for (int i = 0; i < N; i++) {
       J.template block<kElementDim, kElementDim>(i * kElementDim, i * kElementDim) =
-          Traits::BoxplusJacVec(in[i], vec.template block<kElementDim, 1>(i * kElementDim, 0));
+          Traits::BoxplusJacVec(in.at(i), vec.template block<kElementDim, 1>(i * kElementDim, 0));
     }
     return J;
   }
@@ -299,7 +299,7 @@ class ElementTraits<std::array<T, N>> {
     J.setZero();
     for (int i = 0; i < N; i++) {
       J.template block<kElementDim, kElementDim>(i * kElementDim, i * kElementDim) =
-          Traits::BoxminusJacInp(in[i], ref[i]);
+          Traits::BoxminusJacInp(in.at(i), ref.at(i));
     }
     return J;
   }
@@ -308,7 +308,7 @@ class ElementTraits<std::array<T, N>> {
     J.setZero();
     for (int i = 0; i < N; i++) {
       J.template block<kElementDim, kElementDim>(i * kElementDim, i * kElementDim) =
-          Traits::BoxminusJacRef(in[i], ref[i]);
+          Traits::BoxminusJacRef(in.at(i), ref.at(i));
     }
     return J;
   }

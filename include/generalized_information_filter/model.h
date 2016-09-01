@@ -124,7 +124,7 @@ inline void Model<Derived,OutPack,InPacks...>::EvalWrapper(
       Ps&... elements) const{
   static constexpr int outerIndex = TH_pack_index<sizeof...(Ps)-n_,InPacks...>::GetOuter();
   static constexpr int innerIndex = TH_pack_index<sizeof...(Ps)-n_,InPacks...>::GetInner();
-
+  static_assert(outerIndex < N_, "Indexing Error");
   assert(ins.at(outerIndex)->MatchesDefinition(*inDefinitions_[outerIndex]));
   typedef typename InPack<outerIndex>::Tuple Tuple;
   typedef typename std::tuple_element<innerIndex,Tuple>::type ElementType;
@@ -148,8 +148,10 @@ template<int InIndex, typename... Ps, typename std::enable_if<
 inline void Model<Derived,OutPack,InPacks...>::JacWrapper(MatX& J,
                  const std::array<const ElementVectorBase*,N_>& ins,
                  Ps&... elements) const{
+  static_assert(InIndex < N_, "Indexing Error");
   static constexpr int outerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::GetOuter();
   static constexpr int innerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::GetInner();
+  static_assert(outerIndex < N_, "Indexing Error");
   assert(ins.at(outerIndex)->MatchesDefinition(*inDefinitions_[outerIndex]));
   assert(J.cols() == inDefinitions_[InIndex]->GetDim());
   assert(J.rows() == outDefinition_->GetDim());
@@ -174,6 +176,7 @@ template<int InIndex>
 void Model<Derived,OutPack,InPacks...>::JacFDImpl(MatX& J,
             const std::array<const ElementVectorBase*,N_>& ins,
             const double delta) const{
+  static_assert(InIndex < N_, "Indexing Error");
   ElementVector stateDis(inDefinitions_[InIndex]);
   ElementVector outRef(outDefinition_);
   ElementVector outDis(outDefinition_);
@@ -201,6 +204,7 @@ bool Model<Derived,OutPack,InPacks...>::JacTestImpl(
       const std::array<const ElementVectorBase*,N_>& ins,
       const double delta,
       const double th) const {
+  static_assert(InIndex < N_, "Indexing Error");
   if(OutPack::kDim <= 0 || InPack<InIndex>::kDim <= 0){
     return true;
   }
@@ -259,6 +263,7 @@ template<int i, typename std::enable_if<(i<sizeof...(InPacks))>::type*>
 void Model<Derived,OutPack,InPacks...>::MakeInDefinitons(
     const std::tuple<std::array<std::string,InPacks::n_>...>& namesIn) {
   typedef typename std::tuple_element<i,std::tuple<InPacks...>>::type ElementPack;
+  static_assert(i < N_, "Indexing Error");
   inDefinitions_[i].reset(new ElementPack(std::get<i>(namesIn)));
   MakeInDefinitons<i+1>(namesIn);
 }
