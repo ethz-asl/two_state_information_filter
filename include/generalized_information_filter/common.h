@@ -7,6 +7,7 @@
 #include <memory>
 #include "kindr/Core"
 #include <chrono>
+#include <glog/logging.h>
 
 namespace GIF {
 

@@ -102,37 +102,37 @@ const T& ElementVectorBase::GetValue(int i) const {
 
 template<typename T>
 T& ElementVectorBase::GetValue(const std::string& name) {
-  assert(MatchesDefinition(*def_));
+  DLOG_IF(FATAL, !MatchesDefinition(*def_)) << "Element vector definition mismatch";
   int i = def_->FindName(name);
-  assert(i != -1);
+  DLOG_IF(ERROR, i == -1) << "Element name not found";
   return GetValue<T>(i);
 }
 
 template<typename T>
 const T& ElementVectorBase::GetValue(const std::string& name) const {
-  assert(MatchesDefinition(*def_));
+  DLOG_IF(FATAL, !MatchesDefinition(*def_)) << "Element vector definition mismatch";
   int i = def_->FindName(name);
-  assert(i != -1);
+  DLOG_IF(ERROR, i == -1) << "Element name not found";
   return GetValue<T>(i);
 }
 
 int ElementVectorBase::GetDimension() const {
-  assert(MatchesDefinition(*def_));
+  DLOG_IF(FATAL, !MatchesDefinition(*def_)) << "Element vector definition mismatch";
   return def_->GetDim();
 }
 
 int ElementVectorBase::GetStart(int i) const {
-  assert(MatchesDefinition(*def_));
+  DLOG_IF(FATAL, !MatchesDefinition(*def_)) << "Element vector definition mismatch";
   return def_->GetStartIndex(i);
 }
 
 int ElementVectorBase::GetOuter(int i) const {
-  assert(MatchesDefinition(*def_));
+  DLOG_IF(FATAL, !MatchesDefinition(*def_)) << "Element vector definition mismatch";
   return def_->GetOuterIndex(i);
 }
 
 int ElementVectorBase::GetInner(int i) const {
-  assert(MatchesDefinition(*def_));
+  DLOG_IF(FATAL, !MatchesDefinition(*def_)) << "Element vector definition mismatch";
   return def_->GetInnerIndex(i);
 }
 
@@ -145,12 +145,12 @@ const ElementBase* ElementVector::GetElement(int i) const {
 }
 
 ElementBase* ElementVectorWrapper::GetElement(int i) {
-  assert(element_vector_ != nullptr);
+  DLOG_IF(FATAL, element_vector_ == nullptr) << "Element vector not set for wrapper";
   return element_vector_->GetElement(indexMap_.at(i));
 }
 
 const ElementBase* ElementVectorWrapper::GetElement(int i) const {
-  assert(const_element_vector_ != nullptr);
+  DLOG_IF(FATAL, const_element_vector_ == nullptr) << "Element vector not set for wrapper";
   return const_element_vector_->GetElement(indexMap_.at(i));
 }
 

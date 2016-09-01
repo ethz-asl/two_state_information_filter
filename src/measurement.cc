@@ -23,13 +23,12 @@ void MeasurementTimeline::AddMeasurement(const std::shared_ptr<const ElementVect
     return;
   }
   if (t <= last_processed_time_) {
-    std::cout << "Error: adding measurements before last processed time (will be "
-              << "discarded)" << std::endl;
+    LOG(ERROR) << "Adding measurements before last processed time (will be discarded)" << std::endl;
   } else {
     std::pair<std::map<TimePoint, std::shared_ptr<const ElementVectorBase>>::iterator, bool> ret;
     ret = meas_map_.insert(std::pair<TimePoint, std::shared_ptr<const ElementVectorBase>>(t, meas));
     if (!ret.second) {
-      std::cout << "Error: measurement already exists!" << std::endl;
+      LOG(ERROR) << "Measurement already exists!" << std::endl;
     }
   }
 }
@@ -46,13 +45,13 @@ bool MeasurementTimeline::GetMeasurement(const TimePoint& t,
 }
 
 void MeasurementTimeline::RemoveProcessedFirst() {
-  assert(meas_map_.size() > 0);
+  DLOG_IF(ERROR,meas_map_.size() == 0) << "No measurement to remove";
   last_processed_time_ = meas_map_.begin()->first;
   meas_map_.erase(meas_map_.begin());
 }
 
 void MeasurementTimeline::RemoveProcessedMeas(const TimePoint& t) {
-  assert(meas_map_.count(t) > 0);
+  DLOG_IF(ERROR,meas_map_.count(t) == 0) << "No measurement to remove";
   meas_map_.erase(t);
   last_processed_time_ = t;
 }
@@ -104,7 +103,7 @@ void MeasurementTimeline::GetLastInRange(std::set<TimePoint>& times,
 
 void MeasurementTimeline::Split(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
                                 const BinaryResidualBase* res) {
-  assert(t0 <= t1 && t1 <= t2);
+  DLOG_IF(ERROR,t0 > t1 || t1 > t2) << "No chronological times";
   AddMeasurement(std::shared_ptr<const ElementVectorBase>(), t1);
   res->SplitMeasurements(t0, t1, t2, meas_map_.at(t2), meas_map_.at(t1), meas_map_.at(t2));
 }
@@ -113,7 +112,7 @@ void MeasurementTimeline::Split(const std::set<TimePoint>& times, const BinaryRe
   for (const auto& t : times) {
     auto it = meas_map_.lower_bound(t);
     if (it == meas_map_.end()) {
-      std::cout << "Error: range error while splitting!" << std::endl;
+      LOG(ERROR) << "Range error while splitting!" << std::endl;
       continue;
     }
     if (it->first == t) {
@@ -127,7 +126,7 @@ void MeasurementTimeline::Split(const std::set<TimePoint>& times, const BinaryRe
 
 void MeasurementTimeline::Merge(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
                                 const BinaryResidualBase* res) {
-  assert(t0 <= t1 && t1 <= t2);
+  DLOG_IF(ERROR,t0 > t1 || t1 > t2) << "No chronological times";
   res->MergeMeasurements(t0, t1, t2, meas_map_.at(t1), meas_map_.at(t2), meas_map_.at(t2));
   meas_map_.erase(t1);  // does not count as processed
 }
@@ -148,7 +147,7 @@ void MeasurementTimeline::MergeUndesired(const std::set<TimePoint>& times,
       continue;
     }
     if (next(it) == meas_map_.end()) {
-      std::cout << "Error: range error while merging!" << std::endl;
+      LOG(ERROR) << "Range error while merging!" << std::endl;
       break;
     }
     TimePoint previous = (it == meas_map_.begin()) ? last_processed_time_ : std::prev(it)->first;

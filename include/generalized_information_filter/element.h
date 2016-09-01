@@ -72,13 +72,13 @@ class ElementBase {
   template<typename T>
   T& GetValue() {
     Element<T>* const element =  dynamic_cast<Element<T>*>(this);
-    assert(element != nullptr);
+    DLOG_IF(FATAL, element == nullptr) << "Dereferencing nullptr";
     return element->GetValue();
   }
   template<typename T>
   const T& GetValue() const {
     const Element<T>* const element =  dynamic_cast<const Element<T>*>(this);
-    assert(element != nullptr);
+    DLOG_IF(FATAL, element == nullptr) << "Dereferencing nullptr";
     return element->GetValue();
   }
 };
@@ -93,7 +93,7 @@ class Element : public ElementBase {
   typedef ElementTraits<T> Traits;
   Element(const ElementDescription<T>* description)
       : description_(description) {
-    assert(description != nullptr);
+    DLOG_IF(FATAL, description == nullptr) << "Passing nullptr";
   }
   virtual ~Element() {
   }
@@ -103,7 +103,7 @@ class Element : public ElementBase {
   }
   virtual ElementBase& operator=(const ElementBase& other) {
     const Element<T>* const element =  dynamic_cast<const Element<T>*>(&other);
-    assert(element != nullptr);
+    DLOG_IF(FATAL, element == nullptr) << "Dereferencing nullptr";
     *this = *element;
     return *this;
   }

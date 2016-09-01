@@ -94,7 +94,7 @@ int ElementVectorDefinition::GetStartIndex(int outer_index) const {
 }
 
 int ElementVectorDefinition::GetOuterIndex(int i) const {
-  assert(i >= 0 && i < GetDim());
+  DLOG_IF(FATAL, i < 0 | i >= GetDim()) << "Index out of range";
   int outer_index = GetNumElements()-1;
   while (GetStartIndex(outer_index) > i) {
     --outer_index;

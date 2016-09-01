@@ -37,7 +37,7 @@ std::string ElementVectorDefinition::GetName(int outer_index) const { // Slow
       return e.first;
     }
   }
-  assert("Index not found in name map" == 0);
+  LOG(ERROR) << "Index not found in name map";
   return "";
 }
 
@@ -54,9 +54,8 @@ int ElementVectorDefinition::AddElement(const std::string& name,
                                         const ElementDescriptionBase& description) {
   int outer_index = FindName(name);
   if (outer_index != -1) {
-    if (!GetElementDescription(outer_index).MatchesDescription(description)) {
-      assert("ERROR: invalid extension of state definition" == 0);
-    }
+    DLOG_IF(ERROR,!GetElementDescription(outer_index).MatchesDescription(description)) <<
+        "Invalid addition to element vector definition";
     return outer_index;
   } else {
     descriptions_.push_back(description.Copy());

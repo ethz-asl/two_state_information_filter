@@ -146,7 +146,11 @@ class Filter {
 
   void AddMeasurement(const int i, const std::shared_ptr<const ElementVectorBase>& meas,
                       const TimePoint& t) {
-    residuals_.at(i).mt_.AddMeasurement(meas, t);
+    if(residuals_.at(i).res_->CheckMeasType(meas)){
+      residuals_.at(i).mt_.AddMeasurement(meas, t);
+    } else {
+      LOG(ERROR) << "Passing wrong measurement type";
+    }
   }
 
   void PrintMeasurementTimelines(const TimePoint& start, int startOffset, double resolution) {

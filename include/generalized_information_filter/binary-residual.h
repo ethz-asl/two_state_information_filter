@@ -47,6 +47,7 @@ class BinaryResidualBase {
       const ElementVectorBase::CPtr& in2,
       ElementVectorBase::CPtr& out) const = 0;
   virtual void SetMeas(const ElementVectorBase::CPtr& meas) = 0;
+  virtual bool CheckMeasType(const ElementVectorBase::CPtr& meas) const = 0;
   virtual const MatX& GetNoiseCovariance() const = 0;
   virtual MatX& GetNoiseCovariance() = 0;
   virtual bool TestJacs(const ElementVectorBase& pre,
@@ -96,10 +97,12 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
   // Set measurement
   void SetMeas(const ElementVectorBase::CPtr& meas) {
     meas_ = std::dynamic_pointer_cast<const Meas>(meas);
-    if (!meas_) {
-      assert("ERROR: Passing wrong measurement type" == 0);
-      std::cout << "ERROR: Passing wrong measurement type" << std::endl;
-    }
+    DLOG_IF(ERROR, !meas_) << "Passing wrong measurement type";
+  }
+
+  bool CheckMeasType(const ElementVectorBase::CPtr& meas) const{
+    std::shared_ptr<const Meas> cast_meas = std::dynamic_pointer_cast<const Meas>(meas);
+    return cast_meas.get() != nullptr;
   }
 
   void SplitMeasurements(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
@@ -111,7 +114,7 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
       out1 = in;
       out2 = in;
     } else {
-      std::cout << "ERROR: splitting of specific residual not supported/implemented!" << std::endl;
+      LOG(ERROR) << "Splitting of specific residual not supported/implemented!";
     }
   }
 
@@ -126,7 +129,7 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
       in2->BoxPlus(toSec(t1 - t0) / toSec(t2 - t0) * diff, newMeas.get());
       out = newMeas;
     } else {
-      std::cout << "ERROR: merging of specific residual not supported!/implemented" << std::endl;
+      LOG(ERROR) << "Merging of specific residual not supported/implemented!";
     }
   }
 

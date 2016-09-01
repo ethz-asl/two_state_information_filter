@@ -107,7 +107,8 @@ inline void Model<Derived,OutPack,InPacks...>::EvalWrapper(
       ElementVectorBase* out,
       const std::array<const ElementVectorBase*,N_>& ins,
       Ps&... elements) const{
-  assert(out->MatchesDefinition(*outDefinition_));
+  DLOG_IF(FATAL, !out->MatchesDefinition(*outDefinition_)) <<
+      "Element vector definition mismatch";
   static constexpr int inner_index = sizeof...(Ps);
   typedef typename OutPack::Tuple Tuple;
   typedef typename std::tuple_element<inner_index,Tuple>::type ElementType;
@@ -124,7 +125,8 @@ inline void Model<Derived,OutPack,InPacks...>::EvalWrapper(
   static constexpr int outerIndex = TH_pack_index<sizeof...(Ps)-n_,InPacks...>::GetOuter();
   static constexpr int innerIndex = TH_pack_index<sizeof...(Ps)-n_,InPacks...>::GetInner();
   static_assert(outerIndex < N_, "Indexing Error");
-  assert(ins.at(outerIndex)->MatchesDefinition(*inDefinitions_[outerIndex]));
+  DLOG_IF(FATAL, !ins.at(outerIndex)->MatchesDefinition(*inDefinitions_[outerIndex])) <<
+      "Element vector definition mismatch";
   typedef typename InPack<outerIndex>::Tuple Tuple;
   typedef typename std::tuple_element<innerIndex,Tuple>::type ElementType;
   EvalWrapper(out, ins, elements...,
@@ -151,9 +153,11 @@ inline void Model<Derived,OutPack,InPacks...>::JacWrapper(MatX& J,
   static constexpr int outerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::GetOuter();
   static constexpr int innerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::GetInner();
   static_assert(outerIndex < N_, "Indexing Error");
-  assert(ins.at(outerIndex)->MatchesDefinition(*inDefinitions_[outerIndex]));
-  assert(J.cols() == inDefinitions_[InIndex]->GetDim());
-  assert(J.rows() == outDefinition_->GetDim());
+  DLOG_IF(FATAL, !ins.at(outerIndex)->MatchesDefinition(*inDefinitions_[outerIndex])) <<
+      "Element vector definition mismatch";
+  DLOG_IF(FATAL, J.cols() != inDefinitions_[InIndex]->GetDim()
+               | J.rows() != outDefinition_->GetDim()) <<
+      "Jacobian Dimension mismatch";
   typedef typename InPack<outerIndex>::Tuple Tuple;
   typedef typename std::tuple_element<innerIndex,Tuple>::type mtElementType;
   JacWrapper<InIndex>(J, ins, elements...,
@@ -216,16 +220,16 @@ bool Model<Derived,OutPack,InPacks...>::JacTestImpl(
   if(r>th){
     std::string outName = outDefinition_->GetName(outDefinition_->GetOuterIndex(maxRow));
     std::string inName = inDefinitions_[InIndex]->GetName(ins[InIndex]->GetOuter(maxCol));
-    std::cout << "==== Model jacInput (" << InIndex << ") Test failed: " << r
-              << " is larger than " << th << " at row "
-              << maxRow << "("<< outName << "." << outDefinition_->GetInnerIndex(maxRow)
-              << ") and col " << maxCol << "("<< inName << "."
-              << ins[InIndex]->GetInner(maxCol) << ") ====" << std::endl;
-    std::cout << "  " << J(maxRow,maxCol) << "  " << J_FD(maxRow,maxCol)
-              << std::endl;
+    LOG(ERROR) << "==== Model jacInput (" << InIndex << ") Test failed: " << r
+               << " is larger than " << th << " at row "
+               << maxRow << "("<< outName << "." << outDefinition_->GetInnerIndex(maxRow)
+               << ") and col " << maxCol << "("<< inName << "."
+               << ins[InIndex]->GetInner(maxCol) << ") ====" << std::endl
+               << "  " << J(maxRow,maxCol) << "  " << J_FD(maxRow,maxCol)
+               << std::endl;
     return false;
   } else {
-    std::cout << "==== Test successful (" << r << ") ====" << std::endl;
+    LOG(INFO) << "==== Test successful (" << r << ") ====" << std::endl;
     return true;
   }
 }

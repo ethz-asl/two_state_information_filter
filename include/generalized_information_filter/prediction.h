@@ -38,7 +38,8 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
            typename std::enable_if<(sizeof...(Ts)<ElementPack<Sta...>::n_)>::type* = nullptr>
   void PredictWrapper(ElementVectorBase* cur,
                       const Sta&... pre, const Noi&... noi, Ts&... elements) const {
-    assert(cur->MatchesDefinition(*this->CurDefinition()));
+    DLOG_IF(FATAL,!cur->MatchesDefinition(*this->CurDefinition())) <<
+        "Element vector definition mismatch";
     static constexpr int innerIndex = sizeof...(Ts);
     typedef typename ElementPack<Sta...>::Tuple Tuple;
     typedef typename std::tuple_element<innerIndex,Tuple>::type mtElementType;
@@ -94,7 +95,8 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
   template<int i = 0, int j = 0, typename std::enable_if<(i<sizeof...(Sta))>::type* = nullptr>
   void ComputeCurJacobian(MatX& J, ElementVectorBase* prediction,
                           const Sta&... cur) const{
-    assert(prediction->MatchesDefinition(*this->CurDefinition()));
+    DLOG_IF(FATAL,!prediction->MatchesDefinition(*this->CurDefinition())) <<
+        "Element vector definition mismatch";
     typedef typename std::tuple_element<i,typename ElementPack<Sta...>::Tuple>::type mtElementType;
     typedef ElementTraits<mtElementType> Trait;
     Eigen::Matrix<double,Trait::kDim,1> vec;

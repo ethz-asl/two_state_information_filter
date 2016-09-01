@@ -115,7 +115,7 @@ void ElementVectorWrapper::ComputeMap() {
   indexMap_.resize(def_->GetNumElements());
   for (int i = 0; i < def_->GetNumElements(); i++) {
     indexMap_[i] = inDef_->FindName(def_->GetName(i));
-    assert(indexMap_.at(i) != -1);
+    DLOG_IF(ERROR, indexMap_.at(i) == -1) << "Element name not found";
   }
 }
 
