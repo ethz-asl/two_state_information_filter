@@ -38,7 +38,7 @@ using MatCRef = Eigen::Ref<const Mat<N,M>>;
 typedef std::chrono::high_resolution_clock Clock;
 typedef Clock::time_point TimePoint;
 typedef Clock::duration Duration;
-inline Duration fromSec(const double& sec) {
+inline Duration fromSec(const double sec) {
   return std::chrono::duration_cast < Duration
       > (std::chrono::duration<double>(sec));
 }

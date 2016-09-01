@@ -63,16 +63,16 @@ class Model {
 
   template<int j>
   void _jacFD(MatX& J, const std::array<const ElementVectorBase*,N_>& ins,
-              const double& delta = 1e-8) const;
+              const double delta = 1e-6) const;
 
   template<int j>
   bool _testJacInput(const std::array<const ElementVectorBase*,N_>& ins,
-                     const double& delta = 1e-6,
-                     const double& th = 1e-6) const;
+                     const double delta = 1e-6,
+                     const double th = 1e-6) const;
 
   template<int j>
-  bool _testJacInput(int& s, const double& delta = 1e-6,
-                     const double& th = 1e-6) const;
+  bool _testJacInput(int& s, const double delta = 1e-6,
+                     const double th = 1e-6) const;
 
   template<int j, int n, int m>
   void _setJacBlock(MatX& J, const Mat<OutPack::template _GetStateDimension<n>(),
@@ -168,7 +168,7 @@ template<typename Derived, typename OutPack, typename ... InPacks>
 template<int j>
 void Model<Derived,OutPack,InPacks...>::_jacFD(MatX& J,
             const std::array<const ElementVectorBase*,N_>& ins,
-            const double& delta) const{
+            const double delta) const{
   ElementVector stateDis(inDefinitions_[j]);
   ElementVector outRef(outDefinition_);
   ElementVector outDis(outDefinition_);
@@ -194,8 +194,8 @@ template<typename Derived, typename OutPack, typename ... InPacks>
 template<int j>
 bool Model<Derived,OutPack,InPacks...>::_testJacInput(
       const std::array<const ElementVectorBase*,N_>& ins,
-      const double& delta,
-      const double& th) const {
+      const double delta,
+      const double th) const {
   if(OutPack::d_ <= 0 || InPack<j>::d_ <= 0){
     return true;
   }
@@ -225,8 +225,8 @@ bool Model<Derived,OutPack,InPacks...>::_testJacInput(
 template<typename Derived, typename OutPack, typename ... InPacks>
 template<int j>
 bool Model<Derived,OutPack,InPacks...>::_testJacInput(int& s,
-                                                      const double& delta,
-                                                      const double& th) const{
+                                                      const double delta,
+                                                      const double th) const{
   std::array<ElementVectorBase::Ptr,N_> ins;
   std::array<const ElementVectorBase*,N_> insRawPtr;
   for(int i=0;i<N_;i++){

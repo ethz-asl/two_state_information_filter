@@ -52,8 +52,8 @@ class BinaryResidualBase {
   virtual bool testJacs(const ElementVectorBase* pre,
                         const ElementVectorBase* cur,
                         const ElementVectorBase* noi,
-                        const double& delta = 1e-6, const double& th = 1e-6) const = 0;
-  virtual bool testJacs(int& s, const double& delta = 1e-6, const double& th = 1e-6) = 0;
+                        const double delta = 1e-6, const double th = 1e-6) const = 0;
+  virtual bool testJacs(int& s, const double delta = 1e-6, const double th = 1e-6) = 0;
 
   const bool isUnary_;
   const bool isSplitable_;
@@ -167,14 +167,14 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
   void jacFDPre(MatX& J, const ElementVectorBase* pre,
                          const ElementVectorBase* cur,
                          const ElementVectorBase* noi,
-                         const double& delta = 1e-6) {
+                         const double delta = 1e-6) {
     const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
     this->template _jacFD<0>(J, ins, delta);
   }
   void jacFDCur(MatX& J, const ElementVectorBase* pre,
                          const ElementVectorBase* cur,
                          const ElementVectorBase* noi,
-                         const double& delta = 1e-6) {
+                         const double delta = 1e-6) {
     const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
     this->template _jacFD<1>(J, ins, delta);
   }
@@ -182,7 +182,7 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
   void jacFDNoi(MatX& J, const ElementVectorBase* pre,
                          const ElementVectorBase* cur,
                          const ElementVectorBase* noi,
-                         const double& delta = 1e-6) {
+                         const double delta = 1e-6) {
     const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
     this->template _jacFD<2>(J, ins, delta);
   }
@@ -214,14 +214,14 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
   bool testJacs(const ElementVectorBase* pre,
                 const ElementVectorBase* cur,
                 const ElementVectorBase* noi,
-                const double& delta = 1e-6, const double& th = 1e-6) const {
+                const double delta = 1e-6, const double th = 1e-6) const {
     const std::array<const ElementVectorBase*, 3> ins = {pre, cur, noi};
     return this->template _testJacInput<0>(ins, delta, th)
          & this->template _testJacInput<1>(ins, delta, th)
          & this->template _testJacInput<2>(ins, delta, th);
   }
 
-  bool testJacs(int& s, const double& delta = 1e-6, const double& th = 1e-6) {
+  bool testJacs(int& s, const double delta = 1e-6, const double th = 1e-6) {
     std::shared_ptr<Meas> meas(new Meas());
     meas->SetRandom(s);
     meas_ = meas;
