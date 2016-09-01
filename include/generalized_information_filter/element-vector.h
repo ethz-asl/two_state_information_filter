@@ -92,12 +92,12 @@ class ElementVectorWrapper : public ElementVectorBase {
 // ==================== Implementation ==================== //
 template<typename T>
 T& ElementVectorBase::GetValue(int i) {
-  return dynamic_cast<Element<T>*>(GetElement(i))->get();
+  return dynamic_cast<Element<T>*>(GetElement(i))->GetValue();
 }
 
 template<typename T>
 const T& ElementVectorBase::GetValue(int i) const {
-  return dynamic_cast<const Element<T>*>(GetElement(i))->get();
+  return dynamic_cast<const Element<T>*>(GetElement(i))->GetValue();
 }
 
 template<typename T>

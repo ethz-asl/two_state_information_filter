@@ -50,7 +50,7 @@ void ElementVectorBase::SetRandom(int& s) {
 void ElementVectorBase::BoxPlus(const VecCRefX& vec, ElementVectorBase* out) const {
   for (int i = 0; i < GetNumElement(); i++) {
     GetElement(i)->Boxplus(
-        vec.block(GetStart(i), 0, GetElement(i)->getDim(), 1),
+        vec.block(GetStart(i), 0, GetElement(i)->GetDim(), 1),
         out->GetElement(i));
   }
 }
@@ -60,7 +60,7 @@ void ElementVectorBase::BoxMinus(const ElementVectorBase& ref,
   for (int i = 0; i < GetNumElement(); i++) {
     GetElement(i)->Boxminus(
         *ref.GetElement(i),
-        vec.block(GetStart(i), 0, GetElement(i)->getDim(), 1));
+        vec.block(GetStart(i), 0, GetElement(i)->GetDim(), 1));
   }
 }
 
@@ -136,7 +136,7 @@ void ElementVectorWrapper::EmbedJacobian(MatRef<> out,
                                         int rowOffset) const {
   const int rows = in.rows();
   for (int i = 0; i < GetNumElement(); ++i) {
-    const int cols = GetElement(i)->getDim();
+    const int cols = GetElement(i)->GetDim();
     out.block(rowOffset, const_element_vector_->GetStart(indexMap_.at(i)), rows, cols) =
         in.block(0, GetStart(i), rows, cols);
   }

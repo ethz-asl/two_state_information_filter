@@ -59,7 +59,7 @@ class ElementBase {
   virtual ~ElementBase() {
   }
   virtual ElementBase& operator=(const ElementBase& other) = 0;
-  virtual int getDim() const = 0;
+  virtual int GetDim() const = 0;
   virtual void Print() const = 0;
   virtual void SetIdentity() = 0;
   virtual void SetRandom(int& s) = 0;
@@ -70,12 +70,12 @@ class ElementBase {
   virtual MatX BoxminusJacInp(const ElementBase& ref) const = 0;
   virtual MatX BoxminusJacRef(const ElementBase& ref) const = 0;
   template<typename T>
-  T& get() {
-    return dynamic_cast<Element<T>*>(this)->get();
+  T& GetValue() {
+    return dynamic_cast<Element<T>*>(this)->GetValue();
   }
   template<typename T>
-  const T& get() const {
-    return dynamic_cast<const Element<T>*>(this)->get();
+  const T& GetValue() const {
+    return dynamic_cast<const Element<T>*>(this)->GetValue();
   }
 };
 
@@ -93,47 +93,47 @@ class Element : public ElementBase {
   virtual ~Element() {
   }
   virtual Element<T>& operator=(const Element<T>& other) {
-    get() = other.get();
+    GetValue() = other.GetValue();
     return *this;
   }
   virtual ElementBase& operator=(const ElementBase& other) {
     *this = dynamic_cast<const Element<T>&>(other);
     return *this;
   }
-  inline virtual int getDim() const {
+  inline virtual int GetDim() const {
     return Traits::d_;
   }
   virtual void Print() const {
-    Traits::Print(get());
+    Traits::Print(GetValue());
   }
   virtual void SetIdentity() {
-    Traits::SetIdentity(get());
+    Traits::SetIdentity(GetValue());
   }
   virtual void SetRandom(int& s) {
-    Traits::SetRandom(get(), s);
+    Traits::SetRandom(GetValue(), s);
   }
   virtual void Boxplus(const VecCRefX& vec, ElementBase* out) const {
-    Traits::Boxplus(get(), vec, out->get<T>());
+    Traits::Boxplus(GetValue(), vec, out->GetValue<T>());
   }
   virtual void Boxminus(const ElementBase& ref, VecRefX vec) const {
-    Traits::Boxminus(get(), ref.get<T>(), vec);
+    Traits::Boxminus(GetValue(), ref.GetValue<T>(), vec);
   }
   virtual MatX BoxplusJacInp(const VecCRefX& vec) const {
-    return Traits::BoxplusJacInp(get(), vec);
+    return Traits::BoxplusJacInp(GetValue(), vec);
   }
   virtual MatX BoxplusJacVec(const VecCRefX& vec) const {
-    return Traits::BoxplusJacVec(get(), vec);
+    return Traits::BoxplusJacVec(GetValue(), vec);
   }
   virtual MatX BoxminusJacInp(const ElementBase& ref) const {
-    return Traits::BoxminusJacInp(get(), ref.get<T>());
+    return Traits::BoxminusJacInp(GetValue(), ref.GetValue<T>());
   }
   virtual MatX BoxminusJacRef(const ElementBase& ref) const {
-    return Traits::BoxminusJacRef(get(), ref.get<T>());
+    return Traits::BoxminusJacRef(GetValue(), ref.GetValue<T>());
   }
-  T& get() {
+  T& GetValue() {
     return x_;
   }
-  const T& get() const {
+  const T& GetValue() const {
     return x_;
   }
  protected:
