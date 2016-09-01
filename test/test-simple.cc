@@ -185,7 +185,7 @@ TEST_F(NewStateTest, constructor) {
 
   // Jacobian
   MatX J;
-  t.jacFD(J, &s1a);
+  t.jacFD(J, &s1a, 1e-6);
   std::cout << J << std::endl;
 
   // Transformation
@@ -194,7 +194,7 @@ TEST_F(NewStateTest, constructor) {
   MatX P2(s2.GetDimension(), s2.GetDimension());
   t.transformState(&s2, &s1a);
   t.transformCovMat(P2, &s1a, P1);
-  t.testJac(&s1a);
+  t.testJac(&s1a, 1e-6, 1e-6);
 
   // Velocity Residual
   std::shared_ptr<BinaryRedidualVelocity> velRes(new BinaryRedidualVelocity());
@@ -204,7 +204,7 @@ TEST_F(NewStateTest, constructor) {
   cur.SetIdentity();
   ElementVector noi(velRes->noiDefinition());
   noi.SetIdentity();
-  velRes->testJacs(&pre, &cur, &noi);
+  velRes->testJacs(&pre, &cur, &noi, 1e-6, 1e-6);
 
   // Accelerometer Residual
   std::shared_ptr<BinaryRedidualAccelerometer> accRes(new BinaryRedidualAccelerometer());
@@ -255,7 +255,7 @@ TEST_F(NewStateTest, constructor) {
   preAcc.SetIdentity();
   curAcc.SetIdentity();
   noiAcc.SetIdentity();
-  accPre->testJacs(&preAcc, &curAcc, &noiAcc);
+  accPre->testJacs(&preAcc, &curAcc, &noiAcc, 1e-6, 1e-6);
 
   // Test measurements
   Filter f2;
@@ -284,10 +284,10 @@ TEST_F(NewStateTest, constructor) {
   int s = 0;
   std::shared_ptr<IMUPrediction> imuPre(new IMUPrediction());
   imuPre->getR() = 1e-8 * imuPre->getR();
-  imuPre->testJacs(s);
+  imuPre->testJacs(s, 1e-6, 1e-6);
   std::shared_ptr<PoseUpdate> poseUpd(new PoseUpdate());
   poseUpd->getR() = 1e-8 * poseUpd->getR();
-  poseUpd->testJacs(s);
+  poseUpd->testJacs(s, 1e-6, 1e-6);
 
   Filter imuPoseFilter;
   int imuPreInd = imuPoseFilter.addRes(imuPre);

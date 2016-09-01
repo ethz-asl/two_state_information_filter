@@ -63,16 +63,16 @@ class Model {
 
   template<int j>
   void _jacFD(MatX& J, const std::array<const ElementVectorBase*,N_>& ins,
-              const double delta = 1e-6) const;
+              const double delta) const;
 
   template<int j>
   bool _testJacInput(const std::array<const ElementVectorBase*,N_>& ins,
-                     const double delta = 1e-6,
-                     const double th = 1e-6) const;
+                     const double delta,
+                     const double th) const;
 
   template<int j>
-  bool _testJacInput(int& s, const double delta = 1e-6,
-                     const double th = 1e-6) const;
+  bool _testJacInput(int& s, const double delta,
+                     const double th) const;
 
   template<int j, int n, int m>
   void _setJacBlock(MatX& J, const Mat<OutPack::template _GetStateDimension<n>(),

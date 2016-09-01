@@ -32,7 +32,7 @@ class Transformation<ElementPack<Out...>, ElementPack<In...>> : public Model<
   virtual void jacTransform(MatX& J, const In&... ins) const = 0;
 
   // Wrapping from user interface to base
-  void jacFD(MatX& J, const ElementVectorBase* in, const double delta = 1e-6) {
+  void jacFD(MatX& J, const ElementVectorBase* in, const double delta) {
     const std::array<const ElementVectorBase*, 1> ins = {in};
     this->template _jacFD<0>(J, ins, delta);
   }
@@ -58,8 +58,8 @@ class Transformation<ElementPack<Out...>, ElementPack<In...>> : public Model<
     this->template _setJacBlock<0, n, m>(J, B);
   }
 
-  bool testJac(const ElementVectorBase* in, const double delta = 1e-6,
-               const double th = 1e-6) const {
+  bool testJac(const ElementVectorBase* in, const double delta,
+               const double th) const {
     const std::array<const ElementVectorBase*, 1> ins = {in};
     return this->template _testJacInput<0>(ins, delta, th);
   }
