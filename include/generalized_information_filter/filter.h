@@ -17,8 +17,8 @@ class ResidualStruct {
                      inn_(res->InnDefinition()),
                      innRef_(res->InnDefinition()),
                      noi_(res->NoiDefinition()){
-    stateDefinition->Extend(*res->PreDefinition());
-    stateDefinition->Extend(*res->CurDefinition());
+    stateDefinition->ExtendWithOtherElementVectorDefinition(*res->PreDefinition());
+    stateDefinition->ExtendWithOtherElementVectorDefinition(*res->CurDefinition());
     res_ = res;
     preWrap_.ComputeMap();
     curWrap_.ComputeMap();
@@ -242,10 +242,9 @@ class Filter {
     }
     std::cout << "Innovation:\t" << y.transpose() << std::endl;
 
-    // Compute Kalman Update // TODO: make more efficient
+    // Compute Kalman Update // TODO: make more efficient and numerically stable
     MatX D = cov_.inverse() + JacPre.transpose() * Winv * JacPre;
-    MatX S = JacCur.transpose()
-        * (Winv - Winv * JacPre * D.inverse() * JacPre.transpose() * Winv);
+    MatX S = JacCur.transpose() * (Winv - Winv * JacPre * D.inverse() * JacPre.transpose() * Winv);
     cov_ = (S * JacCur).inverse();
     VecX dx = cov_ * S * y;
 

@@ -4,7 +4,7 @@
 namespace GIF {
 
 ElementVectorDefinition::ElementVectorDefinition() {
-  Dim_ = 0;
+  dim_ = 0;
 }
 
 ElementVectorDefinition::~ElementVectorDefinition() {}
@@ -47,7 +47,7 @@ int ElementVectorDefinition::FindName(const std::string& name) const {
 }
 
 const ElementDescriptionBase& ElementVectorDefinition::GetElementDescription(int outer_index) const {
-  return *descriptions_.at(outer_index).first;
+  return *descriptions_.at(outer_index);
 }
 
 int ElementVectorDefinition::AddElement(const std::string& name,
@@ -59,15 +59,16 @@ int ElementVectorDefinition::AddElement(const std::string& name,
     }
     return outer_index;
   } else {
-    descriptions_.push_back(
-        std::pair<ElementDescriptionBase::CPtr, int>(description.Copy(), Dim_));
-    Dim_ += description.GetDimension();
+    descriptions_.push_back(description.Copy());
+    start_indices_.push_back(dim_);
+    dim_ += description.GetDimension();
     names_map_.insert(std::pair<std::string, int>(name, GetNumElements() - 1));
     return GetNumElements() - 1;
   }
 }
 
-void ElementVectorDefinition::Extend(const ElementVectorDefinition& other) {
+void ElementVectorDefinition::ExtendWithOtherElementVectorDefinition(
+      const ElementVectorDefinition& other) {
   for (auto entry : other.names_map_) {
     AddElement(entry.first,other.GetElementDescription(entry.second));
   }

@@ -27,8 +27,8 @@ struct TH_pack_index;
 template<typename Derived, typename OutPack, typename ... InPacks>
 class Model {
  public:
-  template<int j>
-  using InPack = typename std::tuple_element<j,std::tuple<InPacks...>>::type;
+  template<int InIndex>
+  using InPack = typename std::tuple_element<InIndex,std::tuple<InPacks...>>::type;
   static constexpr int n_ = OutPack::n_;
   static constexpr int m_ = TH_pack_size<InPacks...>::n_;
   static constexpr int N_ = sizeof...(InPacks);
@@ -54,32 +54,32 @@ class Model {
                           const std::array<const ElementVectorBase*,N_>& ins,
                           Ps&... elements) const;
 
-  template<int j, typename... Ps, typename std::enable_if<
+  template<int InIndex, typename... Ps, typename std::enable_if<
       (sizeof...(Ps)<TH_pack_size<InPacks...>::n_)>::type* = nullptr>
   inline void JacWrapper(MatX& J, const std::array<const ElementVectorBase*,N_>& ins,
                    Ps&... elements) const;
 
-  template<int j, typename... Ps, typename std::enable_if<
+  template<int InIndex, typename... Ps, typename std::enable_if<
       (sizeof...(Ps)==TH_pack_size<InPacks...>::n_)>::type* = nullptr>
   inline void JacWrapper(MatX& J, const std::array<const ElementVectorBase*,N_>& ins,
                    Ps&... elements) const;
 
-  template<int j>
+  template<int InIndex>
   void JacFDImpl(MatX& J, const std::array<const ElementVectorBase*,N_>& ins,
               const double delta) const;
 
-  template<int j>
+  template<int InIndex>
   bool JacTestImpl(const std::array<const ElementVectorBase*,N_>& ins,
                      const double delta,
                      const double th) const;
 
-  template<int j>
+  template<int InIndex>
   bool JacTestImpl(int& s, const double delta,
                      const double th) const;
 
-  template<int j, int n, int m>
+  template<int InIndex, int n, int m>
   void SetJacBlockImpl(MatX& J, const Mat<OutPack::template _GetStateDimension<n>(),
-                                       std::tuple_element<j,std::tuple<InPacks...>>::type::
+                                       std::tuple_element<InIndex,std::tuple<InPacks...>>::type::
                                        template _GetStateDimension<m>()>& B) const;
 
  protected:
@@ -143,7 +143,7 @@ inline void Model<Derived,OutPack,InPacks...>::EvalWrapper(
 }
 
 template<typename Derived, typename OutPack, typename ... InPacks>
-template<int j, typename... Ps, typename std::enable_if<
+template<int InIndex, typename... Ps, typename std::enable_if<
     (sizeof...(Ps)<TH_pack_size<InPacks...>::n_)>::type*>
 inline void Model<Derived,OutPack,InPacks...>::JacWrapper(MatX& J,
                  const std::array<const ElementVectorBase*,N_>& ins,
@@ -151,44 +151,44 @@ inline void Model<Derived,OutPack,InPacks...>::JacWrapper(MatX& J,
   static constexpr int outerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::GetOuter();
   static constexpr int innerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::GetInner();
   assert(ins.at(outerIndex)->MatchesDefinition(*inDefinitions_[outerIndex]));
-  assert(J.cols() == inDefinitions_[j]->GetDim());
+  assert(J.cols() == inDefinitions_[InIndex]->GetDim());
   assert(J.rows() == outDefinition_->GetDim());
   typedef typename InPack<outerIndex>::Tuple Tuple;
   typedef typename std::tuple_element<innerIndex,Tuple>::type mtElementType;
-  JacWrapper<j>(J, ins, elements...,
+  JacWrapper<InIndex>(J, ins, elements...,
                 ins.at(outerIndex)->template GetValue<mtElementType>(innerIndex));
 }
 
 template<typename Derived, typename OutPack, typename ... InPacks>
-template<int j, typename... Ps, typename std::enable_if<
+template<int InIndex, typename... Ps, typename std::enable_if<
     (sizeof...(Ps)==TH_pack_size<InPacks...>::n_)>::type*>
 inline void Model<Derived,OutPack,InPacks...>::JacWrapper(MatX& J,
                  const std::array<const ElementVectorBase*,N_>& ins,
                  Ps&... elements) const{
-  static_assert(j<N_,"No such Jacobian!");
-  static_cast<const Derived&>(*this).template Jac<j>(J,elements...);
+  static_assert(InIndex<N_,"No such Jacobian!");
+  static_cast<const Derived&>(*this).template Jac<InIndex>(J,elements...);
 }
 
 template<typename Derived, typename OutPack, typename ... InPacks>
-template<int j>
+template<int InIndex>
 void Model<Derived,OutPack,InPacks...>::JacFDImpl(MatX& J,
             const std::array<const ElementVectorBase*,N_>& ins,
             const double delta) const{
-  ElementVector stateDis(inDefinitions_[j]);
+  ElementVector stateDis(inDefinitions_[InIndex]);
   ElementVector outRef(outDefinition_);
   ElementVector outDis(outDefinition_);
   J.resize(outRef.GetDimension(),stateDis.GetDimension());
   J.setZero();
-  stateDis = *ins[j];
+  stateDis = *ins[InIndex];
   std::array<const ElementVectorBase*,N_> inDis = ins;
-  inDis[j] = &stateDis;
+  inDis[InIndex] = &stateDis;
   EvalWrapper(&outRef,inDis);
   VecX difIn(stateDis.GetDimension());
   VecX difOut(outRef.GetDimension());
   for(int i=0; i<stateDis.GetDimension(); i++){
     difIn.setZero();
     difIn(i) = delta;
-    ins[j]->BoxPlus(difIn,&stateDis);
+    ins[InIndex]->BoxPlus(difIn,&stateDis);
     EvalWrapper(&outDis,inDis);
     outDis.BoxMinus(outRef,difOut);
     J.col(i) = difOut/delta;
@@ -196,28 +196,28 @@ void Model<Derived,OutPack,InPacks...>::JacFDImpl(MatX& J,
 }
 
 template<typename Derived, typename OutPack, typename ... InPacks>
-template<int j>
+template<int InIndex>
 bool Model<Derived,OutPack,InPacks...>::JacTestImpl(
       const std::array<const ElementVectorBase*,N_>& ins,
       const double delta,
       const double th) const {
-  if(OutPack::kDim <= 0 || InPack<j>::kDim <= 0){
+  if(OutPack::kDim <= 0 || InPack<InIndex>::kDim <= 0){
     return true;
   }
-  MatX J((int)OutPack::kDim,(int)InPack<j>::kDim);
-  MatX J_FD((int)OutPack::kDim,(int)InPack<j>::kDim);
-  JacWrapper<j>(J,ins);
-  JacFDImpl<j>(J_FD,ins,delta);
+  MatX J((int)OutPack::kDim,(int)InPack<InIndex>::kDim);
+  MatX J_FD((int)OutPack::kDim,(int)InPack<InIndex>::kDim);
+  JacWrapper<InIndex>(J,ins);
+  JacFDImpl<InIndex>(J_FD,ins,delta);
   typename MatX::Index maxRow, maxCol = 0;
   const double r = (J-J_FD).array().abs().maxCoeff(&maxRow, &maxCol);
   if(r>th){
     std::string outName = outDefinition_->GetName(outDefinition_->GetOuterIndex(maxRow));
-    std::string inName = inDefinitions_[j]->GetName(ins[j]->GetOuter(maxCol));
-    std::cout << "==== Model jacInput (" << j << ") Test failed: " << r
+    std::string inName = inDefinitions_[InIndex]->GetName(ins[InIndex]->GetOuter(maxCol));
+    std::cout << "==== Model jacInput (" << InIndex << ") Test failed: " << r
               << " is larger than " << th << " at row "
               << maxRow << "("<< outName << "." << outDefinition_->GetInnerIndex(maxRow)
               << ") and col " << maxCol << "("<< inName << "."
-              << ins[j]->GetInner(maxCol) << ") ====" << std::endl;
+              << ins[InIndex]->GetInner(maxCol) << ") ====" << std::endl;
     std::cout << "  " << J(maxRow,maxCol) << "  " << J_FD(maxRow,maxCol)
               << std::endl;
     return false;
@@ -228,7 +228,7 @@ bool Model<Derived,OutPack,InPacks...>::JacTestImpl(
 }
 
 template<typename Derived, typename OutPack, typename ... InPacks>
-template<int j>
+template<int InIndex>
 bool Model<Derived,OutPack,InPacks...>::JacTestImpl(int& s,
                                                       const double delta,
                                                       const double th) const{
@@ -239,19 +239,19 @@ bool Model<Derived,OutPack,InPacks...>::JacTestImpl(int& s,
     ins[i]->SetRandom(s);
     insRawPtr[i] = ins[i].get();
   }
-  JacTestImpl<j>(insRawPtr,delta,th);
+  JacTestImpl<InIndex>(insRawPtr,delta,th);
 }
 
 template<typename Derived, typename OutPack, typename ... InPacks>
-template<int j, int n, int m>
+template<int InIndex, int n, int m>
 void Model<Derived,OutPack,InPacks...>::SetJacBlockImpl(MatX& J,
                   const Mat<OutPack::template _GetStateDimension<n>(),
-                  std::tuple_element<j,std::tuple<InPacks...>>::type::
+                  std::tuple_element<InIndex,std::tuple<InPacks...>>::type::
                       template _GetStateDimension<m>()>& B) const {
   J.block<OutPack::template _GetStateDimension<n>(),
-          InPack<j>::template _GetStateDimension<m>()>(
+          InPack<InIndex>::template _GetStateDimension<m>()>(
               OutPack::template _GetStartIndex<n>(),
-              InPack<j>::template _GetStartIndex<m>()) = B;
+              InPack<InIndex>::template _GetStartIndex<m>()) = B;
 }
 
 template<typename Derived, typename OutPack, typename ... InPacks>

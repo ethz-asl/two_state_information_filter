@@ -35,12 +35,13 @@ class ElementVectorDefinition {
   int AddElement(const std::string& name, const ElementDescriptionBase& new_element_definition);
   template<typename T>
   int AddElement(const std::string& name);
-  void Extend(const ElementVectorDefinition& other);
+  void ExtendWithOtherElementVectorDefinition(const ElementVectorDefinition& other);
 
  protected:
-  std::vector<std::pair<ElementDescriptionBase::CPtr, int>> descriptions_;
+  std::vector<ElementDescriptionBase::CPtr> descriptions_;
+  std::vector<int> start_indices_;
   std::unordered_map<std::string, int> names_map_;
-  int Dim_;
+  int dim_;
 };
 
 /*! \brief Template Helper class for computing the dimension of an ElementPack
@@ -81,7 +82,7 @@ class ElementPack : public ElementVectorDefinition{
 
 // ==================== Implementation ==================== //
 int ElementVectorDefinition::GetDim() const {
-  return Dim_;
+  return dim_;
 }
 
 int ElementVectorDefinition::GetNumElements() const {
@@ -89,13 +90,13 @@ int ElementVectorDefinition::GetNumElements() const {
 }
 
 int ElementVectorDefinition::GetStartIndex(int outer_index) const {
-  return descriptions_.at(outer_index).second;
+  return start_indices_.at(outer_index);
 }
 
 int ElementVectorDefinition::GetOuterIndex(int i) const {
   assert(i >= 0 && i < GetDim());
   int outer_index = GetNumElements()-1;
-  while (descriptions_.at(outer_index).second > i) {
+  while (GetStartIndex(outer_index) > i) {
     --outer_index;
   }
   return outer_index;
