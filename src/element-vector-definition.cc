@@ -4,13 +4,13 @@
 namespace GIF {
 
 ElementVectorDefinition::ElementVectorDefinition() {
-  d_ = 0;
+  Dim_ = 0;
 }
 
 ElementVectorDefinition::~ElementVectorDefinition() {}
 
 bool ElementVectorDefinition::MatchesDefinition(const ElementVectorDefinition& other) const {
-  if (GetStateDimension() != other.GetStateDimension()) {
+  if (GetDim() != other.GetDim()) {
     return false;
   }
   for (auto entry : names_map_) {
@@ -60,8 +60,8 @@ int ElementVectorDefinition::AddElement(const std::string& name,
     return outer_index;
   } else {
     descriptions_.push_back(
-        std::pair<ElementDescriptionBase::CPtr, int>(description.Copy(), d_));
-    d_ += description.GetDimension();
+        std::pair<ElementDescriptionBase::CPtr, int>(description.Copy(), Dim_));
+    Dim_ += description.GetDimension();
     names_map_.insert(std::pair<std::string, int>(name, GetNumElements() - 1));
     return GetNumElements() - 1;
   }

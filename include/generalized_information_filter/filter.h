@@ -24,10 +24,10 @@ class ResidualStruct {
     curWrap_.ComputeMap();
     innRef_.SetIdentity();
     noi_.SetIdentity();
-    innDim_ = res->InnDefinition()->GetStateDimension();
-    jacPre_.resize(innDim_, res->PreDefinition()->GetStateDimension());
-    jacCur_.resize(innDim_, res->CurDefinition()->GetStateDimension());
-    jacNoi_.resize(innDim_, res->NoiDefinition()->GetStateDimension());
+    innDim_ = res->InnDefinition()->GetDim();
+    jacPre_.resize(innDim_, res->PreDefinition()->GetDim());
+    jacCur_.resize(innDim_, res->CurDefinition()->GetDim());
+    jacNoi_.resize(innDim_, res->NoiDefinition()->GetDim());
   }
   ~ResidualStruct() {
   }
@@ -60,7 +60,7 @@ class Filter {
     state_.Construct();
     state_.SetIdentity();
     curLinState_.Construct();
-    cov_.resize(stateDefinition_->GetStateDimension(), stateDefinition_->GetStateDimension());
+    cov_.resize(stateDefinition_->GetDim(), stateDefinition_->GetDim());
     cov_.setIdentity();
   }
 
@@ -188,12 +188,12 @@ class Filter {
     for (int i = 0; i < residuals_.size(); i++) {
       hasMeas.at(i) = residuals_.at(i).mt_.GetMeasurement(t, meas);
       if (hasMeas.at(i)) {
-        innDim += residuals_.at(i).res_->InnDefinition()->GetStateDimension();
+        innDim += residuals_.at(i).res_->InnDefinition()->GetDim();
       }
     }
     VecX y(innDim);
-    MatX JacPre(innDim, stateDefinition_->GetStateDimension());
-    MatX JacCur(innDim, stateDefinition_->GetStateDimension());
+    MatX JacPre(innDim, stateDefinition_->GetDim());
+    MatX JacCur(innDim, stateDefinition_->GetDim());
     JacPre.setZero();
     JacCur.setZero();
     MatX Winv(innDim, innDim);

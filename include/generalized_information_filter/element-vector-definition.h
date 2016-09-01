@@ -24,7 +24,7 @@ class ElementVectorDefinition {
   virtual ~ElementVectorDefinition();
   bool MatchesDefinition(const ElementVectorDefinition& other) const;
   bool MatchesDefinition(const ElementVectorBase& other) const;
-  inline int GetStateDimension() const;
+  inline int GetDim() const;
   inline int GetNumElements() const;
   inline int GetStartIndex(int outer_index) const;
   inline int GetOuterIndex(int i) const;
@@ -40,7 +40,7 @@ class ElementVectorDefinition {
  protected:
   std::vector<std::pair<ElementDescriptionBase::CPtr, int>> descriptions_;
   std::unordered_map<std::string, int> names_map_;
-  int d_;
+  int Dim_;
 };
 
 /*! \brief Template Helper class for computing the dimension of an ElementPack
@@ -56,7 +56,7 @@ template<typename ... Ts>
 class ElementPack : public ElementVectorDefinition{
  public:
   static constexpr int n_ = sizeof...(Ts);
-  static constexpr int d_ = TH_pack_dim<Ts...>::d_;
+  static constexpr int kDim = TH_pack_dim<Ts...>::kDim;
   typedef std::tuple<Ts...> Tuple;
 
   ElementPack(const std::array<std::string,n_>& names);
@@ -80,8 +80,8 @@ class ElementPack : public ElementVectorDefinition{
 };
 
 // ==================== Implementation ==================== //
-int ElementVectorDefinition::GetStateDimension() const {
-  return d_;
+int ElementVectorDefinition::GetDim() const {
+  return Dim_;
 }
 
 int ElementVectorDefinition::GetNumElements() const {
@@ -93,7 +93,7 @@ int ElementVectorDefinition::GetStartIndex(int outer_index) const {
 }
 
 int ElementVectorDefinition::GetOuterIndex(int i) const {
-  assert(i >= 0 && i < GetStateDimension());
+  assert(i >= 0 && i < GetDim());
   int outer_index = GetNumElements()-1;
   while (descriptions_.at(outer_index).second > i) {
     --outer_index;
@@ -112,11 +112,11 @@ int ElementVectorDefinition::AddElement(const std::string& name) {
 
 template<typename T, typename ... Ts>
 struct TH_pack_dim<T, Ts...> {
-  static constexpr int d_ = TH_pack_dim<Ts...>::d_ + ElementTraits<T>::d_;
+  static constexpr int kDim = TH_pack_dim<Ts...>::kDim + ElementTraits<T>::kDim;
 };
 template<>
 struct TH_pack_dim<> {
-  static constexpr int d_ = 0;
+  static constexpr int kDim = 0;
 };
 
 template<typename ... Ts>
@@ -128,7 +128,7 @@ template<typename ... Ts>
 template<int i>
 constexpr int ElementPack<Ts...>::_GetStateDimension() {
   typedef typename std::tuple_element<i,Tuple>::type mtElementType;
-  return ElementTraits<mtElementType>::d_;
+  return ElementTraits<mtElementType>::kDim;
 }
 
 template<typename ... Ts>

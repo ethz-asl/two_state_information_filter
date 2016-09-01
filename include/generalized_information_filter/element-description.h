@@ -47,7 +47,7 @@ class ElementDescription : public ElementDescriptionBase {
     return dynamic_cast<const Element<T>*>(inPtr) != nullptr;
   }
   inline int GetDimension() const {
-    return ElementTraits<T>::d_;
+    return ElementTraits<T>::kDim;
   }
   ElementDescriptionBase::Ptr Copy() const{
     return std::make_shared<ElementDescription<T>>();

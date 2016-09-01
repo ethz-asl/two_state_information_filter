@@ -118,7 +118,7 @@ const T& ElementVectorBase::GetValue(const std::string& name) const {
 
 int ElementVectorBase::GetDimension() const {
   assert(MatchesDefinition(*def_));
-  return def_->GetStateDimension();
+  return def_->GetDim();
 }
 
 int ElementVectorBase::GetStart(int i) const {

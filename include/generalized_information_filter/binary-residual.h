@@ -87,7 +87,7 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
         : mtBase(namesInn, std::forward_as_tuple(namesPre, namesCur, namesNoi)),
           BinaryResidualBase(isUnary, isSplitable, isMergeable),
           meas_(new Meas()) {
-    R_.resize(NoiDefinition()->GetStateDimension(), NoiDefinition()->GetStateDimension());
+    R_.resize(NoiDefinition()->GetDim(), NoiDefinition()->GetDim());
     R_.setIdentity();
   }
   virtual ~BinaryResidual() {

@@ -151,8 +151,8 @@ inline void Model<Derived,OutPack,InPacks...>::JacWrapper(MatX& J,
   static constexpr int outerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::GetOuter();
   static constexpr int innerIndex = TH_pack_index<sizeof...(Ps),InPacks...>::GetInner();
   assert(ins.at(outerIndex)->MatchesDefinition(*inDefinitions_[outerIndex]));
-  assert(J.cols() == inDefinitions_[j]->GetStateDimension());
-  assert(J.rows() == outDefinition_->GetStateDimension());
+  assert(J.cols() == inDefinitions_[j]->GetDim());
+  assert(J.rows() == outDefinition_->GetDim());
   typedef typename InPack<outerIndex>::Tuple Tuple;
   typedef typename std::tuple_element<innerIndex,Tuple>::type mtElementType;
   JacWrapper<j>(J, ins, elements...,
@@ -201,11 +201,11 @@ bool Model<Derived,OutPack,InPacks...>::JacTestImpl(
       const std::array<const ElementVectorBase*,N_>& ins,
       const double delta,
       const double th) const {
-  if(OutPack::d_ <= 0 || InPack<j>::d_ <= 0){
+  if(OutPack::kDim <= 0 || InPack<j>::kDim <= 0){
     return true;
   }
-  MatX J((int)OutPack::d_,(int)InPack<j>::d_);
-  MatX J_FD((int)OutPack::d_,(int)InPack<j>::d_);
+  MatX J((int)OutPack::kDim,(int)InPack<j>::kDim);
+  MatX J_FD((int)OutPack::kDim,(int)InPack<j>::kDim);
   JacWrapper<j>(J,ins);
   JacFDImpl<j>(J_FD,ins,delta);
   typename MatX::Index maxRow, maxCol = 0;

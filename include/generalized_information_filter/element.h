@@ -16,8 +16,8 @@ class ElementDescription;
  */
 template<typename T>
 struct ElementTraits {
-  static constexpr bool is_vectorspace_ = true;
-  static constexpr int d_ = 0;
+  static constexpr bool kIsVectorSpace = true;
+  static constexpr int kDim = 0;
   static void Print(const T& x) {
   }
   static const T Identity() {
@@ -28,22 +28,22 @@ struct ElementTraits {
   }
   static void SetRandom(T& x, int& s) {
   }
-  static void Boxplus(const T& ref, const VecCRef<d_>& vec, T& out) {
+  static void Boxplus(const T& ref, const VecCRef<kDim>& vec, T& out) {
     out = ref;   // Must be computable in-place
   }
-  static void Boxminus(const T& in, const T& ref, VecRef<d_> vec) {
+  static void Boxminus(const T& in, const T& ref, VecRef<kDim> vec) {
   }
-  static Mat<d_, d_> BoxplusJacInp(const T& in, const VecCRef<d_>& vec) {
-    return Mat<d_, d_>::Identity();
+  static Mat<kDim, kDim> BoxplusJacInp(const T& in, const VecCRef<kDim>& vec) {
+    return Mat<kDim, kDim>::Identity();
   }
-  static Mat<d_, d_> BoxplusJacVec(const T& in, const VecCRef<d_>& vec) {
-    return Mat<d_, d_>::Identity();
+  static Mat<kDim, kDim> BoxplusJacVec(const T& in, const VecCRef<kDim>& vec) {
+    return Mat<kDim, kDim>::Identity();
   }
-  static Mat<d_, d_> BoxminusJacInp(const T& in, const T& ref) {
-    return Mat<d_, d_>::Identity();
+  static Mat<kDim, kDim> BoxminusJacInp(const T& in, const T& ref) {
+    return Mat<kDim, kDim>::Identity();
   }
-  static Mat<d_, d_> BoxminusJacRef(const T& in, const T& ref) {
-    return Mat<d_, d_>::Identity();
+  static Mat<kDim, kDim> BoxminusJacRef(const T& in, const T& ref) {
+    return Mat<kDim, kDim>::Identity();
   }
 };
 
@@ -93,6 +93,7 @@ class Element : public ElementBase {
   typedef ElementTraits<T> Traits;
   Element(const ElementDescription<T>* description)
       : description_(description) {
+    assert(description != nullptr);
   }
   virtual ~Element() {
   }
@@ -107,7 +108,7 @@ class Element : public ElementBase {
     return *this;
   }
   inline virtual int GetDim() const {
-    return Traits::d_;
+    return Traits::kDim;
   }
   virtual void Print() const {
     Traits::Print(GetValue());
@@ -154,8 +155,8 @@ class Element : public ElementBase {
 template<>
 class ElementTraits<double> {
  public:
-  static constexpr bool is_vectorspace_ = true;
-  static constexpr int d_ = 1;
+  static constexpr bool kIsVectorSpace = true;
+  static constexpr int kDim = 1;
   static void Print(const double& x) {
     std::cout << x << std::endl;
   }
@@ -166,27 +167,27 @@ class ElementTraits<double> {
     x = 0;
   }
   static void SetRandom(double& x, int& s) {
-    std::default_random_engine generator(s++);
-    std::normal_distribution<double> distribution(0.0, 1.0);
+    static std::default_random_engine generator(s++);
+    static std::normal_distribution<double> distribution(0.0, 1.0);
     x = distribution(generator);
   }
-  static void Boxplus(const double& in, const VecCRef<d_>& vec, double& out) {
+  static void Boxplus(const double& in, const VecCRef<kDim>& vec, double& out) {
     out = in + vec(0);
   }
-  static void Boxminus(const double& in, const double& ref, VecRef<d_> vec) {
+  static void Boxminus(const double& in, const double& ref, VecRef<kDim> vec) {
     vec(0) = in - ref;
   }
-  static Mat<d_> BoxplusJacInp(const double& in, const VecCRef<d_>& vec) {
-    return Mat<d_>::Identity();
+  static Mat<kDim> BoxplusJacInp(const double& in, const VecCRef<kDim>& vec) {
+    return Mat<kDim>::Identity();
   }
-  static Mat<d_> BoxplusJacVec(const double& in, const VecCRef<d_>& vec) {
-    return Mat<d_>::Identity();
+  static Mat<kDim> BoxplusJacVec(const double& in, const VecCRef<kDim>& vec) {
+    return Mat<kDim>::Identity();
   }
-  static Mat<d_> BoxminusJacInp(const double& in, const double& ref) {
-    return Mat<d_>::Identity();
+  static Mat<kDim> BoxminusJacInp(const double& in, const double& ref) {
+    return Mat<kDim>::Identity();
   }
-  static Mat<d_> BoxminusJacRef(const double& in, const double& ref) {
-    return -Mat<d_>::Identity();
+  static Mat<kDim> BoxminusJacRef(const double& in, const double& ref) {
+    return -Mat<kDim>::Identity();
   }
 };
 
@@ -196,8 +197,8 @@ class ElementTraits<double> {
 template<int N>
 class ElementTraits<Vec<N>> {
  public:
-  static constexpr bool is_vectorspace_ = true;
-  static constexpr int d_ = N;
+  static constexpr bool kIsVectorSpace = true;
+  static constexpr int kDim = N;
   static void Print(const Vec<N>& x) {
     std::cout << x.transpose() << std::endl;
   }
@@ -208,29 +209,29 @@ class ElementTraits<Vec<N>> {
     x.setZero();
   }
   static void SetRandom(Vec<N>& x, int& s) {
-    std::default_random_engine generator(s++);
-    std::normal_distribution<double> distribution(0.0, 1.0);
+    static std::default_random_engine generator(s++);
+    static std::normal_distribution<double> distribution(0.0, 1.0);
     for (unsigned int i = 0; i < N; i++) {
       x(i) = distribution(generator);
     }
   }
-  static void Boxplus(const Vec<N>& in, const VecCRef<d_>& vec, Vec<N>& out) {
+  static void Boxplus(const Vec<N>& in, const VecCRef<kDim>& vec, Vec<N>& out) {
     out = in + vec;
   }
-  static void Boxminus(const Vec<N>& in, const Vec<N>& ref, VecRef<d_> vec) {
+  static void Boxminus(const Vec<N>& in, const Vec<N>& ref, VecRef<kDim> vec) {
     vec = in - ref;
   }
-  static Mat<d_> BoxplusJacInp(const Vec<N>& in, const VecCRef<d_>& vec) {
-    return Mat<d_>::Identity();
+  static Mat<kDim> BoxplusJacInp(const Vec<N>& in, const VecCRef<kDim>& vec) {
+    return Mat<kDim>::Identity();
   }
-  static Mat<d_> BoxplusJacVec(const Vec<N>& in, const VecCRef<d_>& vec) {
-    return Mat<d_>::Identity();
+  static Mat<kDim> BoxplusJacVec(const Vec<N>& in, const VecCRef<kDim>& vec) {
+    return Mat<kDim>::Identity();
   }
-  static Mat<d_> BoxminusJacInp(const Vec<N>& in, const Vec<N>& ref) {
-    return Mat<d_>::Identity();
+  static Mat<kDim> BoxminusJacInp(const Vec<N>& in, const Vec<N>& ref) {
+    return Mat<kDim>::Identity();
   }
-  static Mat<d_> BoxminusJacRef(const Vec<N>& in, const Vec<N>& ref) {
-    return -Mat<d_>::Identity();
+  static Mat<kDim> BoxminusJacRef(const Vec<N>& in, const Vec<N>& ref) {
+    return -Mat<kDim>::Identity();
   }
 };
 
@@ -242,9 +243,9 @@ class ElementTraits<std::array<T, N>> {
  public:
   typedef ElementTraits<T> Traits;
   using array = std::array<T, N>;
-  static constexpr bool is_vectorspace_ = Traits::is_vectorspace_;
-  static constexpr int ed_ = Traits::d_;
-  static constexpr int d_ = N * ed_;
+  static constexpr bool kIsVectorSpace = Traits::kIsVectorSpace;
+  static constexpr int kElementDim = Traits::kDim;
+  static constexpr int kDim = N * kElementDim;
   static void Print(const array& x) {
     for (const T& i : x) {
       Traits::Print(i);
@@ -265,48 +266,48 @@ class ElementTraits<std::array<T, N>> {
       Traits::SetRandom(i, s);
     }
   }
-  static void Boxplus(const array& in, const VecCRef<d_>& vec, array& out) {
+  static void Boxplus(const array& in, const VecCRef<kDim>& vec, array& out) {
     for (int i = 0; i < N; i++) {
-      Traits::Boxplus(in[i], vec.template block<ed_, 1>(i * ed_, 0), out[i]);
+      Traits::Boxplus(in[i], vec.template block<kElementDim, 1>(i * kElementDim, 0), out[i]);
     }
   }
-  static void Boxminus(const array& in, const array& ref, VecRef<d_> vec) {
+  static void Boxminus(const array& in, const array& ref, VecRef<kDim> vec) {
     for (int i = 0; i < N; i++) {
-      Traits::Boxminus(in[i], ref[i], vec.template block<ed_, 1>(i * ed_, 0));
+      Traits::Boxminus(in[i], ref[i], vec.template block<kElementDim, 1>(i * kElementDim, 0));
     }
   }
-  static Mat<d_> BoxplusJacInp(const array& in, const VecCRef<d_>& vec) {
-    Mat<d_> J;
+  static Mat<kDim> BoxplusJacInp(const array& in, const VecCRef<kDim>& vec) {
+    Mat<kDim> J;
     J.setZero();
     for (int i = 0; i < N; i++) {
-      J.template block<ed_, ed_>(i * ed_, i * ed_) =
-          Traits::BoxplusJacInp(in[i], vec.template block<ed_, 1>(i * ed_, 0));
+      J.template block<kElementDim, kElementDim>(i * kElementDim, i * kElementDim) =
+          Traits::BoxplusJacInp(in[i], vec.template block<kElementDim, 1>(i * kElementDim, 0));
     }
     return J;
   }
-  static Mat<d_> BoxplusJacVec(const array& in, const VecCRef<d_>& vec) {
-    Mat<d_> J;
+  static Mat<kDim> BoxplusJacVec(const array& in, const VecCRef<kDim>& vec) {
+    Mat<kDim> J;
     J.setZero();
     for (int i = 0; i < N; i++) {
-      J.template block<ed_, ed_>(i * ed_, i * ed_) =
-          Traits::BoxplusJacVec(in[i], vec.template block<ed_, 1>(i * ed_, 0));
+      J.template block<kElementDim, kElementDim>(i * kElementDim, i * kElementDim) =
+          Traits::BoxplusJacVec(in[i], vec.template block<kElementDim, 1>(i * kElementDim, 0));
     }
     return J;
   }
-  static Mat<d_> BoxminusJacInp(const array& in, const array& ref) {
-    Mat<d_> J;
+  static Mat<kDim> BoxminusJacInp(const array& in, const array& ref) {
+    Mat<kDim> J;
     J.setZero();
     for (int i = 0; i < N; i++) {
-      J.template block<ed_, ed_>(i * ed_, i * ed_) =
+      J.template block<kElementDim, kElementDim>(i * kElementDim, i * kElementDim) =
           Traits::BoxminusJacInp(in[i], ref[i]);
     }
     return J;
   }
-  static Mat<d_> BoxminusJacRef(const array& in, const array& ref) {
-    Mat<d_> J;
+  static Mat<kDim> BoxminusJacRef(const array& in, const array& ref) {
+    Mat<kDim> J;
     J.setZero();
     for (int i = 0; i < N; i++) {
-      J.template block<ed_, ed_>(i * ed_, i * ed_) =
+      J.template block<kElementDim, kElementDim>(i * kElementDim, i * kElementDim) =
           Traits::BoxminusJacRef(in[i], ref[i]);
     }
     return J;
@@ -320,8 +321,8 @@ class ElementTraits<std::array<T, N>> {
 template<>
 class ElementTraits<Quat> {
  public:
-  static constexpr bool is_vectorspace_ = false;
-  static constexpr int d_ = 3;
+  static constexpr bool kIsVectorSpace = false;
+  static constexpr int kDim = 3;
   static void Print(const Quat& x) {
     std::cout << x << std::endl;
   }
@@ -332,31 +333,31 @@ class ElementTraits<Quat> {
     x.setIdentity();
   }
   static void SetRandom(Quat& x, int& s) {
-    std::default_random_engine generator(s++);
-    std::normal_distribution<double> distribution(0.0, 1.0);
+    static std::default_random_engine generator(s++);
+    static std::normal_distribution<double> distribution(0.0, 1.0);
     x.toImplementation().w() = distribution(generator);
     x.toImplementation().x() = distribution(generator);
     x.toImplementation().y() = distribution(generator);
     x.toImplementation().z() = distribution(generator);
     x.fix();
   }
-  static void Boxplus(const Quat& in, const VecCRef<d_>& vec, Quat& out) {
+  static void Boxplus(const Quat& in, const VecCRef<kDim>& vec, Quat& out) {
     out = in.boxPlus(vec);
   }
-  static void Boxminus(const Quat& in, const Quat& ref, VecRef<d_> vec) {
+  static void Boxminus(const Quat& in, const Quat& ref, VecRef<kDim> vec) {
     vec = in.boxMinus(ref);
   }
-  static Mat<d_> BoxplusJacInp(const Quat& in, const VecCRef<d_>& vec) {
+  static Mat<kDim> BoxplusJacInp(const Quat& in, const VecCRef<kDim>& vec) {
     RotMat m = m.exponentialMap(vec);
     return m.matrix();
   }
-  static Mat<d_> BoxplusJacVec(const Quat& in, const VecCRef<d_>& vec) {
+  static Mat<kDim> BoxplusJacVec(const Quat& in, const VecCRef<kDim>& vec) {
     return GammaMat(vec);
   }
-  static Mat<d_> BoxminusJacInp(const Quat& in, const Quat& ref) {
+  static Mat<kDim> BoxminusJacInp(const Quat& in, const Quat& ref) {
     return GammaMat(in.boxMinus(ref)).inverse();
   }
-  static Mat<d_> BoxminusJacRef(const Quat& in, const Quat& ref) {
+  static Mat<kDim> BoxminusJacRef(const Quat& in, const Quat& ref) {
     return -GammaMat(in.boxMinus(ref)).inverse()* RotMat(in * ref.inverted()).matrix();
   }
 };

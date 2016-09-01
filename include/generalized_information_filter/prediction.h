@@ -77,7 +77,7 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
     // inn = I+(pred-cur)
     // TODO: make more efficient (could be done directly on Boxminus, but then
     // jacobian becomes more annoying)
-    Eigen::Matrix<double,Trait::d_,1> vec;
+    Eigen::Matrix<double,Trait::kDim,1> vec;
     Trait::Boxminus(prediction->template GetValue<mtElementType>(i),
                     std::get<i>(std::forward_as_tuple(cur...)),
                     vec);
@@ -96,14 +96,14 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
     assert(prediction->MatchesDefinition(*this->CurDefinition()));
     typedef typename std::tuple_element<i,typename ElementPack<Sta...>::Tuple>::type mtElementType;
     typedef ElementTraits<mtElementType> Trait;
-    Eigen::Matrix<double,Trait::d_,1> vec;
+    Eigen::Matrix<double,Trait::kDim,1> vec;
     Trait::Boxminus(prediction->template GetValue<mtElementType>(i),
                     std::get<i>(std::forward_as_tuple(cur...)),
                     vec);
-    J.template block<Trait::d_, Trait::d_>(j,j) = Trait::BoxplusJacVec(Trait::Identity(),vec) *
+    J.template block<Trait::kDim, Trait::kDim>(j,j) = Trait::BoxplusJacVec(Trait::Identity(),vec) *
       Trait::BoxminusJacRef(prediction->template GetValue<mtElementType>(i),
                             std::get<i>(std::forward_as_tuple(cur...)));
-    ComputeCurJacobian<i+1,j+Trait::d_>(J,prediction,cur...);
+    ComputeCurJacobian<i+1,j+Trait::kDim>(J,prediction,cur...);
   }
   template<int i = 0, int j = 0, typename std::enable_if<(i>=sizeof...(Sta))>::type* = nullptr>
   void ComputeCurJacobian(MatX& J, ElementVectorBase* prediction, const Sta&... cur) const{}

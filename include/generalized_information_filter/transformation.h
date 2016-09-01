@@ -20,7 +20,7 @@ class Transformation<ElementPack<Out...>, ElementPack<In...>> : public Model<
   Transformation(const std::array<std::string, mtBase::n_>& namesOut,
                  const std::array<std::string, mtBase::m_>& namesIn)
       : mtBase(namesOut, std::forward_as_tuple(namesIn)),
-        J_((int) ElementPack<Out...>::d_, (int) ElementPack<In...>::d_) {
+        J_((int) ElementPack<Out...>::kDim, (int) ElementPack<In...>::kDim) {
   }
 
   virtual ~Transformation() {
