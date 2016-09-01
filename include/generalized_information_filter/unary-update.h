@@ -10,17 +10,17 @@ template<typename PackInn, typename PackSta, typename PackNoi, typename Meas>
 class UnaryUpdate;
 
 template<typename ... Inn, typename ... Sta, typename ... Noi, typename Meas>
-class UnaryUpdate<ElementVectorPack<Inn...>, ElementVectorPack<Sta...>, ElementVectorPack<Noi...>,
-    Meas> : public BinaryResidual<ElementVectorPack<Inn...>, ElementVectorPack<>,
-    ElementVectorPack<Sta...>, ElementVectorPack<Noi...>, Meas> {
+class UnaryUpdate<ElementPack<Inn...>, ElementPack<Sta...>, ElementPack<Noi...>,
+    Meas> : public BinaryResidual<ElementPack<Inn...>, ElementPack<>,
+    ElementPack<Sta...>, ElementPack<Noi...>, Meas> {
  public:
-  typedef UnaryUpdate<ElementVectorPack<Inn...>, ElementVectorPack<Sta...>,
-      ElementVectorPack<Noi...>, Meas> mtUnaryUpdate;
-  typedef BinaryResidual<ElementVectorPack<Inn...>, ElementVectorPack<>,
-      ElementVectorPack<Sta...>, ElementVectorPack<Noi...>, Meas> mtBinaryRedidual;
-  UnaryUpdate(const std::array<std::string, ElementVectorPack<Inn...>::n_>& namesInn,
-              const std::array<std::string, ElementVectorPack<Sta...>::n_>& namesSta,
-              const std::array<std::string, ElementVectorPack<Noi...>::n_>& namesNoi)
+  typedef UnaryUpdate<ElementPack<Inn...>, ElementPack<Sta...>,
+      ElementPack<Noi...>, Meas> mtUnaryUpdate;
+  typedef BinaryResidual<ElementPack<Inn...>, ElementPack<>,
+      ElementPack<Sta...>, ElementPack<Noi...>, Meas> mtBinaryRedidual;
+  UnaryUpdate(const std::array<std::string, ElementPack<Inn...>::n_>& namesInn,
+              const std::array<std::string, ElementPack<Sta...>::n_>& namesSta,
+              const std::array<std::string, ElementPack<Noi...>::n_>& namesNoi)
       : mtBinaryRedidual(namesInn, std::array<std::string, 0>(), namesSta,
                          namesNoi, true, false, false) {
   }

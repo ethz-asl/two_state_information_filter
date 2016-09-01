@@ -6,8 +6,17 @@
 namespace GIF {
 
 template<typename T>
-class ElementTraits {  // Default implementation for zero dimension elements (may hold data which is not actively estimated/optimized)
- public:
+class Element;
+template<typename T>
+class ElementDescription;
+
+/*! \brief Element traits.
+ *         Default implementation for zero dimension elements,
+ *         may hold data which is not actively estimated/optimized.
+ */
+template<typename T>
+struct ElementTraits {
+  static constexpr bool is_vectorspace_ = true;
   static constexpr int d_ = 0;
   static void print(const T& x) {
   }
@@ -19,32 +28,28 @@ class ElementTraits {  // Default implementation for zero dimension elements (ma
   }
   static void setRandom(T& x, int& s) {
   }
-  static void boxplus(const T& in,
-                      const Eigen::Ref<const Eigen::Matrix<double, d_, 1>>& vec,
-                      T& out) {
-    out = in;
+  static void boxplus(const T& ref, const VecRC<d_>& vec, T& out) {
+    out = ref;   // Must be computable in-place
   }
-  static void boxminus(const T& in, const T& ref,
-                       Eigen::Ref<Eigen::Matrix<double, d_, 1>> vec) {
-  }  // Must be computable in-place
-  static Eigen::Matrix<double, d_, d_> boxplusJacInp(
-      const T& in, const Eigen::Ref<const Eigen::Matrix<double, d_, 1>>& vec) {
-    return Eigen::Matrix<double, d_, d_>::Identity();
+  static void boxminus(const T& in, const T& ref, VecR<d_> vec) {
   }
-  static Eigen::Matrix<double, d_, d_> boxplusJacVec(
-      const T& in, const Eigen::Ref<const Eigen::Matrix<double, d_, 1>>& vec) {
-    return Eigen::Matrix<double, d_, d_>::Identity();
+  static Mat<d_, d_> boxplusJacInp(const T& in, const VecRC<d_>& vec) {
+    return Mat<d_, d_>::Identity();
   }
-  static Eigen::Matrix<double, d_, d_> boxminusJacInp(const T& in,
-                                                      const T& ref) {
-    return Eigen::Matrix<double, d_, d_>::Identity();
+  static Mat<d_, d_> boxplusJacVec(const T& in, const VecRC<d_>& vec) {
+    return Mat<d_, d_>::Identity();
   }
-  static Eigen::Matrix<double, d_, d_> boxminusJacRef(const T& in,
-                                                      const T& ref) {
-    return Eigen::Matrix<double, d_, d_>::Identity();
+  static Mat<d_, d_> boxminusJacInp(const T& in, const T& ref) {
+    return Mat<d_, d_>::Identity();
+  }
+  static Mat<d_, d_> boxminusJacRef(const T& in, const T& ref) {
+    return Mat<d_, d_>::Identity();
   }
 };
 
+/*! \brief Element Base.
+ *         Will be used to store a vector of elements in ElementVector
+ */
 class ElementBase {
  public:
   ElementBase() {
@@ -56,30 +61,36 @@ class ElementBase {
   virtual void print() const = 0;
   virtual void setIdentity() = 0;
   virtual void setRandom(int& s) = 0;
-  virtual void boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec,
-                       const std::shared_ptr<ElementBase>& out) const = 0;
-  virtual void boxminus(const std::shared_ptr<const ElementBase>& ref,
-                        Eigen::Ref<Eigen::VectorXd> vec) const = 0;
-  virtual MXD boxplusJacInp(
-      const Eigen::Ref<const Eigen::VectorXd>& vec) const = 0;
-  virtual MXD boxplusJacVec(
-      const Eigen::Ref<const Eigen::VectorXd>& vec) const = 0;
-  virtual MXD boxminusJacInp(const std::shared_ptr<ElementBase>& ref) const = 0;
-  virtual MXD boxminusJacRef(const std::shared_ptr<ElementBase>& ref) const = 0;
+  virtual void boxplus(const VecRC<>& vec,const SP<ElementBase>& out) const = 0;
+  virtual void boxminus(const SP<const ElementBase>& ref, VecR<> vec) const = 0;
+  virtual Mat<> boxplusJacInp(const VecRC<>& vec) const = 0;
+  virtual Mat<> boxplusJacVec(const VecRC<>& vec) const = 0;
+  virtual Mat<> boxminusJacInp(const SP<ElementBase>& ref) const = 0;
+  virtual Mat<> boxminusJacRef(const SP<ElementBase>& ref) const = 0;
+  template<typename T>
+  T& get() {
+    dynamic_cast<Element<T>*>(this)->get();
+  }
+  template<typename T>
+  const T& get() const {
+    dynamic_cast<const Element<T>*>(this)->get();
+  }
 };
 
-template<typename T>
-class ElementDescription;
-
+/*! \brief Templated form of Element.
+ *         Forwards the virtual methods of the base class to the corresponding
+ *         trait implementation.
+ */
 template<typename T>
 class Element : public ElementBase {
  public:
-  Element(const ElementDescription<T>* def)
-      : def_(def) {
+  typedef ElementTraits<T> Traits;
+  Element(const ElementDescription<T>* description)
+      : description_(description) {
   }
   virtual ~Element() {
   }
-  Element<T>& operator=(const Element<T>& other) {
+  virtual Element<T>& operator=(const Element<T>& other) {
     get() = other.get();
     return *this;
   }
@@ -87,41 +98,35 @@ class Element : public ElementBase {
     *this = dynamic_cast<const Element<T>&>(other);
     return *this;
   }
-  inline int getDim() const {
-    return def_->getDim();
+  inline virtual int getDim() const {
+    return Traits::d_;
   }
-  void print() const {
-    ElementTraits<T>::print(get());
+  virtual void print() const {
+    Traits::print(get());
   }
-  void setIdentity() {
-    ElementTraits<T>::setIdentity(get());
+  virtual void setIdentity() {
+    Traits::setIdentity(get());
   }
-  void setRandom(int& s) {
-    ElementTraits<T>::setRandom(get(), s);
+  virtual void setRandom(int& s) {
+    Traits::setRandom(get(), s);
   }
-  void boxplus(const Eigen::Ref<const Eigen::VectorXd>& vec,
-               const std::shared_ptr<ElementBase>& out) const {
-    ElementTraits<T>::boxplus(
-        get(), vec, std::dynamic_pointer_cast < Element < T >> (out)->get());
+  virtual void boxplus(const VecRC<>& vec, const SP<ElementBase>& out) const {
+    Traits::boxplus(get(), vec, out->get<T>());
   }
-  void boxminus(const std::shared_ptr<const ElementBase>& ref,
-                Eigen::Ref<Eigen::VectorXd> vec) const {
-    ElementTraits<T>::boxminus(
-        get(), std::dynamic_pointer_cast<const Element<T>>(ref)->get(), vec);
+  virtual void boxminus(const SP<const ElementBase>& ref, VecR<> vec) const {
+    Traits::boxminus(get(), ref->get<T>(), vec);
   }
-  MXD boxplusJacInp(const Eigen::Ref<const Eigen::VectorXd>& vec) const {
-    return ElementTraits<T>::boxplusJacInp(get(), vec);
+  virtual Mat<> boxplusJacInp(const VecRC<>& vec) const {
+    return Traits::boxplusJacInp(get(), vec);
   }
-  MXD boxplusJacVec(const Eigen::Ref<const Eigen::VectorXd>& vec) const {
-    return ElementTraits<T>::boxplusJacVec(get(), vec);
+  virtual Mat<> boxplusJacVec(const VecRC<>& vec) const {
+    return Traits::boxplusJacVec(get(), vec);
   }
-  MXD boxminusJacInp(const std::shared_ptr<ElementBase>& ref) const {
-    return ElementTraits<T>::boxminusJacInp(
-        get(), std::dynamic_pointer_cast<const Element<T>>(ref)->get());
+  virtual Mat<> boxminusJacInp(const SP<ElementBase>& ref) const {
+    return Traits::boxminusJacInp(get(), ref->get<T>());
   }
-  MXD boxminusJacRef(const std::shared_ptr<ElementBase>& ref) const {
-    return ElementTraits<T>::boxminusJacRef(
-        get(), std::dynamic_pointer_cast<const Element<T>>(ref)->get());
+  virtual Mat<> boxminusJacRef(const SP<ElementBase>& ref) const {
+    return Traits::boxminusJacRef(get(), ref->get<T>());
   }
   T& get() {
     return x_;
@@ -131,13 +136,17 @@ class Element : public ElementBase {
   }
  protected:
   T x_;
-  const ElementDescription<T>* def_;
+  const ElementDescription<T>* description_;
 };
 
 // ==================== Traits Implementation ==================== //
+/*! \brief Scalar Trait.
+ *         Element trait for regular scalar.
+ */
 template<>
 class ElementTraits<double> {
  public:
+  static constexpr bool is_vectorspace_ = true;
   static constexpr int d_ = 1;
   static void print(const double& x) {
     std::cout << x << std::endl;
@@ -149,192 +158,161 @@ class ElementTraits<double> {
     x = 0;
   }
   static void setRandom(double& x, int& s) {
-    std::default_random_engine generator(s);
+    std::default_random_engine generator(s++);
     std::normal_distribution<double> distribution(0.0, 1.0);
     x = distribution(generator);
-    ++s;
   }
-  static void boxplus(const double& in,
-                      const Eigen::Ref<const Eigen::Matrix<double, d_, 1>>& vec,
-                      double& out) {
+  static void boxplus(const double& in, const VecRC<d_>& vec, double& out) {
     out = in + vec(0);
   }
-  static void boxminus(const double& in, const double& ref,
-                       Eigen::Ref<Eigen::Matrix<double, d_, 1>> vec) {
+  static void boxminus(const double& in, const double& ref, VecR<d_> vec) {
     vec(0) = in - ref;
   }
-  static Eigen::Matrix<double, d_, d_> boxplusJacInp(
-      const double& in,
-      const Eigen::Ref<const Eigen::Matrix<double, d_, 1>>& vec) {
-    return Eigen::Matrix<double, d_, d_>::Identity();
+  static Mat<d_> boxplusJacInp(const double& in, const VecRC<d_>& vec) {
+    return Mat<d_>::Identity();
   }
-  static Eigen::Matrix<double, d_, d_> boxplusJacVec(
-      const double& in,
-      const Eigen::Ref<const Eigen::Matrix<double, d_, 1>>& vec) {
-    return Eigen::Matrix<double, d_, d_>::Identity();
+  static Mat<d_> boxplusJacVec(const double& in, const VecRC<d_>& vec) {
+    return Mat<d_>::Identity();
   }
-  static Eigen::Matrix<double, d_, d_> boxminusJacInp(const double& in,
-                                                      const double& ref) {
-    return Eigen::Matrix<double, d_, d_>::Identity();
+  static Mat<d_> boxminusJacInp(const double& in, const double& ref) {
+    return Mat<d_>::Identity();
   }
-  static Eigen::Matrix<double, d_, d_> boxminusJacRef(const double& in,
-                                                      const double& ref) {
-    return -Eigen::Matrix<double, d_, d_>::Identity();
+  static Mat<d_> boxminusJacRef(const double& in, const double& ref) {
+    return -Mat<d_>::Identity();
   }
 };
+
+/*! \brief Vector Trait.
+ *         Element trait for vector of scalars
+ */
 template<int N>
-class ElementTraits<Eigen::Matrix<double, N, 1>> {
+class ElementTraits<Vec<N>> {
  public:
+  static constexpr bool is_vectorspace_ = true;
   static constexpr int d_ = N;
-  static void print(const Eigen::Matrix<double, N, 1>& x) {
+  static void print(const Vec<N>& x) {
     std::cout << x.transpose() << std::endl;
   }
-  static const Eigen::Matrix<double, N, 1> identity() {
-    return Eigen::Matrix<double, N, 1>::Zero();
+  static const Vec<N> identity() {
+    return Vec<N>::Zero();
   }
-  static void setIdentity(Eigen::Matrix<double, N, 1>& x) {
+  static void setIdentity(Vec<N>& x) {
     x.setZero();
   }
-  static void setRandom(Eigen::Matrix<double, N, 1>& x, int& s) {
-    std::default_random_engine generator(s);
+  static void setRandom(Vec<N>& x, int& s) {
+    std::default_random_engine generator(s++);
     std::normal_distribution<double> distribution(0.0, 1.0);
     for (unsigned int i = 0; i < N; i++) {
       x(i) = distribution(generator);
     }
-    ++s;
   }
-  static void boxplus(const Eigen::Matrix<double, N, 1>& in,
-                      const Eigen::Ref<const Eigen::Matrix<double, d_, 1>>& vec,
-                      Eigen::Matrix<double, N, 1>& out) {
+  static void boxplus(const Vec<N>& in, const VecRC<d_>& vec, Vec<N>& out) {
     out = in + vec;
   }
-  static void boxminus(const Eigen::Matrix<double, N, 1>& in,
-                       const Eigen::Matrix<double, N, 1>& ref,
-                       Eigen::Ref<Eigen::Matrix<double, d_, 1>> vec) {
+  static void boxminus(const Vec<N>& in, const Vec<N>& ref, VecR<d_> vec) {
     vec = in - ref;
   }
-  static Eigen::Matrix<double, d_, d_> boxplusJacInp(
-      const Eigen::Matrix<double, N, 1>& in,
-      const Eigen::Ref<const Eigen::Matrix<double, d_, 1>>& vec) {
-    return Eigen::Matrix<double, d_, d_>::Identity();
+  static Mat<d_> boxplusJacInp(const Vec<N>& in, const VecRC<d_>& vec) {
+    return Mat<d_>::Identity();
   }
-  static Eigen::Matrix<double, d_, d_> boxplusJacVec(
-      const Eigen::Matrix<double, N, 1>& in,
-      const Eigen::Ref<const Eigen::Matrix<double, d_, 1>>& vec) {
-    return Eigen::Matrix<double, d_, d_>::Identity();
+  static Mat<d_> boxplusJacVec(const Vec<N>& in, const VecRC<d_>& vec) {
+    return Mat<d_>::Identity();
   }
-  static Eigen::Matrix<double, d_, d_> boxminusJacInp(
-      const Eigen::Matrix<double, N, 1>& in,
-      const Eigen::Matrix<double, N, 1>& ref) {
-    return Eigen::Matrix<double, d_, d_>::Identity();
+  static Mat<d_> boxminusJacInp(const Vec<N>& in, const Vec<N>& ref) {
+    return Mat<d_>::Identity();
   }
-  static Eigen::Matrix<double, d_, d_> boxminusJacRef(
-      const Eigen::Matrix<double, N, 1>& in,
-      const Eigen::Matrix<double, N, 1>& ref) {
-    return -Eigen::Matrix<double, d_, d_>::Identity();
+  static Mat<d_> boxminusJacRef(const Vec<N>& in, const Vec<N>& ref) {
+    return -Mat<d_>::Identity();
   }
 };
+
+/*! \brief Array Trait.
+ *         Element trait for array of specific sub-elements
+ */
 template<typename T, size_t N>
 class ElementTraits<std::array<T, N>> {
  public:
-  static constexpr int d_ = N * ElementTraits<T>::d_;
-  static void print(const std::array<T, N>& x) {
+  typedef ElementTraits<T> Traits;
+  using array = std::array<T, N>;
+  static constexpr bool is_vectorspace_ = Traits::is_vectorspace_;
+  static constexpr int ed_ = Traits::d_;
+  static constexpr int d_ = N * ed_;
+  static void print(const array& x) {
     for (const T& i : x) {
-      ElementTraits<T>::print(i);
+      Traits::print(i);
     }
   }
-  static const std::array<T, N> identity() {
-    std::array<T, N> x;
+  static const array identity() {
+    array x;
     setIdentity(x);
     return x;
   }
-  static void setIdentity(std::array<T, N>& x) {
+  static void setIdentity(array& x) {
     for (T& i : x) {
-      ElementTraits<T>::setIdentity(i);
+      Traits::setIdentity(i);
     }
   }
-  static void setRandom(std::array<T, N>& x, int& s) {
+  static void setRandom(array& x, int& s) {
     for (T& i : x) {
-      ElementTraits<T>::setRandom(i, s);
+      Traits::setRandom(i, s);
     }
   }
-  static void boxplus(const std::array<T, N>& in,
-                      const Eigen::Ref<const Eigen::Matrix<double, d_, 1>>& vec,
-                      std::array<T, N>& out) {
+  static void boxplus(const array& in, const VecRC<d_>& vec, array& out) {
     for (int i = 0; i < N; i++) {
-      ElementTraits<T>::boxplus(
-          in[i],
-          vec.template block<ElementTraits<T>::d_, 1>(i * ElementTraits<T>::d_,
-                                                      0),
-          out[i]);
+      Traits::boxplus(in[i], vec.template block<ed_, 1>(i * ed_, 0), out[i]);
     }
   }
-  static void boxminus(const std::array<T, N>& in, const std::array<T, N>& ref,
-                       Eigen::Ref<Eigen::Matrix<double, d_, 1>> vec) {
+  static void boxminus(const array& in, const array& ref, VecR<d_> vec) {
     for (int i = 0; i < N; i++) {
-      ElementTraits<T>::boxminus(
-          in[i],
-          ref[i],
-          vec.template block<ElementTraits<T>::d_, 1>(i * ElementTraits<T>::d_,
-                                                      0));
+      Traits::boxminus(in[i], ref[i], vec.template block<ed_, 1>(i * ed_, 0));
     }
   }
-  static Eigen::Matrix<double, d_, d_> boxplusJacInp(
-      const std::array<T, N>& in,
-      const Eigen::Ref<const Eigen::Matrix<double, d_, 1>>& vec) {
-    Eigen::Matrix<double, d_, d_> J;
+  static Mat<d_> boxplusJacInp(const array& in, const VecRC<d_>& vec) {
+    Mat<d_> J;
     J.setZero();
     for (int i = 0; i < N; i++) {
-      J.template block<ElementTraits<T>::d_, ElementTraits<T>::d_>(
-          i * ElementTraits<T>::d_, i * ElementTraits<T>::d_) =
-          ElementTraits<T>::boxplusJacInp(
-              in[i],
-              vec.template block<ElementTraits<T>::d_, 1>(
-                  i * ElementTraits<T>::d_, 0));
+      J.template block<ed_, ed_>(i * ed_, i * ed_) =
+          Traits::boxplusJacInp(in[i], vec.template block<ed_, 1>(i * ed_, 0));
     }
     return J;
   }
-  static Eigen::Matrix<double, d_, d_> boxplusJacVec(
-      const std::array<T, N>& in,
-      const Eigen::Ref<const Eigen::Matrix<double, d_, 1>>& vec) {
-    Eigen::Matrix<double, d_, d_> J;
+  static Mat<d_> boxplusJacVec(const array& in, const VecRC<d_>& vec) {
+    Mat<d_> J;
     J.setZero();
     for (int i = 0; i < N; i++) {
-      J.template block<ElementTraits<T>::d_, ElementTraits<T>::d_>(
-          i * ElementTraits<T>::d_, i * ElementTraits<T>::d_) =
-          ElementTraits<T>::boxplusJacVec(
-              in[i],
-              vec.template block<ElementTraits<T>::d_, 1>(
-                  i * ElementTraits<T>::d_, 0));
+      J.template block<ed_, ed_>(i * ed_, i * ed_) =
+          Traits::boxplusJacVec(in[i], vec.template block<ed_, 1>(i * ed_, 0));
     }
     return J;
   }
-  static Eigen::Matrix<double, d_, d_> boxminusJacInp(
-      const std::array<T, N>& in, const std::array<T, N>& ref) {
-    Eigen::Matrix<double, d_, d_> J;
+  static Mat<d_> boxminusJacInp(const array& in, const array& ref) {
+    Mat<d_> J;
     J.setZero();
     for (int i = 0; i < N; i++) {
-      J.template block<ElementTraits<T>::d_, ElementTraits<T>::d_>(
-          i * ElementTraits<T>::d_, i * ElementTraits<T>::d_) =
-          ElementTraits<T>::boxminusJacInp(in[i], ref[i]);
+      J.template block<ed_, ed_>(i * ed_, i * ed_) =
+          Traits::boxminusJacInp(in[i], ref[i]);
     }
     return J;
   }
-  static Eigen::Matrix<double, d_, d_> boxminusJacRef(
-      const std::array<T, N>& in, const std::array<T, N>& ref) {
-    Eigen::Matrix<double, d_, d_> J;
+  static Mat<d_> boxminusJacRef(const array& in, const array& ref) {
+    Mat<d_> J;
     J.setZero();
     for (int i = 0; i < N; i++) {
-      J.template block<ElementTraits<T>::d_, ElementTraits<T>::d_>(
-          i * ElementTraits<T>::d_, i * ElementTraits<T>::d_) =
-          ElementTraits<T>::boxminusJacRef(in[i], ref[i]);
+      J.template block<ed_, ed_>(i * ed_, i * ed_) =
+          Traits::boxminusJacRef(in[i], ref[i]);
     }
     return J;
   }
 };
+
+/*! \brief Unit Quaternion Trait.
+ *         Element trait for unit quaternion. Employed to represent
+ *         orientations.
+ */
 template<>
 class ElementTraits<QPD> {
  public:
+  static constexpr bool is_vectorspace_ = false;
   static constexpr int d_ = 3;
   static void print(const QPD& x) {
     std::cout << x << std::endl;
@@ -346,42 +324,32 @@ class ElementTraits<QPD> {
     x.setIdentity();
   }
   static void setRandom(QPD& x, int& s) {
-    std::default_random_engine generator(s);
+    std::default_random_engine generator(s++);
     std::normal_distribution<double> distribution(0.0, 1.0);
     x.toImplementation().w() = distribution(generator);
     x.toImplementation().x() = distribution(generator);
     x.toImplementation().y() = distribution(generator);
     x.toImplementation().z() = distribution(generator);
     x.fix();
-    ++s;
   }
-  static void boxplus(const QPD& in,
-                      const Eigen::Ref<const Eigen::Matrix<double, d_, 1>>& vec,
-                      QPD& out) {
+  static void boxplus(const QPD& in, const VecRC<d_>& vec, QPD& out) {
     out = in.boxPlus(vec);
   }
-  static void boxminus(const QPD& in, const QPD& ref,
-                       Eigen::Ref<Eigen::Matrix<double, d_, 1>> vec) {
+  static void boxminus(const QPD& in, const QPD& ref, VecR<d_> vec) {
     vec = in.boxMinus(ref);
   }
-  static Eigen::Matrix<double, d_, d_> boxplusJacInp(
-      const QPD& in,
-      const Eigen::Ref<const Eigen::Matrix<double, d_, 1>>& vec) {
+  static Mat<d_> boxplusJacInp(const QPD& in, const VecRC<d_>& vec) {
     MPD m = m.exponentialMap(vec);
     return m.matrix();
   }
-  static Eigen::Matrix<double, d_, d_> boxplusJacVec(
-      const QPD& in,
-      const Eigen::Ref<const Eigen::Matrix<double, d_, 1>>& vec) {
+  static Mat<d_> boxplusJacVec(const QPD& in, const VecRC<d_>& vec) {
     return Lmat(vec);
   }
-  static Eigen::Matrix<double, d_, d_> boxminusJacInp(const QPD& in,
-                                                      const QPD& ref) {
+  static Mat<d_> boxminusJacInp(const QPD& in, const QPD& ref) {
     return Lmat(in.boxMinus(ref)).inverse();
   }
-  static Eigen::Matrix<double, d_, d_> boxminusJacRef(const QPD& in,
-                                                      const QPD& ref) {
-    return -Lmat(in.boxMinus(ref)).inverse() * MPD(in * ref.inverted()).matrix();
+  static Mat<d_> boxminusJacRef(const QPD& in, const QPD& ref) {
+    return -Lmat(in.boxMinus(ref)).inverse()* MPD(in * ref.inverted()).matrix();
   }
 };
 

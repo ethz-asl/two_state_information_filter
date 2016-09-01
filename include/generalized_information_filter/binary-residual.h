@@ -67,21 +67,21 @@ class BinaryResidual;
 
 template<typename ... Res, typename ... Pre, typename ... Pos, typename ... Noi,
     typename Meas>
-class BinaryResidual<ElementVectorPack<Res...>, ElementVectorPack<Pre...>,
-    ElementVectorPack<Pos...>, ElementVectorPack<Noi...>, Meas> : public Model<
-    BinaryResidual<ElementVectorPack<Res...>, ElementVectorPack<Pre...>,
-        ElementVectorPack<Pos...>, ElementVectorPack<Noi...>, Meas>, ElementVectorPack<Res...>,
-    ElementVectorPack<Pre...>, ElementVectorPack<Pos...>, ElementVectorPack<Noi...>>,
+class BinaryResidual<ElementPack<Res...>, ElementPack<Pre...>,
+    ElementPack<Pos...>, ElementPack<Noi...>, Meas> : public Model<
+    BinaryResidual<ElementPack<Res...>, ElementPack<Pre...>,
+        ElementPack<Pos...>, ElementPack<Noi...>, Meas>, ElementPack<Res...>,
+    ElementPack<Pre...>, ElementPack<Pos...>, ElementPack<Noi...>>,
     public BinaryResidualBase {
  public:
-  typedef BinaryResidual<ElementVectorPack<Res...>, ElementVectorPack<Pre...>,
-      ElementVectorPack<Pos...>, ElementVectorPack<Noi...>, Meas> mtBinaryRedidual;
-  using mtBase = Model<mtBinaryRedidual,ElementVectorPack<Res...>,ElementVectorPack<Pre...>,ElementVectorPack<Pos...>,ElementVectorPack<Noi...>>;
+  typedef BinaryResidual<ElementPack<Res...>, ElementPack<Pre...>,
+      ElementPack<Pos...>, ElementPack<Noi...>, Meas> mtBinaryRedidual;
+  using mtBase = Model<mtBinaryRedidual,ElementPack<Res...>,ElementPack<Pre...>,ElementPack<Pos...>,ElementPack<Noi...>>;
   BinaryResidual(
-      const std::array<std::string, ElementVectorPack<Res...>::n_>& namesRes,
-      const std::array<std::string, ElementVectorPack<Pre...>::n_>& namesPre,
-      const std::array<std::string, ElementVectorPack<Pos...>::n_>& namesPos,
-      const std::array<std::string, ElementVectorPack<Noi...>::n_>& namesNoi,
+      const std::array<std::string, ElementPack<Res...>::n_>& namesRes,
+      const std::array<std::string, ElementPack<Pre...>::n_>& namesPre,
+      const std::array<std::string, ElementPack<Pos...>::n_>& namesPos,
+      const std::array<std::string, ElementPack<Noi...>::n_>& namesNoi,
       bool isUnary = false, bool isSplitable = false, bool isMergeable = false)
       : mtBase(namesRes, std::forward_as_tuple(namesPre, namesPos, namesNoi)),
         BinaryResidualBase(isUnary, isSplitable, isMergeable),
@@ -123,9 +123,9 @@ class BinaryResidual<ElementVectorPack<Res...>, ElementVectorPack<Pre...>,
                          std::shared_ptr<const ElementVectorBase>& out) const {
     if (isMergeable_) {
       std::shared_ptr < ElementVectorBase > newMeas(new Meas());
-      VXD diff(in1->getDim());
-      in1->boxminus(in2, diff);
-      in2->boxplus(toSec(t1 - t0) / toSec(t2 - t0) * diff, newMeas);
+      VXD diff(in1->GetDimention());
+      in1->BoxMinus(in2, diff);
+      in2->BoxPlus(toSec(t1 - t0) / toSec(t2 - t0) * diff, newMeas);
       out = newMeas;
     } else {
       std::cout
@@ -205,24 +205,24 @@ class BinaryResidual<ElementVectorPack<Res...>, ElementVectorPack<Pre...>,
   template<int n, int m>
   void setJacBlockPre(
       MXD& J,
-      const Eigen::Matrix<double, ElementVectorPack<Res...>::template _GetStateDimension<n>(),
-          ElementVectorPack<Pre...>::template _GetStateDimension<m>()>& B) const {
+      const Eigen::Matrix<double, ElementPack<Res...>::template _GetStateDimension<n>(),
+          ElementPack<Pre...>::template _GetStateDimension<m>()>& B) const {
     this->template _setJacBlock<0, n, m>(J, B);
   }
 
   template<int n, int m>
   void setJacBlockPos(
       MXD& J,
-      const Eigen::Matrix<double, ElementVectorPack<Res...>::template _GetStateDimension<n>(),
-          ElementVectorPack<Pos...>::template _GetStateDimension<m>()>& B) const {
+      const Eigen::Matrix<double, ElementPack<Res...>::template _GetStateDimension<n>(),
+          ElementPack<Pos...>::template _GetStateDimension<m>()>& B) const {
     this->template _setJacBlock<1, n, m>(J, B);
   }
 
   template<int n, int m>
   void setJacBlockNoi(
       MXD& J,
-      const Eigen::Matrix<double, ElementVectorPack<Res...>::template _GetStateDimension<n>(),
-          ElementVectorPack<Noi...>::template _GetStateDimension<m>()>& B) const {
+      const Eigen::Matrix<double, ElementPack<Res...>::template _GetStateDimension<n>(),
+          ElementPack<Noi...>::template _GetStateDimension<m>()>& B) const {
     this->template _setJacBlock<2, n, m>(J, B);
   }
 
@@ -242,14 +242,14 @@ class BinaryResidual<ElementVectorPack<Res...>, ElementVectorPack<Pre...>,
 
   bool testJacs(int& s, const double& delta = 1e-6, const double& th = 1e-6) {
     std::shared_ptr < Meas > meas(new Meas());
-    meas->setRandom(s);
+    meas->SetRandom(s);
     meas_ = meas;
     std::shared_ptr < ElementVectorBase > pre(new ElementVector(preDefinition()));
-    pre->setRandom(s);
+    pre->SetRandom(s);
     std::shared_ptr < ElementVectorBase > pos(new ElementVector(posDefinition()));
-    pos->setRandom(s);
+    pos->SetRandom(s);
     std::shared_ptr < ElementVectorBase > noi(new ElementVector(noiDefinition()));
-    noi->setIdentity();
+    noi->SetIdentity();
     const std::array<std::shared_ptr<const ElementVectorBase>, 3> ins =
         { pre, pos, noi };
     return (preDefinition()->GetStateDimension() == 0

@@ -6,19 +6,26 @@
 
 namespace GIF {
 
+/*! \brief Element Description Base
+ *         Base class for element descriptions. Used to  implement the element
+ *         vector definition (vector of element descriptions).
+ */
 class ElementDescriptionBase {
  public:
   ElementDescriptionBase() {}
-
   virtual ~ElementDescriptionBase() {}
 
-  virtual std::shared_ptr<ElementBase> newElement() const = 0;
-  virtual bool isSameDef(
-      const std::shared_ptr<const ElementDescriptionBase>& in) const = 0;
-  virtual bool isOfDef(const std::shared_ptr<const ElementBase>& in) const = 0;
-  virtual int getDim() const = 0;
+  virtual SP<ElementBase> MakeElement() const = 0;
+  virtual bool MatchesDescription(
+      const SP<const ElementDescriptionBase>& in) const = 0;
+  virtual bool MatchesDescription(const SP<const ElementBase>& in) const = 0;
+  virtual int GetDimension() const = 0;
 };
 
+/*! \brief Templated form of element descriptions.
+ *         Implements the virtual methods of the base class (mainly based on
+ *         dynamic casting).
+ */
 template<typename T>
 class ElementDescription : public ElementDescriptionBase {
  public:
@@ -26,17 +33,17 @@ class ElementDescription : public ElementDescriptionBase {
   }
   ~ElementDescription() {
   }
-  std::shared_ptr<ElementBase> newElement() const {
-    return std::shared_ptr < Element < T >> (new Element<T>(this));
+  SP<ElementBase> MakeElement() const {
+    return std::shared_ptr<Element<T>>(new Element<T>(this));
   }
-  bool isSameDef(const std::shared_ptr<const ElementDescriptionBase>& in) const {
+  bool MatchesDescription(const SP<const ElementDescriptionBase>& in) const {
     return std::dynamic_pointer_cast<const ElementDescription<T>>(in).get()
         != nullptr;
   }
-  bool isOfDef(const std::shared_ptr<const ElementBase>& in) const {
+  bool MatchesDescription(const SP<const ElementBase>& in) const {
     return std::dynamic_pointer_cast<const Element<T>>(in).get() != nullptr;
   }
-  inline int getDim() const {
+  inline int GetDimension() const {
     return ElementTraits<T>::d_;
   }
 };

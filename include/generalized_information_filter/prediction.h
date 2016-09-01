@@ -10,16 +10,16 @@ template<typename PackSta, typename PackNoi, typename Meas>
 class Prediction;
 
 template<typename ... Sta, typename ... Noi, typename Meas>
-class Prediction<ElementVectorPack<Sta...>, ElementVectorPack<Noi...>, Meas> :
-    public BinaryResidual<ElementVectorPack<Sta...>, ElementVectorPack<Sta...>,
-        ElementVectorPack<Sta...>, ElementVectorPack<Noi...>, Meas> {
+class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
+    public BinaryResidual<ElementPack<Sta...>, ElementPack<Sta...>,
+        ElementPack<Sta...>, ElementPack<Noi...>, Meas> {
  public:
-  typedef Prediction<ElementVectorPack<Sta...>, ElementVectorPack<Noi...>, Meas>
+  typedef Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas>
     mtPrediction;
-  typedef BinaryResidual<ElementVectorPack<Sta...>, ElementVectorPack<Sta...>,
-      ElementVectorPack<Sta...>, ElementVectorPack<Noi...>, Meas> mtBinaryRedidual;
-  Prediction(const std::array<std::string, ElementVectorPack<Sta...>::n_>& namesSta,
-             const std::array<std::string, ElementVectorPack<Noi...>::n_>& namesNoi)
+  typedef BinaryResidual<ElementPack<Sta...>, ElementPack<Sta...>,
+      ElementPack<Sta...>, ElementPack<Noi...>, Meas> mtBinaryRedidual;
+  Prediction(const std::array<std::string, ElementPack<Sta...>::n_>& namesSta,
+             const std::array<std::string, ElementPack<Noi...>::n_>& namesNoi)
       : mtBinaryRedidual(namesSta, namesSta, namesSta, namesNoi, false, true,
                          true),
         prediction_(new ElementVector(this->posDefinition())) {
@@ -36,20 +36,20 @@ class Prediction<ElementVectorPack<Sta...>, ElementVectorPack<Noi...>, Meas> :
                                     const Noi&... noi) const = 0;
 
  protected:
-  template<typename ... Ts, typename std::enable_if<(sizeof...(Ts)<ElementVectorPack<Sta...>::n_)>::type* = nullptr>
+  template<typename ... Ts, typename std::enable_if<(sizeof...(Ts)<ElementPack<Sta...>::n_)>::type* = nullptr>
   void _evalPredictionImpl(const std::shared_ptr<ElementVectorBase>& pos,
                            const Sta&... pre, const Noi&... noi,
                            Ts&... elements) const {
-    assert(pos->matchesDef(this->posDefinition()));
+    assert(pos->MatchesDefinition(this->posDefinition()));
     static constexpr int innerIndex = sizeof...(Ts);
-    typedef typename ElementVectorPack<Sta...>::mtTuple mtTuple;
+    typedef typename ElementPack<Sta...>::mtTuple mtTuple;
     typedef typename std::tuple_element<innerIndex,mtTuple>::type mtElementType;
     _evalPredictionImpl(pos, pre..., noi..., elements...,
                         std::dynamic_pointer_cast<Element<mtElementType>>(
-                            pos->getElement(innerIndex))->get());
+                            pos->GetElement(innerIndex))->get());
   }
 
-  template<typename... Ts, typename std::enable_if<(sizeof...(Ts)==ElementVectorPack<Sta...>::n_)>::type* = nullptr>
+  template<typename... Ts, typename std::enable_if<(sizeof...(Ts)==ElementPack<Sta...>::n_)>::type* = nullptr>
   void _evalPredictionImpl(const std::shared_ptr<ElementVectorBase>& pos,
                            const Sta&... pre, const Noi&... noi,
                            Ts&... elements) const {
@@ -83,13 +83,13 @@ class Prediction<ElementVectorPack<Sta...>, ElementVectorPack<Noi...>, Meas> :
   inline void computeInnovation(Sta&... res, const Sta&... pos,
       const std::shared_ptr<const ElementVectorBase>& prediction) const {
     typedef typename std::tuple_element<i,
-        typename ElementVectorPack<Sta...>::mtTuple>::type mtElementType;
+        typename ElementPack<Sta...>::mtTuple>::type mtElementType;
 
     // res = I+(pred-pos)
     Eigen::Matrix<double,ElementTraits<mtElementType>::d_,1> vec;
     ElementTraits<mtElementType>::boxminus(
         std::dynamic_pointer_cast<const Element<mtElementType>>(
-            prediction->getElement(i))->get(),std::get<i>(
+            prediction->GetElement(i))->get(),std::get<i>(
                 std::forward_as_tuple(pos...)),vec);
     // TODO: make more efficient (could be done directly on boxminus, but then
     // jacobian becomes more annoying)
@@ -105,13 +105,13 @@ class Prediction<ElementVectorPack<Sta...>, ElementVectorPack<Noi...>, Meas> :
   template<int i = 0, int j = 0, typename std::enable_if<(i<sizeof...(Sta))>::type* = nullptr>
   void computePosJacobian(MXD& J, const std::shared_ptr<ElementVectorBase>& prediction,
                           const Sta&... pos) const{
-    assert(prediction->matchesDef(this->posDefinition()));
+    assert(prediction->MatchesDefinition(this->posDefinition()));
     typedef typename std::tuple_element<i,typename
-        ElementVectorPack<Sta...>::mtTuple>::type mtElementType;
+        ElementPack<Sta...>::mtTuple>::type mtElementType;
     Eigen::Matrix<double,ElementTraits<mtElementType>::d_,1> vec;
     ElementTraits<mtElementType>::boxminus(
         std::dynamic_pointer_cast<const Element<mtElementType>>(
-            prediction->getElement(i))->get(),std::get<i>(
+            prediction->GetElement(i))->get(),std::get<i>(
                 std::forward_as_tuple(pos...)),vec);
     J.template block<ElementTraits<mtElementType>::d_,
                      ElementTraits<mtElementType>::d_>(j,j) =
@@ -119,7 +119,7 @@ class Prediction<ElementVectorPack<Sta...>, ElementVectorPack<Noi...>, Meas> :
           ElementTraits<mtElementType>::identity(),vec) *
       ElementTraits<mtElementType>::boxminusJacRef(
           std::dynamic_pointer_cast<const Element<mtElementType>>(
-              prediction->getElement(i))->get(),std::get<i>(
+              prediction->GetElement(i))->get(),std::get<i>(
                   std::forward_as_tuple(pos...)));
     computePosJacobian<i+1,j+ElementTraits<mtElementType>::d_>(J,prediction,pos...);
   }
