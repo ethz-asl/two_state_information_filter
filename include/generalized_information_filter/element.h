@@ -71,11 +71,15 @@ class ElementBase {
   virtual MatX BoxminusJacRef(const ElementBase& ref) const = 0;
   template<typename T>
   T& GetValue() {
-    return dynamic_cast<Element<T>*>(this)->GetValue();
+    Element<T>* const element =  dynamic_cast<Element<T>*>(this);
+    assert(element != nullptr);
+    return element->GetValue();
   }
   template<typename T>
   const T& GetValue() const {
-    return dynamic_cast<const Element<T>*>(this)->GetValue();
+    const Element<T>* const element =  dynamic_cast<const Element<T>*>(this);
+    assert(element != nullptr);
+    return element->GetValue();
   }
 };
 
@@ -97,7 +101,9 @@ class Element : public ElementBase {
     return *this;
   }
   virtual ElementBase& operator=(const ElementBase& other) {
-    *this = dynamic_cast<const Element<T>&>(other);
+    const Element<T>* const element =  dynamic_cast<const Element<T>*>(&other);
+    assert(element != nullptr);
+    *this = *element;
     return *this;
   }
   inline virtual int GetDim() const {

@@ -102,8 +102,7 @@ ElementVectorWrapper::ElementVectorWrapper(
 ElementVectorWrapper::~ElementVectorWrapper() {
 }
 
-ElementVectorWrapper& ElementVectorWrapper::operator=(
-      const ElementVectorBase& other) {
+ElementVectorWrapper& ElementVectorWrapper::operator=(const ElementVectorBase& other) {
   dynamic_cast<ElementVectorBase&>(*this) = other;
   return *this;
 }
