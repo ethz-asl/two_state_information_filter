@@ -120,7 +120,7 @@ void MeasurementTimeline::Split(
 void MeasurementTimeline::Split(
     const std::set<TimePoint>& times,
     const BinaryResidualBase* res) {
-  for (auto t : times) {
+  for (const auto& t : times) {
     auto it = measMap_.lower_bound(t);
     if (it == measMap_.end()) {
       std::cout << "Error: range error while splitting!" << std::endl;
@@ -191,7 +191,7 @@ void MeasurementTimeline::Print(const TimePoint& start, int startOffset,
       counts[x]++;
     }
   }
-  for (auto c : counts) {
+  for (const auto& c : counts) {
     if (c == 0) {
       std::cout << "-";
     } else {

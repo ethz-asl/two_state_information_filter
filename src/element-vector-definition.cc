@@ -13,7 +13,7 @@ bool ElementVectorDefinition::MatchesDefinition(const ElementVectorDefinition& o
   if (GetDim() != other.GetDim()) {
     return false;
   }
-  for (auto entry : names_map_) {
+  for (const auto& entry : names_map_) {
     int other_outer_index = other.FindName(entry.first);
     if (other_outer_index != entry.second) {
       return false;
@@ -32,7 +32,7 @@ bool ElementVectorDefinition::MatchesDefinition(
 }
 
 std::string ElementVectorDefinition::GetName(int outer_index) const { // Slow
-  for (auto e : names_map_) {
+  for (const auto& e : names_map_) {
     if (e.second == outer_index) {
       return e.first;
     }
@@ -42,7 +42,7 @@ std::string ElementVectorDefinition::GetName(int outer_index) const { // Slow
 }
 
 int ElementVectorDefinition::FindName(const std::string& name) const {
-  auto query = names_map_.find(name);
+  const auto& query = names_map_.find(name);
   return (query != names_map_.end()) ? query->second : -1;
 }
 
@@ -69,7 +69,7 @@ int ElementVectorDefinition::AddElement(const std::string& name,
 
 void ElementVectorDefinition::ExtendWithOtherElementVectorDefinition(
       const ElementVectorDefinition& other) {
-  for (auto entry : other.names_map_) {
+  for (const auto& entry : other.names_map_) {
     AddElement(entry.first,other.GetElementDescription(entry.second));
   }
 }

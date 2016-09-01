@@ -165,14 +165,14 @@ class Filter {
     std::set<TimePoint> times;
     GetMeasurementTimeList(times, maxUpdateTime, false);
     std::cout << "updateTimes:\t";
-    for (auto t : times) {
+    for (const auto& t : times) {
       std::cout << toSec(t - startTime_) << "\t";
     }
     std::cout << std::endl;
     SplitAndMergeMeasurements(times);
     PrintMeasurementTimelines(time_, 20);
 
-    for (auto t : times) {
+    for (const auto& t : times) {
       MakeUpdateStep(t);
     }
   }
