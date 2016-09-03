@@ -4,8 +4,9 @@
 #include <list>
 #include <initializer_list>
 
-#include "element-vector-definition.h"
 #include "generalized_information_filter/common.h"
+#include "generalized_information_filter/element-vector.h"
+#include "generalized_information_filter/element-vector-definition.h"
 
 namespace GIF {
 

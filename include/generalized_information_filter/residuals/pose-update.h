@@ -33,7 +33,6 @@ class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
  public:
   PoseUpdate()
       : mtUnaryUpdate( { "IrIB", "qIB" }, { "IrIB", "qIB" }, { "IrIB", "qIB" }) {
-    dt_ = 0.1;
   }
 
   virtual ~PoseUpdate() {
@@ -60,7 +59,6 @@ class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
   }
 
  protected:
-  double dt_;
   enum Elements {
     POS,
     ATT

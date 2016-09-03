@@ -7,6 +7,7 @@
 #include "generalized_information_filter/prediction.h"
 #include "generalized_information_filter/residuals/imu-prediction.h"
 #include "generalized_information_filter/residuals/landmark-prediction.h"
+#include "generalized_information_filter/residuals/leg-kinematic-update.h"
 #include "generalized_information_filter/residuals/pose-update.h"
 #include "generalized_information_filter/transformation.h"
 #include "generalized_information_filter/unary-update.h"
