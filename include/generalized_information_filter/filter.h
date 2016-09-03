@@ -213,6 +213,7 @@ class Filter {
     int count = 0;
     for (int i = 0; i < residuals_.size(); i++) {
       if (hasMeas.at(i)) {
+        residuals_.at(i).res_->SetDt(toSec(t-time_));
         residuals_.at(i).mt_.GetMeasurement(t, meas);
         residuals_.at(i).res_->SetMeas(meas);
         residuals_.at(i).preWrap_.SetElementVector(&state_);

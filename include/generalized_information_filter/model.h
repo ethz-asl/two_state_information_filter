@@ -77,9 +77,8 @@ class Model {
   bool JacTestImpl(const double delta, const double th) const;
 
   template<int InIndex, int n, int m>
-  void SetJacBlockImpl(MatX& J, const Mat<OutPack::template _GetStateDimension<n>(),
-                                       std::tuple_element<InIndex,std::tuple<InPacks...>>::type::
-                                       template _GetStateDimension<m>()>& B) const;
+  MatRef<OutPack::template _GetStateDimension<n>(),
+  InPack<InIndex>::template _GetStateDimension<m>()> GetJacBlockImpl(MatRefX J) const;
 
  protected:
   ElementVectorDefinition::Ptr outDefinition_;
@@ -249,14 +248,13 @@ bool Model<Derived,OutPack,InPacks...>::JacTestImpl(const double delta, const do
 
 template<typename Derived, typename OutPack, typename ... InPacks>
 template<int InIndex, int n, int m>
-void Model<Derived,OutPack,InPacks...>::SetJacBlockImpl(MatX& J,
-                  const Mat<OutPack::template _GetStateDimension<n>(),
-                  std::tuple_element<InIndex,std::tuple<InPacks...>>::type::
-                      template _GetStateDimension<m>()>& B) const {
-  J.block<OutPack::template _GetStateDimension<n>(),
-          InPack<InIndex>::template _GetStateDimension<m>()>(
-              OutPack::template _GetStartIndex<n>(),
-              InPack<InIndex>::template _GetStartIndex<m>()) = B;
+MatRef<OutPack::template _GetStateDimension<n>(),
+std::tuple_element<InIndex,std::tuple<InPacks...>>::type::template _GetStateDimension<m>()>
+Model<Derived,OutPack,InPacks...>::GetJacBlockImpl(MatRefX J) const{
+  return J.block<OutPack::template _GetStateDimension<n>(),
+      InPack<InIndex>::template _GetStateDimension<m>()>(
+          OutPack::template _GetStartIndex<n>(),
+          InPack<InIndex>::template _GetStartIndex<m>());
 }
 
 template<typename Derived, typename OutPack, typename ... InPacks>

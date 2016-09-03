@@ -18,7 +18,7 @@ if(DEFINED CATKIN_DEVEL_PREFIX)
 	)
 	catkin_package(
 		INCLUDE_DIRS include ${catkin_INCLUDE_DIRS}
-	    LIBRARIES ${PROJECT_NAME}
+	    LIBRARIES ${PROJECT_NAME} glog
 		CATKIN_DEPENDS
 	)
 endif()

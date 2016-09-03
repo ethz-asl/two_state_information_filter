@@ -33,8 +33,12 @@ using Mat3 = Mat<3>;
 using MatX = Mat<>;
 template<int N = -1, int M = N>
 using MatRef = Eigen::Ref<Mat<N,M>>;
+using MatRef3 = MatRef<3>;
+using MatRefX = MatRef<>;
 template<int N = -1, int M = N>
 using MatCRef = Eigen::Ref<const Mat<N,M>>;
+using MatCRef3 = MatCRef<3>;
+using MatCRefX = MatCRef<>;
 
 typedef std::chrono::high_resolution_clock Clock;
 typedef Clock::time_point TimePoint;
