@@ -8,6 +8,11 @@
 
 namespace GIF {
 
+class EmptyMeas : public ElementVector {
+ public:
+  EmptyMeas(): ElementVector(std::make_shared<ElementVectorDefinition>()){};
+};
+
 class BinaryResidualBase;
 
 /*! \brief MeasurementTimeline

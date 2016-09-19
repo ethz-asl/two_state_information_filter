@@ -13,6 +13,7 @@ class BinaryResidualBase {
  public:
   BinaryResidualBase(bool isUnary = false, bool isSplitable = false, bool isMergeable = false)
       : isUnary_(isUnary), isSplitable_(isSplitable), isMergeable_(isMergeable){
+    dt_ = 0.1;
   }
   virtual ~BinaryResidualBase() {
   }
@@ -47,6 +48,9 @@ class BinaryResidualBase {
       const ElementVectorBase::CPtr& in2,
       ElementVectorBase::CPtr& out) const = 0;
   virtual void SetMeas(const ElementVectorBase::CPtr& meas) = 0;
+  void SetDt(double dt){
+    dt_ = dt;
+  }
   virtual bool CheckMeasType(const ElementVectorBase::CPtr& meas) const = 0;
   virtual const MatX& GetNoiseCovariance() const = 0;
   virtual MatX& GetNoiseCovariance() = 0;
@@ -59,6 +63,7 @@ class BinaryResidualBase {
   const bool isUnary_;
   const bool isSplitable_;
   const bool isMergeable_;
+  double dt_;
 };
 
 /*! \brief Binary Residual
@@ -84,7 +89,7 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
                  const std::array<std::string, ElementPack<Pre...>::n_>& namesPre,
                  const std::array<std::string, ElementPack<Cur...>::n_>& namesCur,
                  const std::array<std::string, ElementPack<Noi...>::n_>& namesNoi,
-                 bool isUnary = false, bool isSplitable = false, bool isMergeable = false)
+                 bool isUnary, bool isSplitable, bool isMergeable)
         : mtBase(namesInn, std::forward_as_tuple(namesPre, namesCur, namesNoi)),
           BinaryResidualBase(isUnary, isSplitable, isMergeable),
           meas_(new Meas()) {
@@ -191,27 +196,21 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
   }
 
   template<int n, int m>
-  void SetJacBlockPre(
-      MatX& J,
-      const Mat<ElementPack<Inn...>::template _GetStateDimension<n>(),
-                ElementPack<Pre...>::template _GetStateDimension<m>()>& B) const {
-    this->template SetJacBlockImpl<0, n, m>(J, B);
+  MatRef<ElementPack<Inn...>::template _GetStateDimension<n>(),
+         ElementPack<Pre...>::template _GetStateDimension<m>()> GetJacBlockPre(MatRefX J) const {
+    return this->template GetJacBlockImpl<0, n, m>(J);
   }
 
   template<int n, int m>
-  void SetJacBlockCur(
-      MatX& J,
-      const Mat<ElementPack<Inn...>::template _GetStateDimension<n>(),
-                ElementPack<Cur...>::template _GetStateDimension<m>()>& B) const {
-    this->template SetJacBlockImpl<1, n, m>(J, B);
+  MatRef<ElementPack<Inn...>::template _GetStateDimension<n>(),
+         ElementPack<Cur...>::template _GetStateDimension<m>()> GetJacBlockCur(MatRefX J) const {
+    return this->template GetJacBlockImpl<1, n, m>(J);
   }
 
   template<int n, int m>
-  void SetJacBlockNoi(
-      MatX& J,
-      const Mat<ElementPack<Inn...>::template _GetStateDimension<n>(),
-                ElementPack<Noi...>::template _GetStateDimension<m>()>& B) const {
-    this->template SetJacBlockImpl<2, n, m>(J, B);
+  MatRef<ElementPack<Inn...>::template _GetStateDimension<n>(),
+         ElementPack<Noi...>::template _GetStateDimension<m>()> GetJacBlockNoi(MatRefX J) const {
+    return this->template GetJacBlockImpl<2, n, m>(J);
   }
 
   bool TestJacs(const ElementVectorBase& pre,

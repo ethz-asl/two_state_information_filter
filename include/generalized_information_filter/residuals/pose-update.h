@@ -49,14 +49,14 @@ class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
   void JacCur(MatX& J, const Vec3& IrIB_cur, const Quat& qIB_cur,
                        const Vec3& pos_noi, const Vec3& att_noi) const {
     J.setZero();
-    SetJacBlockCur<POS, POS>(J, Mat3::Identity());
-    SetJacBlockCur<ATT, ATT>(J, Mat3::Identity());
+    GetJacBlockCur<POS, POS>(J) = Mat3::Identity();
+    GetJacBlockCur<ATT, ATT>(J) = Mat3::Identity();
   }
   void JacNoi(MatX& J, const Vec3& IrIB_cur, const Quat& qIB_cur,
                        const Vec3& pos_noi, const Vec3& att_noi) const {
     J.setZero();
-    SetJacBlockNoi<POS, POS>(J, Mat3::Identity());
-    SetJacBlockNoi<ATT, ATT>(J, Mat3::Identity());
+    GetJacBlockNoi<POS, POS>(J) = Mat3::Identity();
+    GetJacBlockNoi<ATT, ATT>(J) = Mat3::Identity();
   }
 
  protected:

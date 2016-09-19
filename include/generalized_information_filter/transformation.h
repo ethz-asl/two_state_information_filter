@@ -53,11 +53,9 @@ class Transformation<ElementPack<Out...>, ElementPack<In...>> : public Model<
   }
 
   template<int n, int m>
-  void SetJacBlock(
-        MatX& J,
-        const Eigen::Matrix<double, ElementPack<Out...>::template _GetStateDimension<n>(),
-        ElementPack<In...>::template _GetStateDimension<m>()>& B) const {
-    this->template SetJacBlockImpl<0, n, m>(J, B);
+  MatRef<ElementPack<Out...>::template _GetStateDimension<n>(),
+         ElementPack<In...>::template _GetStateDimension<m>()> GetJacBlock(MatRefX J) const {
+    return this->template GetJacBlockImpl<0, n, m>(J);
   }
 
   bool JacTest(const ElementVectorBase& in, const double delta, const double th) const {

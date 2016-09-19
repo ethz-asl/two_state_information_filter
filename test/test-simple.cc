@@ -27,17 +27,12 @@ class TransformationExample : public Transformation<ElementPack<Vec3>,
   void JacTransform(MatX& J, const double& timeIn,
                     const std::array<Vec3, 4>& posIn) const {
     J.setZero();
-    SetJacBlock<0, 0>(J, Vec3(1, 2, 3));
+    GetJacBlock<0, 0>(J) = Vec3(1, 2, 3);
     Eigen::Matrix<double, 3, 12> J2;
     J2.setZero();
     J2.block<3, 3>(0, 6) = Mat3::Identity();
-    SetJacBlock<0, 1>(J, J2);
+    GetJacBlock<0, 1>(J) = J2;
   }
-};
-
-class EmptyMeas : public ElementVector {
- public:
-  EmptyMeas(): ElementVector(std::make_shared<ElementVectorDefinition>()){};
 };
 
 class BinaryRedidualVelocity : public BinaryResidual<ElementPack<Vec3>,
@@ -59,20 +54,20 @@ class BinaryRedidualVelocity : public BinaryResidual<ElementPack<Vec3>,
   void JacPre(MatX& J, const Vec3& posPre, const Vec3& velPre,
                   const Vec3& posCur, const Vec3& posNoi) const {
     J.setZero();
-    SetJacBlockPre<0, 0>(J, Mat3::Identity());
-    SetJacBlockPre<0, 1>(J, dt_ * Mat3::Identity());
+    GetJacBlockPre<0, 0>(J) = Mat3::Identity();
+    GetJacBlockPre<0, 1>(J) = dt_ * Mat3::Identity();
   }
 
   void JacCur(MatX& J, const Vec3& posPre, const Vec3& velPre,
                   const Vec3& posCur, const Vec3& posNoi) const {
     J.setZero();
-    SetJacBlockCur<0, 0>(J, -Mat3::Identity());
+    GetJacBlockCur<0, 0>(J) = -Mat3::Identity();
   }
 
   void JacNoi(MatX& J, const Vec3& posPre, const Vec3& velPre,
                   const Vec3& posCur, const Vec3& posNoi) const {
     J.setZero();
-    SetJacBlockNoi<0, 0>(J, Mat3::Identity());
+    GetJacBlockNoi<0, 0>(J) = Mat3::Identity();
   }
 
  protected:
@@ -108,17 +103,17 @@ class BinaryRedidualAccelerometer : public BinaryResidual<ElementPack<Vec3>,
   void JacPre(MatX& J, const Vec3& velPre, const Vec3& velCur,
                   const Vec3& velNoi) const {
     J.setZero();
-    SetJacBlockPre<0, 0>(J, Mat3::Identity());
+    GetJacBlockPre<0, 0>(J) = Mat3::Identity();
   }
   void JacCur(MatX& J, const Vec3& velPre, const Vec3& velCur,
                   const Vec3& velNoi) const {
     J.setZero();
-    SetJacBlockCur<0, 0>(J, -Mat3::Identity());
+    GetJacBlockCur<0, 0>(J) = -Mat3::Identity();
   }
   void JacNoi(MatX& J, const Vec3& velPre, const Vec3& velCur,
                   const Vec3& velNoi) const {
     J.setZero();
-    SetJacBlockNoi<0, 0>(J, Mat3::Identity());
+    GetJacBlockNoi<0, 0>(J) = Mat3::Identity();
   }
 
  protected:
@@ -142,12 +137,12 @@ class PredictionAccelerometer : public Prediction<ElementPack<Vec3>,
   void PredictJacPre(MatX& J, const Vec3& velPre,
                             const Vec3& velNoi) const {
     J.setZero();
-    SetJacBlockPre<0, 0>(J, Mat3::Identity());
+    GetJacBlockPre<0, 0>(J) = Mat3::Identity();
   }
   void PredictJacNoi(MatX& J, const Vec3& velPre,
                             const Vec3& velNoi) const {
     J.setZero();
-    SetJacBlockNoi<0, 0>(J, Mat3::Identity());
+    GetJacBlockNoi<0, 0>(J) = Mat3::Identity();
   }
 
  protected:
@@ -279,8 +274,8 @@ TEST_F(NewStateTest, constructor) {
   f2.Update();
   f2.Update();
 
-  // Test IMU + Pose filter
-  std::shared_ptr<IMUPrediction> imuPre(new IMUPrediction());
+  // Test Imu + Pose filter
+  std::shared_ptr<ImuPrediction> imuPre(new ImuPrediction());
   imuPre->GetNoiseCovariance() = 1e-8 * imuPre->GetNoiseCovariance();
   imuPre->TestJacs(1e-6, 1e-6);
   std::shared_ptr<PoseUpdate> poseUpd(new PoseUpdate());
@@ -291,15 +286,15 @@ TEST_F(NewStateTest, constructor) {
   int imuPreInd = imuPoseFilter.AddResidual(imuPre);
   int poseUpdInd = imuPoseFilter.AddResidual(poseUpd);
   imuPoseFilter.Init(start);
-  imuPoseFilter.AddMeasurement(imuPreInd, std::shared_ptr<IMUMeas>(
-      new IMUMeas(Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 9.81))), start);
+  imuPoseFilter.AddMeasurement(imuPreInd, std::shared_ptr<ImuMeas>(
+      new ImuMeas(Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 9.81))), start);
   for (int i = 1; i <= 10; i++) {
-    imuPoseFilter.AddMeasurement(imuPreInd, std::shared_ptr<IMUMeas>(
-        new IMUMeas(Vec3(0.3, 0.0, 0.1), Vec3(0.0, 0.2, 9.81))),
-        start + fromSec(i));
+    imuPoseFilter.AddMeasurement(imuPreInd, std::shared_ptr<ImuMeas>(
+        new ImuMeas(Vec3(0.3, 0.0, 0.1), Vec3(0.0, 0.2, 9.81))),
+        start + fromSec(1+0.1*i));
     imuPoseFilter.AddMeasurement(poseUpdInd, std::shared_ptr<PoseMeas>(
         new PoseMeas(Vec3(0.0, 0.0, 0.0), Quat(1.0, 0.0, 0.0, 0.0))),
-        start + fromSec(i));
+        start + fromSec(1+0.1*i));
   }
   TimePoint startFilter = Clock::now();
   imuPoseFilter.Update();
