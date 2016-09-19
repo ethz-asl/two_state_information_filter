@@ -6,48 +6,57 @@
 
 namespace GIF {
 
+/*! \brief Pose Measurement
+ *         ElementVector that can be used to hold a generic pose measurements (position + attitude).
+ */
 class PoseMeas : public ElementVector {
  public:
-  PoseMeas(const V3D& pos = V3D(0, 0, 0), const QPD& att = QPD())
-      : ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementPack<V3D, QPD>({ "pos", "att" }))),
-        pos_(ElementVector::GetValue<V3D>("pos")),
-        att_(ElementVector::GetValue<QPD>("att")) {
-    pos_ = pos;
-    att_ = att;
+  PoseMeas(const Vec3& IrIB = Vec3(0, 0, 0), const Quat& qIB = Quat())
+      : ElementVector(std::shared_ptr<ElementVectorDefinition>(
+            new ElementPack<Vec3, Quat>({ "IrIB", "qIB" }))),
+        IrIB_(ElementVector::GetValue<Vec3>("IrIB")),
+        qIB_(ElementVector::GetValue<Quat>("qIB")) {
+    IrIB_ = IrIB;
+    qIB_ = qIB;
   }
-  V3D& pos_;
-  QPD& att_;
+  Vec3& IrIB_;
+  Quat& qIB_;
 };
 
-class PoseUpdate : public UnaryUpdate<ElementPack<V3D, QPD>,
-    ElementPack<V3D, QPD>, ElementPack<V3D, V3D>, PoseMeas> {
+/*! \brief Pose Update
+ *         Builds a residual between current state pose and measured pose.
+ *         Coordinate frames: I (world), B (IMU).
+ *         Chosen state parametrisation: Position (IrIB), Attitude (qIB).
+ */
+class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
+    ElementPack<Vec3, Quat>, ElementPack<Vec3, Vec3>, PoseMeas> {
  public:
   PoseUpdate()
-      : mtUnaryUpdate( { "pos", "att" }, { "pos", "att" }, { "pos", "att" }) {
+      : mtUnaryUpdate( { "IrIB", "qIB" }, { "IrIB", "qIB" }, { "IrIB", "qIB" }) {
     dt_ = 0.1;
   }
 
   virtual ~PoseUpdate() {
   }
 
-  void evalUnaryUpdateImpl(V3D& posInn, QPD& attInn, const V3D& posSta,
-                           const QPD& attSta, const V3D& posNoi,
-                           const V3D& attNoi) const {
-    posInn = posSta - meas_->pos_ + posNoi;
-    QPD dQ = dQ.exponentialMap(attNoi);
-    attInn = dQ * attSta * meas_->att_.inverted();
+  void Eval(Vec3& pos_inn, Quat& att_inn, const Vec3& IrIB_cur,
+            const Quat& qIB_cur, const Vec3& pos_noi,
+            const Vec3& att_noi) const {
+    pos_inn = IrIB_cur - meas_->IrIB_ + pos_noi;
+    Quat dQ = dQ.exponentialMap(att_noi);
+    att_inn = dQ * qIB_cur * meas_->qIB_.inverted();
   }
-  void jacStaUnaryUpdateImpl(MXD& J, const V3D& posSta, const QPD& attSta,
-                             const V3D& posNoi, const V3D& attNoi) const {
+  void JacCur(MatX& J, const Vec3& IrIB_cur, const Quat& qIB_cur,
+                       const Vec3& pos_noi, const Vec3& att_noi) const {
     J.setZero();
-    setJacBlockPos<POS, POS>(J, M3D::Identity());
-    setJacBlockPos<ATT, ATT>(J, M3D::Identity());
+    SetJacBlockCur<POS, POS>(J, Mat3::Identity());
+    SetJacBlockCur<ATT, ATT>(J, Mat3::Identity());
   }
-  void jacNoiUnaryUpdateImpl(MXD& J, const V3D& posSta, const QPD& attSta,
-                             const V3D& posNoi, const V3D& attNoi) const {
+  void JacNoi(MatX& J, const Vec3& IrIB_cur, const Quat& qIB_cur,
+                       const Vec3& pos_noi, const Vec3& att_noi) const {
     J.setZero();
-    setJacBlockNoi<POS, POS>(J, M3D::Identity());
-    setJacBlockNoi<ATT, ATT>(J, M3D::Identity());
+    SetJacBlockNoi<POS, POS>(J, Mat3::Identity());
+    SetJacBlockNoi<ATT, ATT>(J, Mat3::Identity());
   }
 
  protected:

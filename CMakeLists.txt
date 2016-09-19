@@ -6,6 +6,7 @@ add_definitions(-std=c++11)
 
 find_package(kindr REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(glog REQUIRED)
 
 include_directories(${kindr_INCLUDE_DIRS})
 include_directories(${EIGEN3_INCLUDE_DIR})
@@ -23,7 +24,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/gtest/" AND (NOT DEFINED CATKIN_DEVEL_PRE
 	 src/element-vector.cc
 	 src/element-vector-definition.cc
   )
-	target_link_libraries(${PROJECT_NAME} pthread)
+	target_link_libraries(${PROJECT_NAME} pthread glog)
 	
 	
 	add_executable(test_simple test/test-simple.cc)

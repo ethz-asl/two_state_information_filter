@@ -12,14 +12,16 @@ namespace GIF {
  */
 class ElementDescriptionBase {
  public:
+  typedef std::shared_ptr<ElementDescriptionBase> Ptr;
+  typedef std::shared_ptr<const ElementDescriptionBase> CPtr;
   ElementDescriptionBase() {}
   virtual ~ElementDescriptionBase() {}
 
-  virtual SP<ElementBase> MakeElement() const = 0;
-  virtual bool MatchesDescription(
-      const SP<const ElementDescriptionBase>& in) const = 0;
-  virtual bool MatchesDescription(const SP<const ElementBase>& in) const = 0;
+  virtual ElementBase::Ptr MakeElement() const = 0;
+  virtual bool MatchesDescription(const ElementDescriptionBase& in) const = 0;
+  virtual bool MatchesDescription(const ElementBase& in) const = 0;
   virtual int GetDimension() const = 0;
+  virtual ElementDescriptionBase::Ptr Copy() const = 0;
 };
 
 /*! \brief Templated form of element descriptions.
@@ -33,18 +35,22 @@ class ElementDescription : public ElementDescriptionBase {
   }
   ~ElementDescription() {
   }
-  SP<ElementBase> MakeElement() const {
-    return std::shared_ptr<Element<T>>(new Element<T>(this));
+  ElementBase::Ptr MakeElement() const {
+    return std::make_shared<Element<T>>(this);
   }
-  bool MatchesDescription(const SP<const ElementDescriptionBase>& in) const {
-    return std::dynamic_pointer_cast<const ElementDescription<T>>(in).get()
-        != nullptr;
+  bool MatchesDescription(const ElementDescriptionBase& in) const {
+    const ElementDescriptionBase* inPtr = &in;
+    return dynamic_cast<const ElementDescription<T>*>(inPtr) != nullptr;
   }
-  bool MatchesDescription(const SP<const ElementBase>& in) const {
-    return std::dynamic_pointer_cast<const Element<T>>(in).get() != nullptr;
+  bool MatchesDescription(const ElementBase& in) const {
+    const ElementBase* inPtr = &in;
+    return dynamic_cast<const Element<T>*>(inPtr) != nullptr;
   }
   inline int GetDimension() const {
-    return ElementTraits<T>::d_;
+    return ElementTraits<T>::kDim;
+  }
+  ElementDescriptionBase::Ptr Copy() const{
+    return std::make_shared<ElementDescription<T>>();
   }
 };
 
