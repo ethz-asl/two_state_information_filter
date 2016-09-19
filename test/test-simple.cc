@@ -6,6 +6,7 @@
 #include "generalized_information_filter/filter.h"
 #include "generalized_information_filter/prediction.h"
 #include "generalized_information_filter/residuals/imu-prediction.h"
+#include "generalized_information_filter/residuals/kinematics-model.h"
 #include "generalized_information_filter/residuals/landmark-prediction.h"
 #include "generalized_information_filter/residuals/leg-kinematic-update.h"
 #include "generalized_information_filter/residuals/pose-update.h"
@@ -305,6 +306,11 @@ TEST_F(NewStateTest, constructor) {
   // Test Landmark Prediction
   std::shared_ptr<RobocentricLandmarkPrediction<4>> rcLMPre(new RobocentricLandmarkPrediction<4>());
   rcLMPre->TestJacs(1e-6,1e-6);
+
+  // Test Leg Kinematic Update
+  std::shared_ptr<LegKinematicUpdate<LeggedRobotModelExample>> legKinematicUpd(new LegKinematicUpdate<LeggedRobotModelExample>());
+  legKinematicUpd->SetModelPtr(new LeggedRobotModelExample());
+  legKinematicUpd->TestJacs(1e-6,1e-6);
 }
 
 int main(int argc, char **argv) {
