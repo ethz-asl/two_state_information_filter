@@ -58,15 +58,16 @@ class Filter {
  public:
   Filter(): stateDefinition_(new ElementVectorDefinition()),
             state_(stateDefinition_), curLinState_(stateDefinition_) {
-    Init();
     max_wait_time_default_ = fromSec(0.1);
     min_wait_time_default_ = fromSec(0.0);
+    is_initialized_ = false;
   }
 
   virtual ~Filter() {
   }
 
   void Init(const TimePoint& t = TimePoint::min()) {  // TODO: pass optional State
+    LOG(INFO) << "Initializing state at t = " << std::chrono::system_clock::to_time_t(t) << std::endl;
     startTime_ = t;
     time_ = t;
     state_.Construct();
@@ -114,6 +115,14 @@ class Filter {
     return maxUpdateTime;
   }
 
+  TimePoint GetMinMeasTime() const {
+    TimePoint minMeasTime = TimePoint::max();
+    for (int i = 0; i < residuals_.size(); i++) {
+      minMeasTime = std::min(minMeasTime, residuals_.at(i).mt_.GetFirstTime());
+    }
+    return minMeasTime;
+  }
+
   void GetMeasurementTimeList(std::set<TimePoint>& times,
                               const TimePoint& maxUpdateTime,
                               const bool includeMax = false) const {
@@ -126,7 +135,7 @@ class Filter {
         residuals_.at(i).mt_.GetLastInRange(times, time_, maxUpdateTime);
       }
     }
-    if (includeMax) {
+    if (includeMax && maxUpdateTime > time_) {
       times.insert(maxUpdateTime);
     }
   }
@@ -146,6 +155,11 @@ class Filter {
 
   void AddMeasurement(const int i, const std::shared_ptr<const ElementVectorBase>& meas,
                       const TimePoint& t) {
+    if(t <= time_){
+      LOG(WARNING) << "Adding measurements before current time (will be discarded)" << std::endl;
+      return;
+    }
+    LOG(INFO) << "Adding measurement with ID " << i << " at  t = " << std::chrono::system_clock::to_time_t(t) << std::endl;
     if(residuals_.at(i).res_->CheckMeasType(meas)){
       residuals_.at(i).mt_.AddMeasurement(meas, t);
     } else {
@@ -164,28 +178,47 @@ class Filter {
   }
 
   void Update() {
-    // Remove outdated
-    for (int i = 0; i < residuals_.size(); i++) {
-      residuals_.at(i).mt_.RemoveOutdated(time_);
-    }
-    PrintMeasurementTimelines(time_, 20, 0.01);
-    std::cout << "stateTime:\t" << toSec(time_ - startTime_) << std::endl;
-    TimePoint currentTime = GetCurrentTimeFromMeasurements();
-    std::cout << "currentTime:\t" << toSec(currentTime - startTime_) << std::endl;
-    TimePoint maxUpdateTime = GetMaxUpdateTime(currentTime);
-    std::cout << "maxUpdateTime:\t" << toSec(maxUpdateTime - startTime_) << std::endl;
-    std::set<TimePoint> times;
-    GetMeasurementTimeList(times, maxUpdateTime, false);
-    std::cout << "updateTimes:\t";
-    for (const auto& t : times) {
-      std::cout << toSec(t - startTime_) << "\t";
-    }
-    std::cout << std::endl;
-    SplitAndMergeMeasurements(times);
-    PrintMeasurementTimelines(time_, 20, 0.01);
+    // Initialize if possible
+    const TimePoint minMeasTime = GetMinMeasTime();
+    if(!is_initialized_ && minMeasTime != TimePoint::max()){
+      bool check = true;
+      for (int i = 0; i < residuals_.size(); i++) {
+        if(residuals_.at(i).mt_.GetFirstTime() == TimePoint::max()
+           && !residuals_.at(i).res_->isUnary_){
+          check = false;
+        }
+      }
 
-    for (const auto& t : times) {
-      MakeUpdateStep(t);
+      if(check){
+        Init(minMeasTime);
+        is_initialized_ = true;
+      }
+    }
+
+    if(is_initialized_){
+      // Remove outdated
+      for (int i = 0; i < residuals_.size(); i++) {
+        residuals_.at(i).mt_.RemoveOutdated(time_);
+      }
+      PrintMeasurementTimelines(time_, 20, 0.001);
+      std::cout << "stateTime:\t" << toSec(time_ - startTime_) << std::endl;
+      TimePoint currentTime = GetCurrentTimeFromMeasurements();
+      std::cout << "currentTime:\t" << toSec(currentTime - startTime_) << std::endl;
+      TimePoint maxUpdateTime = GetMaxUpdateTime(currentTime);
+      std::cout << "maxUpdateTime:\t" << toSec(maxUpdateTime - startTime_) << std::endl;
+      std::set<TimePoint> times;
+      GetMeasurementTimeList(times, maxUpdateTime, false);
+      std::cout << "updateTimes:\t";
+      for (const auto& t : times) {
+        std::cout << toSec(t - startTime_) << "\t";
+      }
+      std::cout << std::endl;
+      SplitAndMergeMeasurements(times);
+      PrintMeasurementTimelines(time_, 20, 0.001);
+
+      for (const auto& t : times) {
+        MakeUpdateStep(t);
+      }
     }
   }
 
@@ -251,6 +284,11 @@ class Filter {
 
         // Increment counter
         count += residuals_.at(i).innDim_;
+        if(residuals_.at(i).mt_.GetFirstTime() == t){
+          residuals_.at(i).mt_.RemoveProcessedFirst();
+        } else {
+          LOG(WARNING) << "Bad timing";
+        }
       }
     }
     std::cout << "Innovation:\t" << y.transpose() << std::endl;
@@ -280,6 +318,7 @@ class Filter {
   MatX cov_;
   Duration max_wait_time_default_;
   Duration min_wait_time_default_;
+  bool is_initialized_;
 
 };
 

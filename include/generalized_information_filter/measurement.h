@@ -17,6 +17,7 @@ class BinaryResidualBase;
 
 /*! \brief MeasurementTimeline
  *         Class for managing measurements in a timeline. Provides various helpers.
+ *         Assume: last_processed_time_ is always smaller than all other measurement times.
  */
 class MeasurementTimeline {
  public:
@@ -26,9 +27,9 @@ class MeasurementTimeline {
   void AddMeasurement(const std::shared_ptr<const ElementVectorBase>& meas, const TimePoint& t);
   bool GetMeasurement(const TimePoint& t, std::shared_ptr<const ElementVectorBase>& meas);
   void RemoveProcessedFirst();
-  void RemoveProcessedMeas(const TimePoint& t);
   void Reset();
   TimePoint GetLastTime() const;
+  TimePoint GetFirstTime() const;
   TimePoint GetMaximalUpdateTime(const TimePoint& current_time) const;
   void GetAllInRange(std::set<TimePoint>& times, const TimePoint& start,
                      const TimePoint& end) const;
@@ -45,9 +46,9 @@ class MeasurementTimeline {
  protected:
   std::map<TimePoint, std::shared_ptr<const ElementVectorBase>> meas_map_;
   Duration max_wait_time_;
-  Duration min_wait_time_;
+  Duration min_wait_time_; // Should always be zero for binary residual
   TimePoint last_processed_time_;
-  bool ignore_first_;
+  bool drop_first_;
 };
 
 }

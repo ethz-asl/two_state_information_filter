@@ -45,8 +45,10 @@ class LegKinematicUpdate : public UnaryUpdate<ElementPack<std::array<Vec<KinMode
   using mtUnaryUpdate::meas_;
   enum Elements {KIN};
 
-  LegKinematicUpdate()
-      : mtUnaryUpdate({"BrBL"},{"MrML"},{"BrBL"}) {
+  LegKinematicUpdate(const std::string& errorName = "BrBL",
+                     const std::string& stateName = "MrML",
+                     const std::string& noiseName = "BrBL")
+      : mtUnaryUpdate({errorName},{stateName},{noiseName}) {
     model_ = nullptr;
   }
 
