@@ -75,6 +75,7 @@ class Filter {
     curLinState_.Construct();
     cov_.resize(stateDefinition_->GetDim(), stateDefinition_->GetDim());
     cov_.setIdentity();
+    is_initialized_ = true;
   }
 
   int AddResidual(const std::shared_ptr<BinaryResidualBase>& res, const std::string& name = "") {
@@ -191,7 +192,6 @@ class Filter {
 
       if(check){
         Init(minMeasTime);
-        is_initialized_ = true;
       }
     }
 
@@ -199,6 +199,9 @@ class Filter {
       // Remove outdated
       for (int i = 0; i < residuals_.size(); i++) {
         residuals_.at(i).mt_.RemoveOutdated(time_);
+        if(residuals_.at(i).mt_.GetLastProcessedTime() > time_){
+          LOG(ERROR) << "Last processed time is in future, this should not happen!" << std::endl;
+        }
       }
       PrintMeasurementTimelines(time_, 20, 0.001);
       std::cout << "stateTime:\t" << toSec(time_ - startTime_) << std::endl;
@@ -234,6 +237,7 @@ class Filter {
       hasMeas.at(i) = residuals_.at(i).mt_.GetMeasurement(t, meas);
       if (hasMeas.at(i)) {
         innDim += residuals_.at(i).res_->InnDefinition()->GetDim();
+        PreProcess(i);
       }
     }
     VecX y(innDim);
@@ -307,6 +311,8 @@ class Filter {
     // Remove measurements and Update timepoint
     time_ = t;
   }
+
+  virtual void PreProcess(int residual_id){};
 
  protected:
   std::shared_ptr<ElementVectorDefinition> stateDefinition_; // Must come before state

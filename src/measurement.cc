@@ -189,4 +189,8 @@ void MeasurementTimeline::Print(const TimePoint& start, int start_offset,
   std::cout << std::endl;
 }
 
+TimePoint MeasurementTimeline::GetLastProcessedTime(){
+  return last_processed_time_;
+}
+
 }

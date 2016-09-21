@@ -223,7 +223,6 @@ TEST_F(NewStateTest, constructor) {
   // Test measurements
   std::shared_ptr<EmptyMeas> eptMeas(new EmptyMeas);
   TimePoint start = Clock::now();
-  f.Init(start+fromSec(0.00));
   f.AddMeasurement(0, eptMeas,start+fromSec(-0.1));
   f.AddMeasurement(0, eptMeas,start+fromSec(0.0));
   f.AddMeasurement(0, eptMeas,start+fromSec(0.2));
@@ -258,7 +257,6 @@ TEST_F(NewStateTest, constructor) {
   Filter f2;
   f2.AddResidual(velRes);
   f2.AddResidual(accPre);
-  f2.Init(start+fromSec(0.00));
   f2.AddMeasurement(0,eptMeas,start+fromSec(-0.1));
   f2.AddMeasurement(0,eptMeas,start+fromSec(0.0));
   f2.AddMeasurement(0,eptMeas,start+fromSec(0.2));
@@ -288,7 +286,6 @@ TEST_F(NewStateTest, constructor) {
   Filter imuPoseFilter;
   int imuPreInd = imuPoseFilter.AddResidual(imuPre);
   int poseUpdInd = imuPoseFilter.AddResidual(poseUpd);
-  imuPoseFilter.Init(start);
   imuPoseFilter.AddMeasurement(imuPreInd, std::shared_ptr<ImuMeas>(
       new ImuMeas(Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 9.81))), start);
   for (int i = 1; i <= 10; i++) {
