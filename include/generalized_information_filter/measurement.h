@@ -30,6 +30,7 @@ class MeasurementTimeline {
   void Reset();
   TimePoint GetLastTime() const;
   TimePoint GetFirstTime() const;
+  bool GetFirst(std::shared_ptr<const ElementVectorBase>& meas);
   TimePoint GetMaximalUpdateTime(const TimePoint& current_time) const;
   void GetAllInRange(std::set<TimePoint>& times, const TimePoint& start,
                      const TimePoint& end) const;
@@ -42,7 +43,7 @@ class MeasurementTimeline {
              const BinaryResidualBase* res);
   void MergeUndesired(const std::set<TimePoint>& times, const BinaryResidualBase* res);
   void RemoveOutdated(const TimePoint& time);
-  void Print(const TimePoint& start, int start_offset, double resolution) const;
+  std::string Print(const TimePoint& start, int start_offset, double resolution) const;
   TimePoint GetLastProcessedTime();
  protected:
   std::map<TimePoint, std::shared_ptr<const ElementVectorBase>> meas_map_;

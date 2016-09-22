@@ -74,6 +74,15 @@ TimePoint MeasurementTimeline::GetFirstTime() const {
   }
 }
 
+bool MeasurementTimeline::GetFirst(std::shared_ptr<const ElementVectorBase>& meas) {
+  if (!meas_map_.empty()) {
+    meas = meas_map_.begin()->second;
+    return true;
+  } else {
+    return false;
+  }
+}
+
 TimePoint MeasurementTimeline::GetMaximalUpdateTime(const TimePoint& current_time) const {
   TimePoint maximalUpdateTime = current_time - max_wait_time_;
   if (!meas_map_.empty()) {
@@ -168,8 +177,9 @@ void MeasurementTimeline::RemoveOutdated(const TimePoint& time) {
   }
 }
 
-void MeasurementTimeline::Print(const TimePoint& start, int start_offset,
+std::string MeasurementTimeline::Print(const TimePoint& start, int start_offset,
                                 double resolution) const {
+  std::ostringstream out;
   const int width = meas_map_.empty() ? start_offset : start_offset
                     + ceil(toSec(meas_map_.rbegin()->first - start) / resolution) + 1;
   std::vector<int> counts(width, 0);
@@ -181,12 +191,13 @@ void MeasurementTimeline::Print(const TimePoint& start, int start_offset,
   }
   for (const auto& c : counts) {
     if (c == 0) {
-      std::cout << "-";
+      out << "-";
     } else {
-      std::cout << c;
+      out << c;
     }
   }
-  std::cout << std::endl;
+  out << std::endl;
+  return out.str();
 }
 
 TimePoint MeasurementTimeline::GetLastProcessedTime(){

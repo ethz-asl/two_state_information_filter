@@ -35,12 +35,12 @@ class KinematicMeasurement : public ElementVector {
  *         M (Imu).
  */
 template<typename KinModel>
-class LegKinematicUpdate : public UnaryUpdate<ElementPack<std::array<Vec<KinModel::kNumDof>,KinModel::kNumLeg>>,
-      ElementPack<std::array<Vec<KinModel::kNumDof>,KinModel::kNumLeg>>, ElementPack<std::array<Vec<KinModel::kNumDof>,KinModel::kNumLeg>>,
+class LegKinematicUpdate : public UnaryUpdate<ElementPack<std::array<Vec3,KinModel::kNumLeg>>,
+      ElementPack<std::array<Vec3,KinModel::kNumLeg>>, ElementPack<std::array<Vec3,KinModel::kNumLeg>>,
       KinematicMeasurement<KinModel::kNumLeg,KinModel::kNumDof>> {
  public:
-  using mtUnaryUpdate = UnaryUpdate<ElementPack<std::array<Vec<KinModel::kNumDof>,KinModel::kNumLeg>>,
-      ElementPack<std::array<Vec<KinModel::kNumDof>,KinModel::kNumLeg>>, ElementPack<std::array<Vec<KinModel::kNumDof>,KinModel::kNumLeg>>,
+  using mtUnaryUpdate = UnaryUpdate<ElementPack<std::array<Vec3,KinModel::kNumLeg>>,
+      ElementPack<std::array<Vec3,KinModel::kNumLeg>>, ElementPack<std::array<Vec3,KinModel::kNumLeg>>,
       KinematicMeasurement<KinModel::kNumLeg,KinModel::kNumDof>>;
   using mtUnaryUpdate::meas_;
   enum Elements {KIN};
@@ -49,17 +49,16 @@ class LegKinematicUpdate : public UnaryUpdate<ElementPack<std::array<Vec<KinMode
                      const std::string& stateName = "MrML",
                      const std::string& noiseName = "BrBL")
       : mtUnaryUpdate({errorName},{stateName},{noiseName}) {
-    model_ = nullptr;
   }
 
   virtual ~LegKinematicUpdate() {
   }
 
-  void Eval(std::array<Vec<KinModel::kNumDof>,KinModel::kNumLeg>& BrBL_inn,
-            const std::array<Vec<KinModel::kNumDof>,KinModel::kNumLeg>& MrML_cur,
-            const std::array<Vec<KinModel::kNumDof>,KinModel::kNumLeg>& BrBL_noi) const {
+  void Eval(std::array<Vec3,KinModel::kNumLeg>& BrBL_inn,
+            const std::array<Vec3,KinModel::kNumLeg>& MrML_cur,
+            const std::array<Vec3,KinModel::kNumLeg>& BrBL_noi) const {
     for(int i=0;i<KinModel::kNumLeg;i++){
-      if(meas_->contact_flag_[i]){
+      if(GetContactFlagFromMeas(i)){
         const Vec3 BrBL = BrBM_ + qMB_.inverseRotate(MrML_cur[i]);
         BrBL_inn[i] = BrBL
             - model_->forwardKinematicsBaseToFootInBaseFrame(meas_->kin_[i],i) + BrBL_noi[i];
@@ -68,34 +67,44 @@ class LegKinematicUpdate : public UnaryUpdate<ElementPack<std::array<Vec<KinMode
       }
     }
   }
-  void JacCur(MatX& J, const std::array<Vec<KinModel::kNumDof>,KinModel::kNumLeg>& MrML_cur,
-                       const std::array<Vec<KinModel::kNumDof>,KinModel::kNumLeg>& BrBL_noi) const {
+  void JacCur(MatX& J, const std::array<Vec3,KinModel::kNumLeg>& MrML_cur,
+                       const std::array<Vec3,KinModel::kNumLeg>& BrBL_noi) const {
     J.setZero();
     for(int i=0;i<KinModel::kNumLeg;i++){
-      if(meas_->contact_flag_[i]){
+      if(GetContactFlagFromMeas(i)){
         this->template GetJacBlockCur<KIN, KIN>(J).template block<3,3>(3*i,3*i) =
             RotMat(qMB_.inverted()).matrix();
       }
     }
   }
-  void JacNoi(MatX& J, const std::array<Vec<KinModel::kNumDof>,KinModel::kNumLeg>& MrML_cur,
-                       const std::array<Vec<KinModel::kNumDof>,KinModel::kNumLeg>& BrBL_noi) const {
+  void JacNoi(MatX& J, const std::array<Vec3,KinModel::kNumLeg>& MrML_cur,
+                       const std::array<Vec3,KinModel::kNumLeg>& BrBL_noi) const {
     J.setZero();
     for(int i=0;i<KinModel::kNumLeg;i++){
       this->template GetJacBlockNoi<KIN, KIN>(J).template block<3,3>(3*i,3*i) = Mat3::Identity();
     }
   }
 
-  void SetModelPtr(KinModel* model) {
+  void SetModelPtr(const std::shared_ptr<KinModel>& model) {
     model_ = model;
   }
+
   void SetExtrinsics(Vec3 BrBM, Quat qMB){
     BrBM_  = BrBM;
     qMB_ = qMB;
   }
 
+  bool GetContactFlagFromMeas(int i) const{
+    return meas_->contact_flag_[i];
+  }
+
+  Vec3 GetMrMLFromMeas(int i) const{
+    return qMB_.rotate(Vec3(model_->forwardKinematicsBaseToFootInBaseFrame(meas_->kin_[i],i)
+                            - BrBM_));
+  }
+
  protected:
-  KinModel* model_;
+  std::shared_ptr<KinModel> model_;
   Vec3 BrBM_;
   Quat qMB_;
 };

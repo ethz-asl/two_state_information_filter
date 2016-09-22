@@ -35,7 +35,7 @@ class ElementVectorBase {
   inline int GetStart(int i) const;
   inline int GetOuter(int i) const;
   inline int GetInner(int i) const;
-  void Print() const;
+  std::string Print() const;
   void SetIdentity();
   void SetRandom();
   void BoxPlus(const VecCRefX& vec, ElementVectorBase* out) const;

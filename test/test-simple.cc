@@ -167,7 +167,7 @@ TEST_F(NewStateTest, constructor) {
   ElementVector s1a(t.InputDefinition());
   ElementVector s1b(t.InputDefinition());
   s1a.SetIdentity();
-  s1a.Print();
+  std::cout << s1a.Print();
 
   // Boxplus and BoxMinus
   Eigen::VectorXd v(s1a.GetDimension());
@@ -176,7 +176,7 @@ TEST_F(NewStateTest, constructor) {
     v(i) = i;
   }
   s1a.BoxPlus(v, &s1b);
-  s1b.Print();
+  std::cout << s1b.Print();
   s1a.BoxMinus(s1b, v);
   std::cout << v.transpose() << std::endl;
 
@@ -213,10 +213,10 @@ TEST_F(NewStateTest, constructor) {
   ElementVector preState(f.StateDefinition());
   preState.SetIdentity();
   preState.GetValue < Vec3 > ("pos") = Vec3(1, 2, 3);
-  preState.Print();
+  std::cout << preState.Print();
   ElementVector curState(f.StateDefinition());
   curState.SetIdentity();
-  curState.Print();
+  std::cout << curState.Print();
   f.EvalResidual(&preState, &curState);
 
 
@@ -306,7 +306,8 @@ TEST_F(NewStateTest, constructor) {
 
   // Test Leg Kinematic Update
   std::shared_ptr<LegKinematicUpdate<LeggedRobotModelExample>> legKinematicUpd(new LegKinematicUpdate<LeggedRobotModelExample>());
-  legKinematicUpd->SetModelPtr(new LeggedRobotModelExample());
+  std::shared_ptr<LeggedRobotModelExample> model(new LeggedRobotModelExample());
+  legKinematicUpd->SetModelPtr(model);
   legKinematicUpd->TestJacs(1e-6,1e-6);
 }
 

@@ -66,7 +66,7 @@ class Filter {
   virtual ~Filter() {
   }
 
-  void Init(const TimePoint& t = TimePoint::min()) {  // TODO: pass optional State
+  virtual void Init(const TimePoint& t = TimePoint::min()) {  // TODO: pass optional State
     LOG(INFO) << "Initializing state at t = " << std::chrono::system_clock::to_time_t(t) << std::endl;
     startTime_ = t;
     time_ = t;
@@ -91,7 +91,7 @@ class Filter {
                                   residuals_.at(i).preWrap_,
                                   residuals_.at(i).curWrap_,
                                   residuals_.at(i).noi_);
-      residuals_.at(i).inn_.Print();
+      LOG(INFO) << residuals_.at(i).inn_.Print();
     }
   }
 
@@ -169,12 +169,14 @@ class Filter {
   }
 
   void PrintMeasurementTimelines(const TimePoint& start, int startOffset, double resolution) {
+    std::ostringstream out;
     for (int i = 0; i < startOffset; i++) {
-      std::cout << " ";
+      out << " ";
     }
-    std::cout << "|" << std::endl;
+    out << "|";
+    LOG(INFO) << out;
     for (int i = 0; i < residuals_.size(); i++) {
-      residuals_.at(i).mt_.Print(start, startOffset, resolution);
+      LOG(INFO) << residuals_.at(i).mt_.Print(start, startOffset, resolution);
     }
   }
 
@@ -204,18 +206,19 @@ class Filter {
         }
       }
       PrintMeasurementTimelines(time_, 20, 0.001);
-      std::cout << "stateTime:\t" << toSec(time_ - startTime_) << std::endl;
+      LOG(INFO) << "stateTime:\t" << toSec(time_ - startTime_);
       TimePoint currentTime = GetCurrentTimeFromMeasurements();
-      std::cout << "currentTime:\t" << toSec(currentTime - startTime_) << std::endl;
+      LOG(INFO) << "currentTime:\t" << toSec(currentTime - startTime_);
       TimePoint maxUpdateTime = GetMaxUpdateTime(currentTime);
-      std::cout << "maxUpdateTime:\t" << toSec(maxUpdateTime - startTime_) << std::endl;
+      LOG(INFO) << "maxUpdateTime:\t" << toSec(maxUpdateTime - startTime_);
       std::set<TimePoint> times;
       GetMeasurementTimeList(times, maxUpdateTime, false);
-      std::cout << "updateTimes:\t";
+      std::ostringstream out;
+      out << "updateTimes:\t";
       for (const auto& t : times) {
-        std::cout << toSec(t - startTime_) << "\t";
+        out << toSec(t - startTime_) << "\t";
       }
-      std::cout << std::endl;
+      LOG(INFO) << out;
       SplitAndMergeMeasurements(times);
       PrintMeasurementTimelines(time_, 20, 0.001);
 
@@ -237,7 +240,6 @@ class Filter {
       hasMeas.at(i) = residuals_.at(i).mt_.GetMeasurement(t, meas);
       if (hasMeas.at(i)) {
         innDim += residuals_.at(i).res_->InnDefinition()->GetDim();
-        PreProcess(i);
       }
     }
     VecX y(innDim);
@@ -253,6 +255,7 @@ class Filter {
         residuals_.at(i).res_->SetDt(toSec(t-time_));
         residuals_.at(i).mt_.GetMeasurement(t, meas);
         residuals_.at(i).res_->SetMeas(meas);
+        PreProcess(i);
         residuals_.at(i).preWrap_.SetElementVector(&state_);
         residuals_.at(i).curWrap_.SetElementVector(&curLinState_);
         residuals_.at(i).res_->Eval(&residuals_.at(i).inn_,
@@ -288,14 +291,9 @@ class Filter {
 
         // Increment counter
         count += residuals_.at(i).innDim_;
-        if(residuals_.at(i).mt_.GetFirstTime() == t){
-          residuals_.at(i).mt_.RemoveProcessedFirst();
-        } else {
-          LOG(WARNING) << "Bad timing";
-        }
       }
     }
-    std::cout << "Innovation:\t" << y.transpose() << std::endl;
+    LOG(INFO) << "Innovation:\t" << y.transpose();
 
     // Compute Kalman Update // TODO: make more efficient and numerically stable
     MatX D = cov_.inverse() + JacPre.transpose() * Winv * JacPre;
@@ -305,14 +303,47 @@ class Filter {
 
     // Apply Kalman Update
     curLinState_.BoxPlus(dx, &state_);
-    std::cout << "state after Update:" << std::endl;
-    state_.Print();
+    LOG(INFO) << "state after Update:";
+    LOG(INFO) << state_.Print();
 
-    // Remove measurements and Update timepoint
+    // Update timepoint
     time_ = t;
+
+    // Post Processing
+    for (int i = 0; i < residuals_.size(); i++) {
+      if (hasMeas.at(i)) {
+        PostProcess(i);
+
+        // Remove processed measurement
+        if(residuals_.at(i).mt_.GetFirstTime() == t){
+          residuals_.at(i).mt_.RemoveProcessedFirst();
+        } else {
+          LOG(WARNING) << "Bad timing";
+        }
+      }
+    }
+  }
+
+  void TestJacs(const double delta, const double th, int i){
+    residuals_.at(i).res_->TestJacs(delta, th);
+  }
+
+  void TestJacs(const double delta, const double th){
+    for(int i=0;i<residuals_.size();i++){
+      TestJacs(delta, th, i);
+    }
   }
 
   virtual void PreProcess(int residual_id){};
+  virtual void PostProcess(int residual_id){};
+
+  ElementVector& GetState(){
+    return state_;
+  }
+
+  GIF::MatX& GetCovariance(){
+    return cov_;
+  }
 
  protected:
   std::shared_ptr<ElementVectorDefinition> stateDefinition_; // Must come before state
