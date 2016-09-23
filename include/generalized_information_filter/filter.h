@@ -338,11 +338,22 @@ class Filter {
   virtual void PostProcess(int residual_id){};
 
   ElementVector& GetState(){
+    LOG_IF(ERROR,!is_initialized_) << "Accessing state before initialization";
     return state_;
   }
 
   GIF::MatX& GetCovariance(){
+    LOG_IF(ERROR,!is_initialized_) << "Accessing cov before initialization";
     return cov_;
+  }
+
+  TimePoint& GetTime(){
+    LOG_IF(ERROR,!is_initialized_) << "Accessing time before initialization";
+    return time_;
+  }
+
+  bool IsInitialized(){
+    return is_initialized_;
   }
 
  protected:
