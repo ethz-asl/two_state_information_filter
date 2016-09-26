@@ -183,15 +183,15 @@ void Model<Derived,OutPack,InPacks...>::JacFDImpl(MatX& J,
   ElementVector stateDis(inDefinitions_[InIndex]);
   ElementVector outRef(outDefinition_);
   ElementVector outDis(outDefinition_);
-  J.resize(outRef.GetDimension(),stateDis.GetDimension());
+  J.resize(outRef.GetDim(),stateDis.GetDim());
   J.setZero();
   stateDis = *ins[InIndex];
   std::array<const ElementVectorBase*,N_> inDis = ins;
   inDis[InIndex] = &stateDis;
   EvalWrapper(&outRef,inDis);
-  VecX difIn(stateDis.GetDimension());
-  VecX difOut(outRef.GetDimension());
-  for(int i=0; i<stateDis.GetDimension(); i++){
+  VecX difIn(stateDis.GetDim());
+  VecX difOut(outRef.GetDim());
+  for(int i=0; i<stateDis.GetDim(); i++){
     difIn.setZero();
     difIn(i) = delta;
     ins[InIndex]->BoxPlus(difIn,&stateDis);

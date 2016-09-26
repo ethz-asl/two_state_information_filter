@@ -129,7 +129,7 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
                          ElementVectorBase::CPtr& out) const {
     if (isMergeable_) {
       ElementVectorBase::Ptr newMeas(new Meas());
-      VecX diff(in1->GetDimension());
+      VecX diff(in1->GetDim());
       in1->BoxMinus(*in2, diff);
       in2->BoxPlus(toSec(t1 - t0) / toSec(t2 - t0) * diff, newMeas.get());
       out = newMeas;

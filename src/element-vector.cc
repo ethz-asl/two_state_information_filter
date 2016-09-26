@@ -8,8 +8,7 @@ ElementVectorBase::ElementVectorBase(
 
 ElementVectorBase::~ElementVectorBase() {}
 
-bool ElementVectorBase::MatchesDefinition(
-    const ElementVectorDefinition& def) const {
+bool ElementVectorBase::MatchesDefinition(const ElementVectorDefinition& def) const {
   if (GetNumElement() != def.GetNumElements()) {
     return false;
   }
@@ -22,6 +21,8 @@ bool ElementVectorBase::MatchesDefinition(
 }
 
 ElementVectorBase& ElementVectorBase::operator=(const ElementVectorBase& other){
+  DLOG_IF(FATAL, !MatchesDefinition(*other.GetDefinition()))
+      << "Definition mismatch during element vector assignement";
   for (int i = 0; i < GetNumElement(); i++) {
     *GetElement(i) = *other.GetElement(i);
   }
@@ -31,7 +32,7 @@ ElementVectorBase& ElementVectorBase::operator=(const ElementVectorBase& other){
 std::string ElementVectorBase::Print() const {
   std::ostringstream out;
   for (int i = 0; i < GetNumElement(); i++) {
-    out << GetDefinition()->GetName(i) << ": ";
+    out << GetName(i) << ": ";
     out << GetElement(i)->Print();
   }
   return out.str();
@@ -50,6 +51,8 @@ void ElementVectorBase::SetRandom() {
 }
 
 void ElementVectorBase::BoxPlus(const VecCRefX& vec, ElementVectorBase* out) const {
+  DLOG_IF(FATAL, !MatchesDefinition(*out->GetDefinition()))
+      << "Definition mismatch during element vector assignement";
   for (int i = 0; i < GetNumElement(); i++) {
     GetElement(i)->Boxplus(
         vec.block(GetStart(i), 0, GetElement(i)->GetDim(), 1),
@@ -59,6 +62,8 @@ void ElementVectorBase::BoxPlus(const VecCRefX& vec, ElementVectorBase* out) con
 
 void ElementVectorBase::BoxMinus(const ElementVectorBase& ref,
                          VecRefX vec) const {
+  DLOG_IF(FATAL, !MatchesDefinition(*ref.GetDefinition()))
+      << "Definition mismatch during element vector assignement";
   for (int i = 0; i < GetNumElement(); i++) {
     GetElement(i)->Boxminus(
         *ref.GetElement(i),
@@ -89,8 +94,8 @@ int ElementVector::GetNumElement() const {
 
 void ElementVector::Construct(){
   elements_.clear();
-  for (int i = 0; i < def_->GetNumElements(); i++) {
-    const ElementDescriptionBase::CPtr& description = def_->GetElementDescription(i);
+  for (int i = 0; i < GetDefinition()->GetNumElements(); i++) {
+    const ElementDescriptionBase::CPtr& description = GetDefinition()->GetElementDescription(i);
     elements_.push_back(description->MakeElement(description));
   }
 }
@@ -115,21 +120,23 @@ int ElementVectorWrapper::GetNumElement() const {
 }
 
 void ElementVectorWrapper::ComputeMap() {
-  indexMap_.resize(def_->GetNumElements());
-  for (int i = 0; i < def_->GetNumElements(); i++) {
-    indexMap_[i] = inDef_->FindName(def_->GetName(i));
+  indexMap_.resize(GetDefinition()->GetNumElements());
+  for (int i = 0; i < GetDefinition()->GetNumElements(); i++) {
+    indexMap_[i] = inDef_->FindName(GetName(i));
     DLOG_IF(ERROR, indexMap_.at(i) == -1) << "Element name not found";
   }
 }
 
 void ElementVectorWrapper::SetElementVector(ElementVectorBase* element_vector) {
-  element_vector->MatchesDefinition(*inDef_);
+  DLOG_IF(FATAL, !element_vector->MatchesDefinition(*inDef_))
+      << "Definition mismatch during in element vector wrapper";
   element_vector_ = element_vector;
   const_element_vector_ = element_vector;
 }
 
 void ElementVectorWrapper::SetElementVector(const ElementVectorBase* element_vector) const {
-  element_vector->MatchesDefinition(*inDef_);
+  DLOG_IF(FATAL, !element_vector->MatchesDefinition(*inDef_))
+      << "Definition mismatch during in element vector wrapper";
   const_element_vector_ = element_vector;
 }
 
