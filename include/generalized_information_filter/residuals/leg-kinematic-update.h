@@ -13,17 +13,16 @@ namespace GIF {
 template<int NumLeg, int NumDof>
 class KinematicMeasurement : public ElementVector {
  public:
-  KinematicMeasurement(const std::array<Vec<NumDof>,NumLeg>& kin
-                       = ElementTraits<std::array<Vec<NumDof>,NumLeg>>::Identity())
-      : ElementVector(std::shared_ptr<ElementVectorDefinition>(
-            new ElementPack<std::array<Vec<NumDof>,NumLeg>>({"kin"}))),
-        kin_(ElementVector::GetValue<std::array<Vec<NumDof>,NumLeg>>("kin")) {
+  typedef std::array<Vec<NumDof>,NumLeg> Kin;
+  KinematicMeasurement(const Kin& kin = ElementTraits<Kin>::Identity())
+      : ElementVector(std::shared_ptr<ElementVectorDefinition>(new ElementPack<Kin>({"kin"}))),
+        kin_(ElementVector::GetValue<Kin>("kin")) {
     kin_ = kin;
     for(int i=0;i<NumLeg;i++){
-      contact_flag_[i] = true;
+      contact_flag_[i] = false;
     }
   }
-  std::array<Vec<NumDof>,NumLeg>& kin_;
+  Kin& kin_;
   std::array<bool,NumLeg> contact_flag_;
 };
 
@@ -33,42 +32,49 @@ class KinematicMeasurement : public ElementVector {
  *         the residual condenses down to prediction - forward kinematics. The forward kinematics
  *         are expressed with respect to B (body frame) and the state is expressed with respect to
  *         M (Imu).
+ *
+ *         Coordinate frames:
+ *           B: Body
+ *           M: IMU
+ *           F: Foothold
  */
 template<typename KinModel>
 class LegKinematicUpdate : public UnaryUpdate<ElementPack<std::array<Vec3,KinModel::kNumLeg>>,
-      ElementPack<std::array<Vec3,KinModel::kNumLeg>>, ElementPack<std::array<Vec3,KinModel::kNumLeg>>,
-      KinematicMeasurement<KinModel::kNumLeg,KinModel::kNumDof>> {
+                                              ElementPack<std::array<Vec3,KinModel::kNumLeg>>,
+                                              ElementPack<std::array<Vec3,KinModel::kNumLeg>>,
+                                              KinematicMeasurement<KinModel::kNumLeg,
+                                                                   KinModel::kNumDof>> {
  public:
   using mtUnaryUpdate = UnaryUpdate<ElementPack<std::array<Vec3,KinModel::kNumLeg>>,
-      ElementPack<std::array<Vec3,KinModel::kNumLeg>>, ElementPack<std::array<Vec3,KinModel::kNumLeg>>,
-      KinematicMeasurement<KinModel::kNumLeg,KinModel::kNumDof>>;
+                                    ElementPack<std::array<Vec3,KinModel::kNumLeg>>,
+                                    ElementPack<std::array<Vec3,KinModel::kNumLeg>>,
+                                    KinematicMeasurement<KinModel::kNumLeg,
+                                                         KinModel::kNumDof>>;
   using mtUnaryUpdate::meas_;
+  typedef std::array<Vec3,KinModel::kNumLeg> LegArray;
   enum Elements {KIN};
 
-  LegKinematicUpdate(const std::string& errorName = "BrBL",
-                     const std::string& stateName = "MrML",
-                     const std::string& noiseName = "BrBL")
+  LegKinematicUpdate(const std::string& errorName = "BrBF",
+                     const std::string& stateName = "MrMF",
+                     const std::string& noiseName = "BrBF")
       : mtUnaryUpdate({errorName},{stateName},{noiseName}) {
   }
 
   virtual ~LegKinematicUpdate() {
   }
 
-  void Eval(std::array<Vec3,KinModel::kNumLeg>& BrBL_inn,
-            const std::array<Vec3,KinModel::kNumLeg>& MrML_cur,
-            const std::array<Vec3,KinModel::kNumLeg>& BrBL_noi) const {
+  void Eval(LegArray& MrMF_inn, const LegArray& MrMF_cur, const LegArray& MrMF_noi) const {
     for(int i=0;i<KinModel::kNumLeg;i++){
       if(GetContactFlagFromMeas(i)){
-        const Vec3 BrBL = BrBM_ + qMB_.inverseRotate(MrML_cur[i]);
-        BrBL_inn[i] = BrBL
-            - model_->forwardKinematicsBaseToFootInBaseFrame(meas_->kin_[i],i) + BrBL_noi[i];
+        const Vec3 BrBF = BrBM_ + qMB_.inverseRotate(MrMF_cur[i]);
+        MrMF_inn[i] = BrBF
+            - model_->forwardKinematicsBaseToFootInBaseFrame(meas_->kin_[i],i) + MrMF_noi[i];
       } else {
-        BrBL_inn[i] = BrBL_noi[i];
+        MrMF_inn[i] = MrMF_noi[i];
       }
     }
   }
-  void JacCur(MatX& J, const std::array<Vec3,KinModel::kNumLeg>& MrML_cur,
-                       const std::array<Vec3,KinModel::kNumLeg>& BrBL_noi) const {
+  void JacCur(MatX& J, const LegArray& MrMF_cur, const LegArray& MrMF_noi) const {
     J.setZero();
     for(int i=0;i<KinModel::kNumLeg;i++){
       if(GetContactFlagFromMeas(i)){
@@ -77,8 +83,7 @@ class LegKinematicUpdate : public UnaryUpdate<ElementPack<std::array<Vec3,KinMod
       }
     }
   }
-  void JacNoi(MatX& J, const std::array<Vec3,KinModel::kNumLeg>& MrML_cur,
-                       const std::array<Vec3,KinModel::kNumLeg>& BrBL_noi) const {
+  void JacNoi(MatX& J, const LegArray& MrMF_cur, const LegArray& MrMF_noi) const {
     J.setZero();
     for(int i=0;i<KinModel::kNumLeg;i++){
       this->template GetJacBlockNoi<KIN, KIN>(J).template block<3,3>(3*i,3*i) = Mat3::Identity();
@@ -98,7 +103,7 @@ class LegKinematicUpdate : public UnaryUpdate<ElementPack<std::array<Vec3,KinMod
     return meas_->contact_flag_[i];
   }
 
-  Vec3 GetMrMLFromMeas(int i) const{
+  Vec3 GetMrMFFromMeas(int i) const{
     return qMB_.rotate(Vec3(model_->forwardKinematicsBaseToFootInBaseFrame(meas_->kin_[i],i)
                             - BrBM_));
   }
