@@ -17,11 +17,10 @@ class ElementDescriptionBase {
   ElementDescriptionBase() {}
   virtual ~ElementDescriptionBase() {}
 
-  virtual ElementBase::Ptr MakeElement() const = 0;
-  virtual bool MatchesDescription(const ElementDescriptionBase& in) const = 0;
+  virtual ElementBase::Ptr MakeElement(const CPtr& description) const = 0;
+  virtual bool MatchesDescription(const ElementDescriptionBase::CPtr& in) const = 0;
   virtual bool MatchesDescription(const ElementBase& in) const = 0;
-  virtual int GetDimension() const = 0;
-  virtual ElementDescriptionBase::Ptr Copy() const = 0;
+  virtual int GetDim() const = 0;
 };
 
 /*! \brief Templated form of element descriptions.
@@ -31,26 +30,25 @@ class ElementDescriptionBase {
 template<typename T>
 class ElementDescription : public ElementDescriptionBase {
  public:
+  typedef std::shared_ptr<ElementDescription<T>> Ptr;
+  typedef std::shared_ptr<const ElementDescription<T>> CPtr;
   ElementDescription() {
   }
   ~ElementDescription() {
   }
-  ElementBase::Ptr MakeElement() const {
-    return std::make_shared<Element<T>>(this);
+  ElementBase::Ptr MakeElement(const ElementDescriptionBase::CPtr& description) const {
+    return std::make_shared<Element<T>>(
+        std::dynamic_pointer_cast<const ElementDescription<T>>(description));
   }
-  bool MatchesDescription(const ElementDescriptionBase& in) const {
-    const ElementDescriptionBase* inPtr = &in;
-    return dynamic_cast<const ElementDescription<T>*>(inPtr) != nullptr;
+  bool MatchesDescription(const ElementDescriptionBase::CPtr& in) const {
+    return (bool)std::dynamic_pointer_cast<const ElementDescription<T>>(in);
   }
   bool MatchesDescription(const ElementBase& in) const {
     const ElementBase* inPtr = &in;
     return dynamic_cast<const Element<T>*>(inPtr) != nullptr;
   }
-  inline int GetDimension() const {
+  inline int GetDim() const {
     return ElementTraits<T>::kDim;
-  }
-  ElementDescriptionBase::Ptr Copy() const{
-    return std::make_shared<ElementDescription<T>>();
   }
 };
 

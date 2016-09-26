@@ -14,7 +14,7 @@ bool ElementVectorBase::MatchesDefinition(
     return false;
   }
   for (int i = 0; i < GetNumElement(); i++) {
-    if (!def.GetElementDescription(i).MatchesDescription(*GetElement(i))) {
+    if (!def.GetElementDescription(i)->MatchesDescription(*GetElement(i))) {
       return false;
     }
   }
@@ -90,7 +90,8 @@ int ElementVector::GetNumElement() const {
 void ElementVector::Construct(){
   elements_.clear();
   for (int i = 0; i < def_->GetNumElements(); i++) {
-    elements_.push_back(def_->GetElementDescription(i).MakeElement());
+    const ElementDescriptionBase::CPtr& description = def_->GetElementDescription(i);
+    elements_.push_back(description->MakeElement(description));
   }
 }
 

@@ -16,7 +16,7 @@ class ElementDescription;
  */
 template<typename T>
 struct ElementTraits {
-  static constexpr bool kIsVectorSpace = true;
+  static constexpr bool kIsVectorSpace = true; // TODO: make use in Boxminus/Boxplus jac
   static constexpr int kDim = 0;
   static std::string Print(const T& x) {
     return "";
@@ -92,7 +92,7 @@ template<typename T>
 class Element : public ElementBase {
  public:
   typedef ElementTraits<T> Traits;
-  Element(const ElementDescription<T>* description)
+  Element(const typename ElementDescription<T>::CPtr description)
       : description_(description) {
     DLOG_IF(FATAL, description == nullptr) << "Passing nullptr";
   }
@@ -146,7 +146,7 @@ class Element : public ElementBase {
   }
  protected:
   T x_;
-  const ElementDescription<T>* description_;
+  const typename ElementDescription<T>::CPtr description_;
 };
 
 // ==================== Traits Implementation ==================== //

@@ -31,8 +31,9 @@ class ElementVectorDefinition {
   inline int GetInnerIndex(int i) const;
   std::string GetName(int outer_index) const;
   int FindName(const std::string& name) const;
-  const ElementDescriptionBase& GetElementDescription(int outer_index) const;
-  int AddElement(const std::string& name, const ElementDescriptionBase& new_element_definition);
+  const ElementDescriptionBase::CPtr& GetElementDescription(int outer_index) const;
+  int AddElement(const std::string& name,
+                 const ElementDescriptionBase::CPtr& new_element_definition);
   template<typename T>
   int AddElement(const std::string& name);
   void ExtendWithOtherElementVectorDefinition(const ElementVectorDefinition& other);
@@ -108,7 +109,7 @@ int ElementVectorDefinition::GetInnerIndex(int i) const {
 
 template<typename T>
 int ElementVectorDefinition::AddElement(const std::string& name) {
-  AddElement(name, ElementDescription<T>());
+  AddElement(name, std::make_shared<ElementDescription<T>>());
 }
 
 template<typename T, typename ... Ts>
