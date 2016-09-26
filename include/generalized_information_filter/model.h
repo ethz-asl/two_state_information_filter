@@ -218,11 +218,11 @@ bool Model<Derived,OutPack,InPacks...>::JacTestImpl(
   typename MatX::Index maxRow, maxCol = 0;
   const double r = (J-J_FD).array().abs().maxCoeff(&maxRow, &maxCol);
   if(r>th){
-    std::string outName = outDefinition_->GetName(outDefinition_->GetOuterIndex(maxRow));
+    std::string outName = outDefinition_->GetName(outDefinition_->GetOuter(maxRow));
     std::string inName = inDefinitions_[InIndex]->GetName(ins[InIndex]->GetOuter(maxCol));
     LOG(ERROR) << "==== Model jacInput (" << InIndex << ") Test failed: " << r
                << " is larger than " << th << " at row "
-               << maxRow << "("<< outName << "." << outDefinition_->GetInnerIndex(maxRow)
+               << maxRow << "("<< outName << "." << outDefinition_->GetInner(maxRow)
                << ") and col " << maxCol << "("<< inName << "."
                << ins[InIndex]->GetInner(maxCol) << ") ====" << std::endl
                << "  " << J(maxRow,maxCol) << "  " << J_FD(maxRow,maxCol)

@@ -121,15 +121,15 @@ int ElementVectorBase::GetDim() const {
 }
 
 int ElementVectorBase::GetStart(int outer_index) const {
-  return GetDefinition()->GetStartIndex(outer_index);
+  return GetDefinition()->GetStart(outer_index);
 }
 
 int ElementVectorBase::GetOuter(int i) const {
-  return GetDefinition()->GetOuterIndex(i);
+  return GetDefinition()->GetOuter(i);
 }
 
 int ElementVectorBase::GetInner(int i) const {
-  return GetDefinition()->GetInnerIndex(i);
+  return GetDefinition()->GetInner(i);
 }
 
 std::string ElementVectorBase::GetName(int outer_index) const {
