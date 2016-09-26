@@ -11,6 +11,8 @@ namespace GIF {
  */
 class BinaryResidualBase {
  public:
+  typedef std::shared_ptr<BinaryResidualBase> Ptr;
+  typedef std::shared_ptr<const BinaryResidualBase> CPtr;
   BinaryResidualBase(bool isUnary = false, bool isSplitable = false, bool isMergeable = false)
       : isUnary_(isUnary), isSplitable_(isSplitable), isMergeable_(isMergeable){
     dt_ = 0.1;

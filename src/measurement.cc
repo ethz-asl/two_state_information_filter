@@ -15,7 +15,7 @@ MeasurementTimeline::MeasurementTimeline(const bool drop_first,
 MeasurementTimeline::~MeasurementTimeline() {
 }
 
-void MeasurementTimeline::AddMeasurement(const std::shared_ptr<const ElementVectorBase>& meas,
+void MeasurementTimeline::AddMeasurement(const ElementVectorBase::CPtr& meas,
                                   const TimePoint& t) {
   // Discard first measurement in binary case
   if (drop_first_ && last_processed_time_ == TimePoint::min()) {
@@ -26,8 +26,8 @@ void MeasurementTimeline::AddMeasurement(const std::shared_ptr<const ElementVect
   if (t <= last_processed_time_) {
     LOG(ERROR) << "Adding measurements before last processed time (will be discarded)" << std::endl;
   } else {
-    std::pair<std::map<TimePoint, std::shared_ptr<const ElementVectorBase>>::iterator, bool> ret;
-    ret = meas_map_.insert(std::pair<TimePoint, std::shared_ptr<const ElementVectorBase>>(t, meas));
+    std::pair<std::map<TimePoint, ElementVectorBase::CPtr>::iterator, bool> ret;
+    ret = meas_map_.insert(std::pair<TimePoint, ElementVectorBase::CPtr>(t, meas));
     if (!ret.second) {
       LOG(ERROR) << "Measurement already exists!" << std::endl;
     } else {
@@ -37,7 +37,7 @@ void MeasurementTimeline::AddMeasurement(const std::shared_ptr<const ElementVect
 }
 
 bool MeasurementTimeline::GetMeasurement(const TimePoint& t,
-                                  std::shared_ptr<const ElementVectorBase>& meas) {
+                                  ElementVectorBase::CPtr& meas) {
   auto it = meas_map_.find(t);
   if (it == meas_map_.end()) {
     return false;
@@ -74,7 +74,7 @@ TimePoint MeasurementTimeline::GetFirstTime() const {
   }
 }
 
-bool MeasurementTimeline::GetFirst(std::shared_ptr<const ElementVectorBase>& meas) {
+bool MeasurementTimeline::GetFirst(ElementVectorBase::CPtr& meas) {
   if (!meas_map_.empty()) {
     meas = meas_map_.begin()->second;
     return true;
@@ -118,7 +118,7 @@ void MeasurementTimeline::GetLastInRange(std::set<TimePoint>& times,
 void MeasurementTimeline::Split(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
                                 const BinaryResidualBase* res) {
   DLOG_IF(ERROR,t0 > t1 || t1 > t2) << "No chronological times";
-  AddMeasurement(std::shared_ptr<const ElementVectorBase>(), t1);
+  AddMeasurement(ElementVectorBase::CPtr(), t1);
   res->SplitMeasurements(t0, t1, t2, meas_map_.at(t2), meas_map_.at(t1), meas_map_.at(t2));
 }
 

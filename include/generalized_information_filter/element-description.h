@@ -21,6 +21,7 @@ class ElementDescriptionBase {
   virtual bool MatchesDescription(const ElementDescriptionBase::CPtr& in) const = 0;
   virtual bool MatchesDescription(const ElementBase& in) const = 0;
   virtual int GetDim() const = 0;
+  virtual bool IsVectorSpace() const = 0;
 };
 
 /*! \brief Templated form of element descriptions.
@@ -49,6 +50,9 @@ class ElementDescription : public ElementDescriptionBase {
   }
   inline int GetDim() const {
     return ElementTraits<T>::kDim;
+  }
+  inline bool IsVectorSpace() const {
+    return ElementTraits<T>::kIsVectorSpace;
   }
 };
 

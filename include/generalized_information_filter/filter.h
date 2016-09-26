@@ -11,9 +11,9 @@ namespace GIF {
  *         Contains various object and temporaries associated with a specific residual.
  */
 struct ResidualStruct {
-  ResidualStruct(const std::shared_ptr<BinaryResidualBase>& res,
-                 const std::shared_ptr<ElementVectorDefinition>& stateDefinition,
-                 const std::shared_ptr<ElementVectorDefinition>& noiseDefinition,
+  ResidualStruct(const BinaryResidualBase::Ptr& res,
+                 const ElementVectorDefinition::Ptr& stateDefinition,
+                 const ElementVectorDefinition::Ptr& noiseDefinition,
                  const Duration& maxWaitTime,
                  const Duration& minWaitTime,
                  const std::string& name):
@@ -40,7 +40,7 @@ struct ResidualStruct {
   ~ResidualStruct() {
   }
 
-  std::shared_ptr<BinaryResidualBase> res_;
+  BinaryResidualBase::Ptr res_;
   MeasurementTimeline mt_;
   ElementVectorWrapper preWrap_;
   ElementVectorWrapper curWrap_;
@@ -93,7 +93,7 @@ class Filter {
     cov_.resize(stateDefinition_->GetDim(), stateDefinition_->GetDim());
   }
 
-  int AddResidual(const std::shared_ptr<BinaryResidualBase>& res,
+  int AddResidual(const BinaryResidualBase::Ptr& res,
                   const Duration& maxWaitTime,
                   const Duration& minWaitTime,
                   const std::string& name) {
@@ -102,11 +102,11 @@ class Filter {
     return residuals_.size() - 1;
   }
 
-  std::shared_ptr<ElementVectorDefinition> StateDefinition() const {
+  ElementVectorDefinition::Ptr StateDefinition() const {
     return stateDefinition_;
   }
 
-  std::shared_ptr<ElementVectorDefinition> NoiseDefinition() const {
+  ElementVectorDefinition::Ptr NoiseDefinition() const {
     return noiseDefinition_;
   }
 
@@ -165,7 +165,7 @@ class Filter {
     }
   }
 
-  void AddMeasurement(const int i, const std::shared_ptr<const ElementVectorBase>& meas,
+  void AddMeasurement(const int i, const ElementVectorBase::CPtr& meas,
                       const TimePoint& t) {
     if(t <= time_){
       LOG(WARNING) << "Adding measurements before current time (will be discarded)" << std::endl;
@@ -251,7 +251,7 @@ class Filter {
     // Check available measurements and prepare residuals
     int innDim = 0;
     std::vector<bool> hasMeas(residuals_.size(), false);
-    std::shared_ptr<const ElementVectorBase> meas;
+    ElementVectorBase::CPtr meas;
     for (int i = 0; i < residuals_.size(); i++) {
       hasMeas.at(i) = residuals_.at(i).mt_.GetMeasurement(t, meas);
       if (hasMeas.at(i)) {
@@ -279,37 +279,39 @@ class Filter {
     int count = 0;
     for (int i = 0; i < residuals_.size(); i++) {
       if (hasMeas.at(i)) {
-        residuals_.at(i).preWrap_.SetElementVector(&state_);
-        residuals_.at(i).curWrap_.SetElementVector(&curLinState_);
-        residuals_.at(i).noiWrap_.SetElementVector(&noise_);
-        residuals_.at(i).res_->Eval(&residuals_.at(i).inn_,
-                                    residuals_.at(i).preWrap_,
-                                    residuals_.at(i).curWrap_,
-                                    residuals_.at(i).noiWrap_);
-        residuals_.at(i).innRef_.BoxMinus(residuals_.at(i).inn_,
-                                          y.block(count, 0, residuals_.at(i).innDim_, 1));
-        residuals_.at(i).res_->JacPre(residuals_.at(i).jacPre_,
-                                      residuals_.at(i).preWrap_,
-                                      residuals_.at(i).curWrap_,
-                                      residuals_.at(i).noiWrap_);
-        residuals_.at(i).res_->JacCur(residuals_.at(i).jacCur_,
-                                      residuals_.at(i).preWrap_,
-                                      residuals_.at(i).curWrap_,
-                                      residuals_.at(i).noiWrap_);
-        residuals_.at(i).res_->JacNoi(residuals_.at(i).jacNoi_,
-                                      residuals_.at(i).preWrap_,
-                                      residuals_.at(i).curWrap_,
-                                      residuals_.at(i).noiWrap_);
-        residuals_.at(i).preWrap_.EmbedJacobian(JacPre,
-                                                residuals_.at(i).jacPre_,
-                                                count);
-        residuals_.at(i).curWrap_.EmbedJacobian(JacCur,
-                                                residuals_.at(i).jacCur_,
-                                                count);
-        residuals_.at(i).noiWrap_.EmbedJacobian(JacNoi,
-                                                residuals_.at(i).jacNoi_,
-                                                count);
-        count += residuals_.at(i).innDim_;
+        ResidualStruct rs = residuals_.at(i);
+        rs.preWrap_.SetElementVector(&state_);
+        rs.curWrap_.SetElementVector(&curLinState_);
+        rs.noiWrap_.SetElementVector(&noise_);
+        rs.res_->Eval(&rs.inn_, rs.preWrap_,
+                                rs.curWrap_,
+                                rs.noiWrap_);
+        rs.inn_.BoxMinus(rs.innRef_, y.block(count, 0, rs.innDim_, 1));
+        rs.res_->JacPre(rs.jacPre_, rs.preWrap_,
+                                    rs.curWrap_,
+                                    rs.noiWrap_);
+        rs.res_->JacCur(rs.jacCur_, rs.preWrap_,
+                                    rs.curWrap_,
+                                    rs.noiWrap_);
+        rs.res_->JacNoi(rs.jacNoi_, rs.preWrap_,
+                                    rs.curWrap_,
+                                    rs.noiWrap_);
+        for(int j=0;j<rs.res_->InnDefinition()->GetNumElements();j++){
+          const ElementDescriptionBase::CPtr& description =
+              rs.res_->InnDefinition()->GetElementDescription(j);
+          if(!description->IsVectorSpace()){
+            rs.jacPre_.block(rs.res_->InnDefinition()->GetStart(j),0,
+                description->GetDim(),rs.preWrap_.GetDim()) =
+                    rs.inn_.GetElement(j)->BoxminusJacInp(*rs.innRef_.GetElement(j)) *
+                    rs.jacPre_.block(rs.res_->InnDefinition()->GetStart(j),0,
+                                    description->GetDim(),rs.preWrap_.GetDim());
+          }
+        }
+
+        rs.preWrap_.EmbedJacobian(JacPre, rs.jacPre_, count);
+        rs.curWrap_.EmbedJacobian(JacCur, rs.jacCur_, count);
+        rs.noiWrap_.EmbedJacobian(JacNoi, rs.jacNoi_, count);
+        count += rs.innDim_;
       }
     }
     LOG(INFO) << "Innovation:\t" << y.transpose();
@@ -321,7 +323,7 @@ class Filter {
     MatX D = cov_.inverse() + JacPre.transpose() * Winv * JacPre;
     MatX S = JacCur.transpose() * (Winv - Winv * JacPre * D.inverse() * JacPre.transpose() * Winv);
     cov_ = (S * JacCur).inverse();
-    VecX dx = cov_ * S * y;
+    VecX dx = -(cov_ * S * y);
 
     // Apply Kalman Update
     curLinState_.BoxPlus(dx, &state_);
@@ -377,8 +379,8 @@ class Filter {
   }
 
  protected:
-  std::shared_ptr<ElementVectorDefinition> stateDefinition_; // Must come before state
-  std::shared_ptr<ElementVectorDefinition> noiseDefinition_;
+  ElementVectorDefinition::Ptr stateDefinition_; // Must come before state
+  ElementVectorDefinition::Ptr noiseDefinition_;
   std::vector<ResidualStruct> residuals_;
   TimePoint time_;
   TimePoint startTime_;

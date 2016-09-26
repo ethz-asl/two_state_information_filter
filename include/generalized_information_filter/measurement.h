@@ -24,13 +24,13 @@ class MeasurementTimeline {
   MeasurementTimeline(const bool ignore_first, const Duration& max_wait_time,
                       const Duration& min_wait_time);
   virtual ~MeasurementTimeline();
-  void AddMeasurement(const std::shared_ptr<const ElementVectorBase>& meas, const TimePoint& t);
-  bool GetMeasurement(const TimePoint& t, std::shared_ptr<const ElementVectorBase>& meas);
+  void AddMeasurement(const ElementVectorBase::CPtr& meas, const TimePoint& t);
+  bool GetMeasurement(const TimePoint& t, ElementVectorBase::CPtr& meas);
   void RemoveProcessedFirst();
   void Reset();
   TimePoint GetLastTime() const;
   TimePoint GetFirstTime() const;
-  bool GetFirst(std::shared_ptr<const ElementVectorBase>& meas);
+  bool GetFirst(ElementVectorBase::CPtr& meas);
   TimePoint GetMaximalUpdateTime(const TimePoint& current_time) const;
   void GetAllInRange(std::set<TimePoint>& times, const TimePoint& start,
                      const TimePoint& end) const;
@@ -46,7 +46,7 @@ class MeasurementTimeline {
   std::string Print(const TimePoint& start, int start_offset, double resolution) const;
   TimePoint GetLastProcessedTime();
  protected:
-  std::map<TimePoint, std::shared_ptr<const ElementVectorBase>> meas_map_;
+  std::map<TimePoint, ElementVectorBase::CPtr> meas_map_;
   Duration max_wait_time_;
   Duration min_wait_time_; // Should always be zero for binary residual
   TimePoint last_processed_time_;
