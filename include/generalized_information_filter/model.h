@@ -86,10 +86,10 @@ class Model {
   std::array<ElementVectorDefinition::Ptr,N_> inDefinitions_;
 
   template<int i = 0, typename std::enable_if<(i<sizeof...(InPacks))>::type* = nullptr>
-  void MakeInDefinitons(const std::tuple<std::array<std::string,InPacks::n_>...>& namesIn);
+  void MakeInDefinitions(const std::tuple<std::array<std::string,InPacks::n_>...>& namesIn);
 
   template<int i = 0, typename std::enable_if<(i==sizeof...(InPacks))>::type* = nullptr>
-  void MakeInDefinitons(const std::tuple<std::array<std::string,InPacks::n_>...>& namesIn);
+  void MakeInDefinitions(const std::tuple<std::array<std::string,InPacks::n_>...>& namesIn);
 };
 
 // ==================== Implementation ==================== //
@@ -98,7 +98,7 @@ Model<Derived,OutPack,InPacks...>::Model(
       const std::array<std::string,n_>& namesOut,
       const std::tuple<std::array<std::string,InPacks::n_>...>& namesIn) {
   outDefinition_.reset(new OutPack(namesOut));
-  MakeInDefinitons(namesIn);
+  MakeInDefinitions(namesIn);
 }
 
 template<typename Derived, typename OutPack, typename ... InPacks>
@@ -260,17 +260,17 @@ Model<Derived,OutPack,InPacks...>::GetJacBlockImpl(MatRefX J) const{
 
 template<typename Derived, typename OutPack, typename ... InPacks>
 template<int i, typename std::enable_if<(i<sizeof...(InPacks))>::type*>
-void Model<Derived,OutPack,InPacks...>::MakeInDefinitons(
+void Model<Derived,OutPack,InPacks...>::MakeInDefinitions(
     const std::tuple<std::array<std::string,InPacks::n_>...>& namesIn) {
   typedef typename std::tuple_element<i,std::tuple<InPacks...>>::type ElementPack;
   static_assert(i < N_, "Indexing Error");
   inDefinitions_[i].reset(new ElementPack(std::get<i>(namesIn)));
-  MakeInDefinitons<i+1>(namesIn);
+  MakeInDefinitions<i+1>(namesIn);
 }
 
 template<typename Derived, typename OutPack, typename ... InPacks>
 template<int i, typename std::enable_if<(i==sizeof...(InPacks))>::type*>
-void Model<Derived,OutPack,InPacks...>::MakeInDefinitons(
+void Model<Derived,OutPack,InPacks...>::MakeInDefinitions(
     const std::tuple<std::array<std::string,InPacks::n_>...>& namesIn) {}
 
 template<typename ... Ts, typename ... InPacks>

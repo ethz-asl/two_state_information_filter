@@ -144,8 +144,8 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
   virtual void JacCur(MatX& J,   const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
   virtual void JacNoi(MatX& J,   const Pre&... pre, const Cur&... cur, const Noi&... noi) const = 0;
 
-  // Wrapping from user interface to base
-  void Eval(ElementVectorBase* inn,
+  // Interface to base
+  inline void Eval(ElementVectorBase* inn,
             const ElementVectorBase& pre,
             const ElementVectorBase& cur,
             const ElementVectorBase& noi) const {
@@ -153,33 +153,33 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
     this->EvalWrapper(inn, ins);
   }
 
-  void JacPre(MatX& J, const ElementVectorBase& pre,
+  inline void JacPre(MatX& J, const ElementVectorBase& pre,
                        const ElementVectorBase& cur,
                        const ElementVectorBase& noi) const {
     const std::array<const ElementVectorBase*, 3> ins = {&pre, &cur, &noi};
     this->template JacWrapper<0>(J, ins);
   }
-  void JacCur(MatX& J, const ElementVectorBase& pre,
+  inline void JacCur(MatX& J, const ElementVectorBase& pre,
                        const ElementVectorBase& cur,
                        const ElementVectorBase& noi) const {
     const std::array<const ElementVectorBase*, 3> ins = {&pre, &cur, &noi};
     this->template JacWrapper<1>(J, ins);
   }
 
-  void JacNoi(MatX& J, const ElementVectorBase& pre,
+  inline void JacNoi(MatX& J, const ElementVectorBase& pre,
                        const ElementVectorBase& cur,
                        const ElementVectorBase& noi) const {
     const std::array<const ElementVectorBase*, 3> ins = {&pre, &cur, &noi};
     this->template JacWrapper<2>(J, ins);
   }
-  void JacFDPre(MatX& J, const ElementVectorBase& pre,
+  inline void JacFDPre(MatX& J, const ElementVectorBase& pre,
                          const ElementVectorBase& cur,
                          const ElementVectorBase& noi,
                          const double delta) {
     const std::array<const ElementVectorBase*, 3> ins = {&pre, &cur, &noi};
     this->template JacFDImpl<0>(J, ins, delta);
   }
-  void JacFDCur(MatX& J, const ElementVectorBase& pre,
+  inline void JacFDCur(MatX& J, const ElementVectorBase& pre,
                          const ElementVectorBase& cur,
                          const ElementVectorBase& noi,
                          const double delta) {
@@ -187,7 +187,7 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
     this->template JacFDImpl<1>(J, ins, delta);
   }
 
-  void JacFDNoi(MatX& J, const ElementVectorBase& pre,
+  inline void JacFDNoi(MatX& J, const ElementVectorBase& pre,
                          const ElementVectorBase& cur,
                          const ElementVectorBase& noi,
                          const double delta) {
@@ -196,19 +196,19 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
   }
 
   template<int n, int m>
-  MatRef<ElementPack<Inn...>::template _GetStateDimension<n>(),
+  inline MatRef<ElementPack<Inn...>::template _GetStateDimension<n>(),
          ElementPack<Pre...>::template _GetStateDimension<m>()> GetJacBlockPre(MatRefX J) const {
     return this->template GetJacBlockImpl<0, n, m>(J);
   }
 
   template<int n, int m>
-  MatRef<ElementPack<Inn...>::template _GetStateDimension<n>(),
+  inline MatRef<ElementPack<Inn...>::template _GetStateDimension<n>(),
          ElementPack<Cur...>::template _GetStateDimension<m>()> GetJacBlockCur(MatRefX J) const {
     return this->template GetJacBlockImpl<1, n, m>(J);
   }
 
   template<int n, int m>
-  MatRef<ElementPack<Inn...>::template _GetStateDimension<n>(),
+  inline MatRef<ElementPack<Inn...>::template _GetStateDimension<n>(),
          ElementPack<Noi...>::template _GetStateDimension<m>()> GetJacBlockNoi(MatRefX J) const {
     return this->template GetJacBlockImpl<2, n, m>(J);
   }
@@ -240,24 +240,24 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
   }
 
   // Access to definitions
-  ElementVectorDefinition::Ptr InnDefinition() const {
+  inline ElementVectorDefinition::Ptr InnDefinition() const {
     return this->outDefinition_;
   }
-  ElementVectorDefinition::Ptr PreDefinition() const {
+  inline ElementVectorDefinition::Ptr PreDefinition() const {
     return this->inDefinitions_[0];
   }
-  ElementVectorDefinition::Ptr CurDefinition() const {
+  inline ElementVectorDefinition::Ptr CurDefinition() const {
     return this->inDefinitions_[1];
   }
-  ElementVectorDefinition::Ptr NoiDefinition() const {
+  inline ElementVectorDefinition::Ptr NoiDefinition() const {
     return this->inDefinitions_[2];
   }
 
   // Get Noise Matrix
-  const MatX& GetNoiseCovariance() const {
+  inline const MatX& GetNoiseCovariance() const {
     return R_;
   }
-  MatX& GetNoiseCovariance() {
+  inline MatX& GetNoiseCovariance() {
     return R_;
   }
 
@@ -268,15 +268,15 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
 
   // Wrapping from base (model) to user implementation
   template<int j, typename std::enable_if<(j == 0)>::type* = nullptr>
-  void Jac(MatX& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
+  inline void Jac(MatX& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
     JacPre(J, pre..., cur..., noi...);
   }
   template<int j, typename std::enable_if<(j == 1)>::type* = nullptr>
-  void Jac(MatX& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
+  inline void Jac(MatX& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
     JacCur(J, pre..., cur..., noi...);
   }
   template<int j, typename std::enable_if<(j == 2)>::type* = nullptr>
-  void Jac(MatX& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
+  inline void Jac(MatX& J, const Pre&... pre, const Cur&... cur, const Noi&... noi) const {
     JacNoi(J, pre..., cur..., noi...);
   }
 

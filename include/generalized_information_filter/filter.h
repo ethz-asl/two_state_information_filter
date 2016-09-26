@@ -10,8 +10,7 @@ namespace GIF {
 /*! \brief Residual Struct
  *         Contains various object and temporaries associated with a specific residual.
  */
-class ResidualStruct {
- public:
+struct ResidualStruct {
   ResidualStruct(const std::shared_ptr<BinaryResidualBase>& res,
                  const std::shared_ptr<ElementVectorDefinition>& stateDefinition,
                  const std::shared_ptr<ElementVectorDefinition>& noiseDefinition,

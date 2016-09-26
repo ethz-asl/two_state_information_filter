@@ -16,7 +16,7 @@ class ElementDescription;
  */
 template<typename T>
 struct ElementTraits {
-  static constexpr bool kIsVectorSpace = true; // TODO: make use in Boxminus/Boxplus jac
+  static constexpr bool kIsVectorSpace = true;
   static constexpr int kDim = 0;
   static std::string Print(const T& x) {
     return "";
