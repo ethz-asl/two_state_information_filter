@@ -15,13 +15,15 @@ struct ResidualStruct {
                  const std::shared_ptr<ElementVectorDefinition>& stateDefinition,
                  const std::shared_ptr<ElementVectorDefinition>& noiseDefinition,
                  const Duration& maxWaitTime,
-                 const Duration& minWaitTime):
+                 const Duration& minWaitTime,
+                 const std::string& name):
                      mt_(!res->isUnary_, maxWaitTime, minWaitTime),
                      preWrap_(res->PreDefinition(), stateDefinition),
                      curWrap_(res->CurDefinition(), stateDefinition),
                      noiWrap_(res->NoiDefinition(), noiseDefinition),
                      inn_(res->InnDefinition()),
-                     innRef_(res->InnDefinition()){
+                     innRef_(res->InnDefinition()),
+                     name_(name){
     stateDefinition->ExtendWithOtherElementVectorDefinition(*res->PreDefinition());
     stateDefinition->ExtendWithOtherElementVectorDefinition(*res->CurDefinition());
     noiseDefinition->ExtendWithOtherElementVectorDefinition(*res->NoiDefinition());
@@ -49,6 +51,7 @@ struct ResidualStruct {
   MatX jacCur_;
   MatX jacNoi_;
   int innDim_;
+  std::string name_;
 };
 
 /*! \brief Filter
@@ -61,45 +64,42 @@ class Filter {
             state_(stateDefinition_), curLinState_(stateDefinition_),
             noiseDefinition_(new ElementVectorDefinition()),
             noise_(noiseDefinition_){
-    max_wait_time_default_ = fromSec(0.1);
-    min_wait_time_default_ = fromSec(0.0);
     is_initialized_ = false;
   }
 
   virtual ~Filter() {
   }
 
-  virtual void Init(const TimePoint& t = TimePoint::min()) {  // TODO: pass optional State
-    LOG(INFO) << "Initializing state at t = " << std::chrono::system_clock::to_time_t(t) << std::endl;
+  virtual void Init(const TimePoint& t, const ElementVectorBase* initState = nullptr) {
+    LOG(INFO) << "Initializing state at t = "
+        << std::chrono::system_clock::to_time_t(t) << std::endl;
     startTime_ = t;
     time_ = t;
-    state_.SetIdentity();
+    if(initState != nullptr){
+      state_ = *initState;
+    } else {
+      state_.SetIdentity();
+    }
     cov_.setIdentity();
     is_initialized_ = true;
   }
 
-  int AddResidual(const std::shared_ptr<BinaryResidualBase>& res, const std::string& name = "") {
-    residuals_.emplace_back(res, stateDefinition_, noiseDefinition_, max_wait_time_default_, min_wait_time_default_);
+  void Construct(){
     state_.Construct();
     state_.SetIdentity();
     curLinState_.Construct();
     noise_.Construct();
     noise_.SetIdentity();
     cov_.resize(stateDefinition_->GetDim(), stateDefinition_->GetDim());
-    return residuals_.size() - 1;
   }
 
-  void EvalResidual(const ElementVectorBase* pre, const ElementVectorBase* cur) {
-    for (int i = 0; i < residuals_.size(); i++) {
-      residuals_.at(i).preWrap_.SetElementVector(pre);
-      residuals_.at(i).curWrap_.SetElementVector(cur);
-      residuals_.at(i).noiWrap_.SetElementVector(&noise_);
-      residuals_.at(i).res_->Eval(&residuals_.at(i).inn_,
-                                  residuals_.at(i).preWrap_,
-                                  residuals_.at(i).curWrap_,
-                                  residuals_.at(i).noiWrap_);
-      LOG(INFO) << residuals_.at(i).inn_.Print();
-    }
+  int AddResidual(const std::shared_ptr<BinaryResidualBase>& res,
+                  const Duration& maxWaitTime,
+                  const Duration& minWaitTime,
+                  const std::string& name) {
+    residuals_.emplace_back(res, stateDefinition_, noiseDefinition_, maxWaitTime, minWaitTime,name);
+    Construct();
+    return residuals_.size() - 1;
   }
 
   std::shared_ptr<ElementVectorDefinition> StateDefinition() const {
@@ -137,7 +137,7 @@ class Filter {
 
   void GetMeasurementTimeList(std::set<TimePoint>& times,
                               const TimePoint& maxUpdateTime,
-                              const bool includeMax = false) const {
+                              const bool includeMax) const {
     for (int i = 0; i < residuals_.size(); i++) {
       if (!residuals_.at(i).res_->isMergeable_) {
         // Add all non-mergeable measurement times
@@ -171,7 +171,8 @@ class Filter {
       LOG(WARNING) << "Adding measurements before current time (will be discarded)" << std::endl;
       return;
     }
-    LOG(INFO) << "Adding measurement with ID " << i << " at  t = " << std::chrono::system_clock::to_time_t(t) << std::endl;
+    LOG(INFO) << "Adding measurement with ID " << i << " at  t = "
+        << std::chrono::system_clock::to_time_t(t) << std::endl;
     if(residuals_.at(i).res_->CheckMeasType(meas)){
       residuals_.at(i).mt_.AddMeasurement(meas, t);
     } else {
@@ -191,27 +192,30 @@ class Filter {
     }
   }
 
+  void AttemptInitialization(){
+    bool check = true;
+    for (int i = 0; i < residuals_.size(); i++) {
+      if(residuals_.at(i).mt_.GetFirstTime() == TimePoint::max()
+         && !residuals_.at(i).res_->isUnary_){
+        check = false;
+      }
+    }
+    if(check){
+      Init(GetMinMeasTime());
+    }
+  }
+
   void Update() {
     // Initialize if possible
-    const TimePoint minMeasTime = GetMinMeasTime();
-    if(!is_initialized_ && minMeasTime != TimePoint::max()){
-      bool check = true;
-      for (int i = 0; i < residuals_.size(); i++) {
-        if(residuals_.at(i).mt_.GetFirstTime() == TimePoint::max()
-           && !residuals_.at(i).res_->isUnary_){
-          check = false;
-        }
-      }
-
-      if(check){
-        Init(minMeasTime);
-      }
+    if(!is_initialized_ && GetMinMeasTime() != TimePoint::max()){
+      AttemptInitialization();
     }
 
     if(is_initialized_){
-      // Remove outdated
       for (int i = 0; i < residuals_.size(); i++) {
+        // Remove outdated
         residuals_.at(i).mt_.RemoveOutdated(time_);
+        // Check time
         if(residuals_.at(i).mt_.GetLastProcessedTime() > time_){
           LOG(ERROR) << "Last processed time is in future, this should not happen!" << std::endl;
         }
@@ -233,26 +237,32 @@ class Filter {
       SplitAndMergeMeasurements(times);
       PrintMeasurementTimelines(time_, 20, 0.001);
 
+      // Carry out updates
       for (const auto& t : times) {
         MakeUpdateStep(t);
       }
     }
   }
 
-  void MakeUpdateStep(const TimePoint& t) { // TODO: split into function, delete EvalResidual
+  void MakeUpdateStep(const TimePoint& t) {
     // Compute linearisation point
     curLinState_ = state_;
 
-    // Eval residual and Jacobians
+    // Check available measurements and prepare residuals
     int innDim = 0;
     std::vector<bool> hasMeas(residuals_.size(), false);
     std::shared_ptr<const ElementVectorBase> meas;
     for (int i = 0; i < residuals_.size(); i++) {
       hasMeas.at(i) = residuals_.at(i).mt_.GetMeasurement(t, meas);
       if (hasMeas.at(i)) {
+        residuals_.at(i).res_->SetDt(toSec(t-time_));
+        residuals_.at(i).res_->SetMeas(meas);
+        PreProcess(i);
         innDim += residuals_.at(i).res_->InnDefinition()->GetDim();
       }
     }
+
+    // Temporaries
     VecX y(innDim);
     MatX JacPre(innDim, stateDefinition_->GetDim());
     MatX JacCur(innDim, stateDefinition_->GetDim());
@@ -264,13 +274,11 @@ class Filter {
     MatX Winv(innDim, innDim);
     R.setIdentity();
     Winv.setZero();
+
+    // Evaluate residuals and Jacobians
     int count = 0;
     for (int i = 0; i < residuals_.size(); i++) {
       if (hasMeas.at(i)) {
-        residuals_.at(i).res_->SetDt(toSec(t-time_));
-        residuals_.at(i).mt_.GetMeasurement(t, meas);
-        residuals_.at(i).res_->SetMeas(meas);
-        PreProcess(i);
         residuals_.at(i).preWrap_.SetElementVector(&state_);
         residuals_.at(i).curWrap_.SetElementVector(&curLinState_);
         residuals_.at(i).noiWrap_.SetElementVector(&noise_);
@@ -280,8 +288,6 @@ class Filter {
                                     residuals_.at(i).noiWrap_);
         residuals_.at(i).innRef_.BoxMinus(residuals_.at(i).inn_,
                                           y.block(count, 0, residuals_.at(i).innDim_, 1));
-
-        // Compute Jacobians
         residuals_.at(i).res_->JacPre(residuals_.at(i).jacPre_,
                                       residuals_.at(i).preWrap_,
                                       residuals_.at(i).curWrap_,
@@ -303,13 +309,13 @@ class Filter {
         residuals_.at(i).noiWrap_.EmbedJacobian(JacNoi,
                                                 residuals_.at(i).jacNoi_,
                                                 count);
-
-        // Increment counter
         count += residuals_.at(i).innDim_;
       }
     }
-    Winv = (JacNoi*R*JacNoi.transpose()).llt().solve(GIF::MatX::Identity(innDim,innDim));
     LOG(INFO) << "Innovation:\t" << y.transpose();
+
+    // Compute weighting // TODO: make more efficient
+    Winv = (JacNoi*R*JacNoi.transpose()).llt().solve(GIF::MatX::Identity(innDim,innDim));
 
     // Compute Kalman Update // TODO: make more efficient and numerically stable
     MatX D = cov_.inverse() + JacPre.transpose() * Winv * JacPre;
@@ -319,11 +325,9 @@ class Filter {
 
     // Apply Kalman Update
     curLinState_.BoxPlus(dx, &state_);
+    time_ = t;
     LOG(INFO) << "state after Update:";
     LOG(INFO) << state_.Print();
-
-    // Update timepoint
-    time_ = t;
 
     // Post Processing
     for (int i = 0; i < residuals_.size(); i++) {
@@ -382,8 +386,6 @@ class Filter {
   ElementVector noise_;
   ElementVector curLinState_;
   MatX cov_;
-  Duration max_wait_time_default_;
-  Duration min_wait_time_default_;
   bool is_initialized_;
 
 };
