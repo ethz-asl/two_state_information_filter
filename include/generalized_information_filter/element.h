@@ -18,7 +18,8 @@ template<typename T>
 struct ElementTraits {
   static constexpr bool kIsVectorSpace = true;
   static constexpr int kDim = 0;
-  static void Print(const T& x) {
+  static std::string Print(const T& x) {
+    return "";
   }
   static const T Identity() {
     T x;
@@ -60,7 +61,7 @@ class ElementBase {
   }
   virtual ElementBase& operator=(const ElementBase& other) = 0;
   virtual int GetDim() const = 0;
-  virtual void Print() const = 0;
+  virtual std::string Print() const = 0;
   virtual void SetIdentity() = 0;
   virtual void SetRandom() = 0;
   virtual void Boxplus(const VecCRefX& vec,ElementBase* out) const = 0;
@@ -110,8 +111,8 @@ class Element : public ElementBase {
   inline virtual int GetDim() const {
     return Traits::kDim;
   }
-  virtual void Print() const {
-    Traits::Print(GetValue());
+  virtual std::string Print() const {
+    return Traits::Print(GetValue());
   }
   virtual void SetIdentity() {
     Traits::SetIdentity(GetValue());
@@ -157,8 +158,10 @@ class ElementTraits<double> {
  public:
   static constexpr bool kIsVectorSpace = true;
   static constexpr int kDim = 1;
-  static void Print(const double& x) {
-    std::cout << x << std::endl;
+  static std::string Print(const double& x) {
+    std::ostringstream out;
+    out << x << std::endl;
+    return out.str();
   }
   static const double Identity() {
     return 0;
@@ -197,8 +200,10 @@ class ElementTraits<Vec<N>> {
  public:
   static constexpr bool kIsVectorSpace = true;
   static constexpr int kDim = N;
-  static void Print(const Vec<N>& x) {
-    std::cout << x.transpose() << std::endl;
+  static std::string Print(const Vec<N>& x) {
+    std::ostringstream out;
+    out << x.transpose() << std::endl;
+    return out.str();
   }
   static const Vec<N> Identity() {
     return Vec<N>::Zero();
@@ -242,10 +247,13 @@ class ElementTraits<std::array<T, N>> {
   static constexpr bool kIsVectorSpace = Traits::kIsVectorSpace;
   static constexpr int kElementDim = Traits::kDim;
   static constexpr int kDim = N * kElementDim;
-  static void Print(const array& x) {
+  static std::string Print(const array& x) {
+    std::ostringstream out;
     for (const T& i : x) {
-      Traits::Print(i);
+      out << Traits::Print(i);
     }
+    return out.str();
+
   }
   static const array Identity() {
     array x;
@@ -319,8 +327,10 @@ class ElementTraits<Quat> {
  public:
   static constexpr bool kIsVectorSpace = false;
   static constexpr int kDim = 3;
-  static void Print(const Quat& x) {
-    std::cout << x << std::endl;
+  static std::string Print(const Quat& x) {
+    std::ostringstream out;
+    out << x << std::endl;
+    return out.str();
   }
   static const Quat Identity() {
     return Quat();

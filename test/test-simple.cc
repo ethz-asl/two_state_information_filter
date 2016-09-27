@@ -6,7 +6,9 @@
 #include "generalized_information_filter/filter.h"
 #include "generalized_information_filter/prediction.h"
 #include "generalized_information_filter/residuals/imu-prediction.h"
+#include "generalized_information_filter/residuals/kinematics-model.h"
 #include "generalized_information_filter/residuals/landmark-prediction.h"
+#include "generalized_information_filter/residuals/leg-kinematic-update.h"
 #include "generalized_information_filter/residuals/pose-update.h"
 #include "generalized_information_filter/transformation.h"
 #include "generalized_information_filter/unary-update.h"
@@ -165,7 +167,7 @@ TEST_F(NewStateTest, constructor) {
   ElementVector s1a(t.InputDefinition());
   ElementVector s1b(t.InputDefinition());
   s1a.SetIdentity();
-  s1a.Print();
+  std::cout << s1a.Print();
 
   // Boxplus and BoxMinus
   Eigen::VectorXd v(s1a.GetDimension());
@@ -174,7 +176,7 @@ TEST_F(NewStateTest, constructor) {
     v(i) = i;
   }
   s1a.BoxPlus(v, &s1b);
-  s1b.Print();
+  std::cout << s1b.Print();
   s1a.BoxMinus(s1b, v);
   std::cout << v.transpose() << std::endl;
 
@@ -211,17 +213,16 @@ TEST_F(NewStateTest, constructor) {
   ElementVector preState(f.StateDefinition());
   preState.SetIdentity();
   preState.GetValue < Vec3 > ("pos") = Vec3(1, 2, 3);
-  preState.Print();
+  std::cout << preState.Print();
   ElementVector curState(f.StateDefinition());
   curState.SetIdentity();
-  curState.Print();
+  std::cout << curState.Print();
   f.EvalResidual(&preState, &curState);
 
 
   // Test measurements
   std::shared_ptr<EmptyMeas> eptMeas(new EmptyMeas);
   TimePoint start = Clock::now();
-  f.Init(start+fromSec(0.00));
   f.AddMeasurement(0, eptMeas,start+fromSec(-0.1));
   f.AddMeasurement(0, eptMeas,start+fromSec(0.0));
   f.AddMeasurement(0, eptMeas,start+fromSec(0.2));
@@ -256,7 +257,6 @@ TEST_F(NewStateTest, constructor) {
   Filter f2;
   f2.AddResidual(velRes);
   f2.AddResidual(accPre);
-  f2.Init(start+fromSec(0.00));
   f2.AddMeasurement(0,eptMeas,start+fromSec(-0.1));
   f2.AddMeasurement(0,eptMeas,start+fromSec(0.0));
   f2.AddMeasurement(0,eptMeas,start+fromSec(0.2));
@@ -286,7 +286,6 @@ TEST_F(NewStateTest, constructor) {
   Filter imuPoseFilter;
   int imuPreInd = imuPoseFilter.AddResidual(imuPre);
   int poseUpdInd = imuPoseFilter.AddResidual(poseUpd);
-  imuPoseFilter.Init(start);
   imuPoseFilter.AddMeasurement(imuPreInd, std::shared_ptr<ImuMeas>(
       new ImuMeas(Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 9.81))), start);
   for (int i = 1; i <= 10; i++) {
@@ -304,6 +303,12 @@ TEST_F(NewStateTest, constructor) {
   // Test Landmark Prediction
   std::shared_ptr<RobocentricLandmarkPrediction<4>> rcLMPre(new RobocentricLandmarkPrediction<4>());
   rcLMPre->TestJacs(1e-6,1e-6);
+
+  // Test Leg Kinematic Update
+  std::shared_ptr<LegKinematicUpdate<LeggedRobotModelExample>> legKinematicUpd(new LegKinematicUpdate<LeggedRobotModelExample>());
+  std::shared_ptr<LeggedRobotModelExample> model(new LeggedRobotModelExample());
+  legKinematicUpd->SetModelPtr(model);
+  legKinematicUpd->TestJacs(1e-6,1e-6);
 }
 
 int main(int argc, char **argv) {

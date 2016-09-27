@@ -28,11 +28,13 @@ ElementVectorBase& ElementVectorBase::operator=(const ElementVectorBase& other){
   return *this;
 }
 
-void ElementVectorBase::Print() const {
+std::string ElementVectorBase::Print() const {
+  std::ostringstream out;
   for (int i = 0; i < GetNumElement(); i++) {
-    std::cout << GetDefinition()->GetName(i) << ": ";
-    GetElement(i)->Print();
+    out << GetDefinition()->GetName(i) << ": ";
+    out << GetElement(i)->Print();
   }
+  return out.str();
 }
 
 void ElementVectorBase::SetIdentity() {

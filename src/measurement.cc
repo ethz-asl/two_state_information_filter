@@ -3,10 +3,10 @@
 
 namespace GIF {
 
-MeasurementTimeline::MeasurementTimeline(const bool ignore_first,
+MeasurementTimeline::MeasurementTimeline(const bool drop_first,
                                          const Duration& max_wait_time,
                                          const Duration& min_wait_time) {
-  ignore_first_ = ignore_first;
+  drop_first_ = drop_first;
   max_wait_time_ = max_wait_time;
   min_wait_time_ = min_wait_time;
   last_processed_time_ = TimePoint::min();
@@ -18,7 +18,8 @@ MeasurementTimeline::~MeasurementTimeline() {
 void MeasurementTimeline::AddMeasurement(const std::shared_ptr<const ElementVectorBase>& meas,
                                   const TimePoint& t) {
   // Discard first measurement in binary case
-  if (ignore_first_ && last_processed_time_ == TimePoint::min()) {
+  if (drop_first_ && last_processed_time_ == TimePoint::min()) {
+    LOG(INFO) << "Droping first measurement" << std::endl;
     last_processed_time_ = t;
     return;
   }
@@ -29,6 +30,8 @@ void MeasurementTimeline::AddMeasurement(const std::shared_ptr<const ElementVect
     ret = meas_map_.insert(std::pair<TimePoint, std::shared_ptr<const ElementVectorBase>>(t, meas));
     if (!ret.second) {
       LOG(ERROR) << "Measurement already exists!" << std::endl;
+    } else {
+      LOG(INFO) << "Adding measurement" << std::endl;
     }
   }
 }
@@ -45,15 +48,9 @@ bool MeasurementTimeline::GetMeasurement(const TimePoint& t,
 }
 
 void MeasurementTimeline::RemoveProcessedFirst() {
-  DLOG_IF(ERROR,meas_map_.size() == 0) << "No measurement to remove";
+  LOG_IF(ERROR,meas_map_.size() == 0) << "No measurement to remove";
   last_processed_time_ = meas_map_.begin()->first;
   meas_map_.erase(meas_map_.begin());
-}
-
-void MeasurementTimeline::RemoveProcessedMeas(const TimePoint& t) {
-  DLOG_IF(ERROR,meas_map_.count(t) == 0) << "No measurement to remove";
-  meas_map_.erase(t);
-  last_processed_time_ = t;
 }
 
 void MeasurementTimeline::Reset() {
@@ -66,6 +63,23 @@ TimePoint MeasurementTimeline::GetLastTime() const {
     return meas_map_.rbegin()->first;
   } else {
     return last_processed_time_;
+  }
+}
+
+TimePoint MeasurementTimeline::GetFirstTime() const {
+  if (!meas_map_.empty()) {
+    return meas_map_.begin()->first;
+  } else {
+    return TimePoint::max();
+  }
+}
+
+bool MeasurementTimeline::GetFirst(std::shared_ptr<const ElementVectorBase>& meas) {
+  if (!meas_map_.empty()) {
+    meas = meas_map_.begin()->second;
+    return true;
+  } else {
+    return false;
   }
 }
 
@@ -158,12 +172,14 @@ void MeasurementTimeline::MergeUndesired(const std::set<TimePoint>& times,
 
 void MeasurementTimeline::RemoveOutdated(const TimePoint& time) {
   while (!meas_map_.empty() && meas_map_.begin()->first <= time) {
+    LOG(WARNING) << "Removing outdated measurement, normal at beginning." << std::endl;
     RemoveProcessedFirst();
   }
 }
 
-void MeasurementTimeline::Print(const TimePoint& start, int start_offset,
+std::string MeasurementTimeline::Print(const TimePoint& start, int start_offset,
                                 double resolution) const {
+  std::ostringstream out;
   const int width = meas_map_.empty() ? start_offset : start_offset
                     + ceil(toSec(meas_map_.rbegin()->first - start) / resolution) + 1;
   std::vector<int> counts(width, 0);
@@ -175,12 +191,17 @@ void MeasurementTimeline::Print(const TimePoint& start, int start_offset,
   }
   for (const auto& c : counts) {
     if (c == 0) {
-      std::cout << "-";
+      out << "-";
     } else {
-      std::cout << c;
+      out << c;
     }
   }
-  std::cout << std::endl;
+  out << std::endl;
+  return out.str();
+}
+
+TimePoint MeasurementTimeline::GetLastProcessedTime(){
+  return last_processed_time_;
 }
 
 }

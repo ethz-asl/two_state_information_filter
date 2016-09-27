@@ -94,6 +94,9 @@ class RobocentricLandmarkPrediction
       this->template GetJacBlockNoi<FEA, FEA>(J).template block<3,3>(i*3,i*3) = sqrt(dt_) * Mat3::Identity();
     }
   }
+  Vec3 GetMeasuredBwB() const{
+    return meas_->BwB_;
+  }
 
  protected:
   const Vec3 Ig_;
