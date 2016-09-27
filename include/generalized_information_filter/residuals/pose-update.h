@@ -11,23 +11,23 @@ namespace GIF {
  */
 class PoseMeas : public ElementVector {
  public:
-  PoseMeas(const Vec3& JrJC = Vec3(0, 0, 0), const Quat& qCJ = Quat())
+  PoseMeas(const Vec3& JrJC = Vec3(0, 0, 0), const Quat& qJC = Quat())
       : ElementVector(std::shared_ptr<ElementVectorDefinition>(
-            new ElementPack<Vec3, Quat>({ "JrJC", "qCJ" }))),
+            new ElementPack<Vec3, Quat>({ "JrJC", "qJC" }))),
         JrJC_(ElementVector::GetValue<Vec3>("JrJC")),
-        qCJ_(ElementVector::GetValue<Quat>("qCJ")) {
+        qJC_(ElementVector::GetValue<Quat>("qJC")) {
     JrJC_ = JrJC;
-    qCJ_ = qCJ;
+    qJC_ = qJC;
   }
   Vec3& JrJC_;
-  Quat& qCJ_;
+  Quat& qJC_;
 };
 
 /*! \brief Pose Update
  *         Builds a residual between current estimate pose and an external measured pose. The state
- *         is parametrized by the position (IrIB) and attitude (qBI). Additionally, the offset
- *         between the inertial frame is coestimate (IrIJ and qJI). The extrinsics calibration of
- *         the pose measurement are assumed to be known  (BrBC and qCB).
+ *         is parametrized by the position (IrIB) and attitude (qIB). Additionally, the offset
+ *         between the inertial frame is coestimate (IrIJ and qIJ). The extrinsics calibration of
+ *         the pose measurement are assumed to be known  (BrBC and qBC).
  *
  *         Coordinate frames:
  *           B: Body
@@ -38,50 +38,51 @@ class PoseMeas : public ElementVector {
 class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
     ElementPack<Vec3, Quat, Vec3, Quat>, ElementPack<Vec3, Vec3>, PoseMeas> {
  public:
-  PoseUpdate(const std::array<std::string,2>& errorName = {"JrJC", "qCJ"},
-             const std::array<std::string,4>& stateName = {"IrIB", "qBI", "IrIJ", "qJI"},
-             const std::array<std::string,2>& noiseName = {"JrJC", "qCJ"})
+  PoseUpdate(const std::array<std::string,2>& errorName = {"JrJC", "qJC"},
+             const std::array<std::string,4>& stateName = {"IrIB", "qIB", "IrIJ", "qIJ"},
+             const std::array<std::string,2>& noiseName = {"JrJC", "qJC"})
        : mtUnaryUpdate(errorName, stateName, noiseName),
          BrBC_(0,0,0),
-         qCB_(1,0,0,0){
+         qBC_(1,0,0,0){
   }
 
   virtual ~PoseUpdate() {
   }
 
-  void Eval(Vec3& JrJC_inn, Quat& qCJ_inn,
-            const Vec3& IrIB_cur, const Quat& qBI_cur, const Vec3& IrIJ_cur, const Quat& qJI_cur,
-            const Vec3& JrJC_noi, const Vec3& qCJ_noi) const {
-    JrJC_inn = qJI_cur.rotate(Vec3(IrIB_cur - IrIJ_cur + qBI_cur.inverseRotate(BrBC_)))
+  void Eval(Vec3& JrJC_inn, Quat& qJC_inn,
+            const Vec3& IrIB_cur, const Quat& qIB_cur, const Vec3& IrIJ_cur, const Quat& qIJ_cur,
+            const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
+    JrJC_inn = qIJ_cur.inverseRotate(Vec3(IrIB_cur - IrIJ_cur + qIB_cur.rotate(BrBC_)))
         - meas_->JrJC_ + JrJC_noi;
-    Quat dQ = dQ.exponentialMap(qCJ_noi);
-    qCJ_inn = dQ * qCB_* qBI_cur * qJI_cur.inverted() * meas_->qCJ_.inverted();
+    Quat dQ = dQ.exponentialMap(qJC_noi);
+    qJC_inn = dQ * qIJ_cur.inverted() * qIB_cur * qBC_ * meas_->qJC_.inverted();
   }
 
   void JacCur(MatX& J,
-              const Vec3& IrIB_cur, const Quat& qBI_cur, const Vec3& IrIJ_cur, const Quat& qJI_cur,
-              const Vec3& JrJC_noi, const Vec3& qCJ_noi) const {
+              const Vec3& IrIB_cur, const Quat& qIB_cur, const Vec3& IrIJ_cur, const Quat& qIJ_cur,
+              const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
     J.setZero();
-    GetJacBlockCur<POS, POS>(J) = RotMat(qJI_cur).matrix();
-    GetJacBlockCur<POS, ATT>(J) = RotMat(qJI_cur * qBI_cur.inverted()).matrix()*gSM(BrBC_);
-    GetJacBlockCur<POS, IJP>(J) = -RotMat(qJI_cur).matrix();
-    GetJacBlockCur<POS, IJA>(J) = -gSM(qJI_cur.rotate(Vec3(IrIB_cur
-                                  - IrIJ_cur + qBI_cur.inverseRotate(BrBC_))));
-    GetJacBlockCur<ATT, ATT>(J) = RotMat(qCB_).matrix();
-    GetJacBlockCur<ATT, IJA>(J) = -RotMat(qCB_* qBI_cur * qJI_cur.inverted()).matrix();
+    GetJacBlockCur<POS, POS>(J) = RotMat(qIJ_cur).matrix().transpose();
+    GetJacBlockCur<POS, ATT>(J) = -gSM(RotMat(qIJ_cur.inverted() * qIB_cur).rotate(BrBC_))
+                                  *RotMat(qIJ_cur).matrix().transpose();
+    GetJacBlockCur<POS, IJP>(J) = -RotMat(qIJ_cur).matrix().transpose();
+    GetJacBlockCur<POS, IJA>(J) = RotMat(qIJ_cur).matrix().transpose()*gSM(Vec3(IrIB_cur
+                                  - IrIJ_cur + qIB_cur.rotate(BrBC_)));
+    GetJacBlockCur<ATT, ATT>(J) = RotMat(qIJ_cur.inverted()).matrix();
+    GetJacBlockCur<ATT, IJA>(J) = -RotMat(qIJ_cur.inverted()).matrix();
   }
 
   void JacNoi(MatX& J,
-              const Vec3& IrIB_cur, const Quat& qBI_cur, const Vec3& IrIJ_cur, const Quat& qJI_cur,
-              const Vec3& JrJC_noi, const Vec3& qCJ_noi) const {
+              const Vec3& IrIB_cur, const Quat& qIB_cur, const Vec3& IrIJ_cur, const Quat& qIJ_cur,
+              const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
     J.setZero();
     GetJacBlockNoi<POS, POS>(J) = Mat3::Identity();
     GetJacBlockNoi<ATT, ATT>(J) = Mat3::Identity();
   }
 
-  void SetExtrinsics(Vec3 BrBC, Quat qCB){
+  void SetExtrinsics(Vec3 BrBC, Quat qBC){
     BrBC_  = BrBC;
-    qCB_ = qCB;
+    qBC_ = qBC;
   }
 
  protected:
@@ -92,7 +93,7 @@ class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
     IJA
   };
   Vec3 BrBC_;
-  Quat qCB_;
+  Quat qBC_;
 };
 
 }

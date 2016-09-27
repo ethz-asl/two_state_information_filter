@@ -11,89 +11,95 @@ namespace GIF {
  */
 class ImuMeas : public ElementVector {
  public:
-  ImuMeas(const Vec3& BwB = Vec3(0, 0, 0), const Vec3& BfB = Vec3(0, 0, 0))
+  ImuMeas(const Vec3& MwM = Vec3(0, 0, 0), const Vec3& MfM = Vec3(0, 0, 0))
       : ElementVector(std::shared_ptr<ElementVectorDefinition>(
-            new ElementPack<Vec3, Vec3>({"BwB", "BfB"}))),
-        BwB_(ElementVector::GetValue<Vec3>("BwB")),
-        BfB_(ElementVector::GetValue<Vec3>("BfB")) {
-    BwB_ = BwB;
-    BfB_ = BfB;
+            new ElementPack<Vec3, Vec3>({"MwM", "MfM"}))),
+        MwM_(ElementVector::GetValue<Vec3>("MwM")),
+        MfM_(ElementVector::GetValue<Vec3>("MfM")) {
+    MwM_ = MwM;
+    MfM_ = MfM;
   }
-  Vec3& BwB_;
-  Vec3& BfB_;
+  Vec3& MwM_;
+  Vec3& MfM_;
 };
 
 /*! \brief Imu Prediction.
  *         Predicts the current state based on the previous state and the Imu measurement.
- *         Coordinate frames: I (world), B (Imu).
- *         Chosen state parametrisation: Position (IrIB), Velocity (BvB), Attitude (qIB),
- *                                       Gyroscope bias (BwB_bias), Accelerometer bias (BfB_bias).
+ *         Coordinate frames: I (world), M (Imu).
+ *         Chosen state parametrisation: Position (IrIM), Velocity (MvM), Attitude (qIM),
+ *                                       Gyroscope bias (MwM_bias), Accelerometer bias (MfM_bias).
  */
 class ImuPrediction : public Prediction<ElementPack<Vec3, Vec3, Vec3, Vec3, Quat>,
                                         ElementPack<Vec3, Vec3, Vec3, Vec3, Vec3>,
                                         ImuMeas> {
  public:
-  ImuPrediction()
-      : mtPrediction({"IrIB", "BvB", "BwB_bias", "BfB_bias", "qIB"},
-                     {"IrIB", "BvB", "BwB_bias", "BfB_bias", "qIB"}),
+  typedef std::array<std::string,5> String5;
+  ImuPrediction(const String5& staName = {"IrIM", "MvM", "MwM_bias", "MfM_bias", "qIM"},
+                const String5& noiName = {"IrIM", "MvM", "MwM_bias", "MfM_bias", "qIM"})
+      : mtPrediction(staName, noiName),
         Ig_(0, 0, -9.81){
   }
   virtual ~ImuPrediction() {
   }
   enum Elements {POS, VEL, GYB, ACB, ATT};
-  void Predict(Vec3& IrIB_cur, Vec3& BvB_cur, Vec3& BwB_bias_cur, Vec3& BfB_bias_cur, Quat& qIB_cur,
-               const Vec3& IrIB_pre, const Vec3& BvB_pre, const Vec3& BwB_bias_pre,
-               const Vec3& BfB_bias_pre, const Quat& qIB_pre, const Vec3& IrIB_noi,
-               const Vec3& BvB_noi, const Vec3& BwB_bias_noi, const Vec3& BfB_bias_noi,
-               const Vec3& qIB_noi) const {
-    const Vec3 BwB = meas_->BwB_ - BwB_bias_pre + qIB_noi / sqrt(dt_);
-    const Vec3 BfB = meas_->BfB_ - BfB_bias_pre + BvB_noi / sqrt(dt_);
-    const Vec3 dOmega = dt_ * BwB;
-    Quat dQ = dQ.exponentialMap(dOmega);
-    IrIB_cur = IrIB_pre + dt_ * (qIB_pre.rotate(BvB_pre) + IrIB_noi / sqrt(dt_));
-    BvB_cur = (Mat3::Identity() - gSM(dOmega)) * BvB_pre + dt_ * (BfB + qIB_pre.inverseRotate(Ig_));
-    BwB_bias_cur = BwB_bias_pre + BwB_bias_noi * sqrt(dt_);
-    BfB_bias_cur = BfB_bias_pre + BfB_bias_noi * sqrt(dt_);
-    qIB_cur = qIB_pre * dQ;
+  void Predict(Vec3& IrIM_cur, Vec3& MvM_cur, Vec3& MwM_bias_cur, Vec3& MfM_bias_cur, Quat& qIM_cur,
+               const Vec3& IrIM_pre, const Vec3& MvM_pre, const Vec3& MwM_bias_pre,
+               const Vec3& MfM_bias_pre, const Quat& qIM_pre, const Vec3& IrIM_noi,
+               const Vec3& MvM_noi, const Vec3& MwM_bias_noi, const Vec3& MfM_bias_noi,
+               const Vec3& qIM_noi) const {
+    ComputeBiasCorrectedImuMeas(MwM_bias_pre, qIM_noi, MfM_bias_pre, MvM_noi);
+    Quat dQ = dQ.exponentialMap(dt_ * MwM_cor_);
+    IrIM_cur = IrIM_pre + dt_ * (qIM_pre.rotate(MvM_pre) + IrIM_noi / sqrt(dt_));
+    MvM_cur = (Mat3::Identity() - gSM(dt_ * MwM_cor_)) * MvM_pre
+              + dt_ * (MfM_cor_ + qIM_pre.inverseRotate(Ig_));
+    MwM_bias_cur = MwM_bias_pre + MwM_bias_noi * sqrt(dt_);
+    MfM_bias_cur = MfM_bias_pre + MfM_bias_noi * sqrt(dt_);
+    qIM_cur = qIM_pre * dQ;
   }
-  void PredictJacPre(MatX& J, const Vec3& IrIB_pre, const Vec3& BvB_pre, const Vec3& BwB_bias_pre,
-                              const Vec3& BfB_bias_pre, const Quat& qIB_pre, const Vec3& IrIB_noi,
-                              const Vec3& BvB_noi, const Vec3& BwB_bias_noi,
-                              const Vec3& BfB_bias_noi, const Vec3& qIB_noi) const {
+  void PredictJacPre(MatX& J, const Vec3& IrIM_pre, const Vec3& MvM_pre, const Vec3& MwM_bias_pre,
+                              const Vec3& MfM_bias_pre, const Quat& qIM_pre, const Vec3& IrIM_noi,
+                              const Vec3& MvM_noi, const Vec3& MwM_bias_noi,
+                              const Vec3& MfM_bias_noi, const Vec3& qIM_noi) const {
     J.setZero();
-    const Vec3 BwB = meas_->BwB_ - BwB_bias_pre + qIB_noi / sqrt(dt_);
-    const Vec3 BfB = meas_->BfB_ - BfB_bias_pre + BvB_noi / sqrt(dt_);
-    const Vec3 dOmega = dt_ * BwB;
+    ComputeBiasCorrectedImuMeas(MwM_bias_pre, qIM_noi, MfM_bias_pre, MvM_noi);
     GetJacBlockPre<POS, POS>(J) = Mat3::Identity();
-    GetJacBlockPre<POS, VEL>(J) = dt_ * RotMat(qIB_pre).matrix();
-    GetJacBlockPre<POS, ATT>(J) = -dt_ * gSM(qIB_pre.rotate(BvB_pre));
-    GetJacBlockPre<VEL, VEL>(J) = (Mat3::Identity() - gSM(dOmega));
-    GetJacBlockPre<VEL, GYB>(J) = -dt_ * gSM(BvB_pre);
+    GetJacBlockPre<POS, VEL>(J) = dt_ * RotMat(qIM_pre).matrix();
+    GetJacBlockPre<POS, ATT>(J) = -dt_ * gSM(qIM_pre.rotate(MvM_pre));
+    GetJacBlockPre<VEL, VEL>(J) = (Mat3::Identity() - gSM(dt_ * MwM_cor_));
+    GetJacBlockPre<VEL, GYB>(J) = -dt_ * gSM(MvM_pre);
     GetJacBlockPre<VEL, ACB>(J) = -dt_ * Mat3::Identity();
-    GetJacBlockPre<VEL, ATT>(J) = dt_ * RotMat(qIB_pre).matrix().transpose() * gSM(Ig_);
+    GetJacBlockPre<VEL, ATT>(J) = dt_ * RotMat(qIM_pre).matrix().transpose() * gSM(Ig_);
     GetJacBlockPre<GYB, GYB>(J) = Mat3::Identity();
     GetJacBlockPre<ACB, ACB>(J) = Mat3::Identity();
-    GetJacBlockPre<ATT, GYB>(J) = -dt_ * RotMat(qIB_pre).matrix() * GammaMat(dOmega);
+    GetJacBlockPre<ATT, GYB>(J) = -dt_ * RotMat(qIM_pre).matrix() * GammaMat(dt_ * MwM_cor_);
     GetJacBlockPre<ATT, ATT>(J) = Mat3::Identity();
   }
-  void PredictJacNoi(MatX& J, const Vec3& IrIB_pre, const Vec3& BvB_pre, const Vec3& BwB_bias_pre,
-                              const Vec3& BfB_bias_pre, const Quat& qIB_pre, const Vec3& IrIB_noi,
-                              const Vec3& BvB_noi, const Vec3& BwB_bias_noi,
-                              const Vec3& BfB_bias_noi, const Vec3& qIB_noi) const {
+  void PredictJacNoi(MatX& J, const Vec3& IrIM_pre, const Vec3& MvM_pre, const Vec3& MwM_bias_pre,
+                              const Vec3& MfM_bias_pre, const Quat& qIM_pre, const Vec3& IrIM_noi,
+                              const Vec3& MvM_noi, const Vec3& MwM_bias_noi,
+                              const Vec3& MfM_bias_noi, const Vec3& qIM_noi) const {
     J.setZero();
-    const Vec3 BwB = meas_->BwB_ - BwB_bias_pre + qIB_noi / sqrt(dt_);
-    const Vec3 BfB = meas_->BfB_ - BfB_bias_pre + BvB_noi / sqrt(dt_);
-    const Vec3 dOmega = dt_ * BwB;
+    ComputeBiasCorrectedImuMeas(MwM_bias_pre, qIM_noi, MfM_bias_pre, MvM_noi);
     GetJacBlockNoi<POS, POS>(J) = sqrt(dt_) * Mat3::Identity();
     GetJacBlockNoi<VEL, VEL>(J) = sqrt(dt_) * Mat3::Identity();
-    GetJacBlockNoi<VEL, ATT>(J) = sqrt(dt_) * gSM(BvB_pre);
+    GetJacBlockNoi<VEL, ATT>(J) = sqrt(dt_) * gSM(MvM_pre);
     GetJacBlockNoi<GYB, GYB>(J) = sqrt(dt_) * Mat3::Identity();
     GetJacBlockNoi<ACB, ACB>(J) = sqrt(dt_) * Mat3::Identity();
-    GetJacBlockNoi<ATT, ATT>(J) = sqrt(dt_) * RotMat(qIB_pre).matrix() * GammaMat(dOmega);
+    GetJacBlockNoi<ATT, ATT>(J) = sqrt(dt_) * RotMat(qIM_pre).matrix() * GammaMat(dt_ * MwM_cor_);
+  }
+  void ComputeBiasCorrectedImuMeas(const Vec3& MwM_bias_pre, const Vec3& qIM_noi,
+                                    const Vec3& MfM_bias_pre, const Vec3& MvM_noi) const{
+    MwM_cor_ = meas_->MwM_ - MwM_bias_pre + qIM_noi / sqrt(dt_);
+    MfM_cor_ = meas_->MfM_ - MfM_bias_pre + MvM_noi / sqrt(dt_);
+  }
+  Vec3 GetMwMCor() const{
+    return MwM_cor_;
   }
 
  protected:
   const Vec3 Ig_;
+  mutable Vec3 MwM_cor_;
+  mutable Vec3 MfM_cor_;
 };
 
 }

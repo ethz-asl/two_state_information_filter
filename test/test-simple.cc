@@ -210,6 +210,7 @@ TEST_F(NewStateTest, constructor) {
   Filter f;
   f.AddResidual(velRes,fromSec(0.1),fromSec(0.0),"VelRes");
   f.AddResidual(accRes,fromSec(0.1),fromSec(0.0),"AccRes");
+  std::cout << f.PrintConnectivity();
   ElementVector preState(f.StateDefinition());
   preState.SetIdentity();
   preState.GetValue < Vec3 > ("pos") = Vec3(1, 2, 3);
@@ -256,6 +257,7 @@ TEST_F(NewStateTest, constructor) {
   Filter f2;
   f2.AddResidual(velRes,fromSec(0.1),fromSec(0.0),"VelRes");
   f2.AddResidual(accPre,fromSec(0.1),fromSec(0.0),"AccRes");
+  std::cout << f2.PrintConnectivity();
   f2.AddMeasurement(0,eptMeas,start+fromSec(-0.1));
   f2.AddMeasurement(0,eptMeas,start+fromSec(0.0));
   f2.AddMeasurement(0,eptMeas,start+fromSec(0.2));
@@ -278,13 +280,16 @@ TEST_F(NewStateTest, constructor) {
   std::shared_ptr<ImuPrediction> imuPre(new ImuPrediction());
   imuPre->GetNoiseCovariance() = 1e-8 * imuPre->GetNoiseCovariance();
   imuPre->TestJacs(1e-6, 1e-6);
-  std::shared_ptr<PoseUpdate> poseUpd(new PoseUpdate());
+  std::shared_ptr<PoseUpdate> poseUpd(new PoseUpdate({"JrJC", "qCJ"},
+                                                     {"IrIM", "qIM", "IrIJ", "qJI"},
+                                                     {"JrJC", "qCJ"}));
   poseUpd->GetNoiseCovariance() = 1e-8 * poseUpd->GetNoiseCovariance();
   poseUpd->TestJacs(1e-6, 1e-6);
 
   Filter imuPoseFilter;
   int imuPreInd = imuPoseFilter.AddResidual(imuPre,fromSec(0.1),fromSec(0.0),"ImuRes");
   int poseUpdInd = imuPoseFilter.AddResidual(poseUpd,fromSec(0.1),fromSec(0.0),"PoseRes");
+  std::cout << imuPoseFilter.PrintConnectivity();
   imuPoseFilter.AddMeasurement(imuPreInd, std::shared_ptr<ImuMeas>(
       new ImuMeas(Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 9.81))), start);
   for (int i = 1; i <= 10; i++) {
