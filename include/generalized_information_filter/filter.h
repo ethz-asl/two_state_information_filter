@@ -378,6 +378,42 @@ class Filter {
     return is_initialized_;
   }
 
+  std::string PrintConnectivity(){
+    std::ostringstream out;
+    int resNamePadding = 10;
+
+    std::vector<long> lengthState;
+    for (int i = 0; i < state_.GetNumElement(); i++) {
+      lengthState.push_back(state_.GetName(i).length());
+      out << state_.GetName(i) << " ";
+    }
+    out << std::string(resNamePadding, '-') << " ";
+    for (int i = 0; i < state_.GetNumElement(); i++) {
+      out << state_.GetName(i) << " ";
+    }
+    out << std::endl;
+
+    for (int i = 0; i < residuals_.size(); i++) {
+      ResidualStruct rs = residuals_.at(i);
+      for (int i = 0; i < state_.GetNumElement(); i++) {
+        const char c = rs.preWrap_.FindName(state_.GetName(i)) == -1 ? ' ' : '+';
+        out << std::string(lengthState.at(i), c);
+        out << " ";
+      }
+      const std::string resName = rs.name_.substr(0,resNamePadding);
+      const int frontPadding = (resNamePadding-resName.length())/2;
+      const int endPadding = resNamePadding-resName.length()-frontPadding+1;
+      out << std::string(frontPadding, ' ') << resName << std::string(endPadding, ' ');
+      for (int i = 0; i < state_.GetNumElement(); i++) {
+        const char c = rs.curWrap_.FindName(state_.GetName(i)) == -1 ? ' ' : '+';
+        out << std::string(lengthState.at(i), c);
+        out << " ";
+      }
+      out << std::endl;
+    }
+    return out.str();
+  }
+
  protected:
   ElementVectorDefinition::Ptr stateDefinition_; // Must come before state
   ElementVectorDefinition::Ptr noiseDefinition_;
