@@ -30,11 +30,13 @@ class ElementVectorBase {
   T& GetValue(const std::string& name);
   template<typename T>
   const T& GetValue(const std::string& name) const;
-  inline int GetDimension() const;
+  inline int GetDim() const;
   virtual int GetNumElement() const = 0;
-  inline int GetStart(int i) const;
+  inline int GetStart(int outer_index) const;
   inline int GetOuter(int i) const;
   inline int GetInner(int i) const;
+  inline std::string GetName(int outer_index) const;
+  inline int FindName(const std::string& name) const;
   std::string Print() const;
   void SetIdentity();
   void SetRandom();
@@ -102,38 +104,40 @@ const T& ElementVectorBase::GetValue(int i) const {
 
 template<typename T>
 T& ElementVectorBase::GetValue(const std::string& name) {
-  DLOG_IF(FATAL, !MatchesDefinition(*def_)) << "Element vector definition mismatch";
-  int i = def_->FindName(name);
+  int i = FindName(name);
   DLOG_IF(ERROR, i == -1) << "Element name not found";
   return GetValue<T>(i);
 }
 
 template<typename T>
 const T& ElementVectorBase::GetValue(const std::string& name) const {
-  DLOG_IF(FATAL, !MatchesDefinition(*def_)) << "Element vector definition mismatch";
-  int i = def_->FindName(name);
+  int i = FindName(name);
   DLOG_IF(ERROR, i == -1) << "Element name not found";
   return GetValue<T>(i);
 }
 
-int ElementVectorBase::GetDimension() const {
-  DLOG_IF(FATAL, !MatchesDefinition(*def_)) << "Element vector definition mismatch";
-  return def_->GetDim();
+int ElementVectorBase::GetDim() const {
+  return GetDefinition()->GetDim();
 }
 
-int ElementVectorBase::GetStart(int i) const {
-  DLOG_IF(FATAL, !MatchesDefinition(*def_)) << "Element vector definition mismatch";
-  return def_->GetStartIndex(i);
+int ElementVectorBase::GetStart(int outer_index) const {
+  return GetDefinition()->GetStart(outer_index);
 }
 
 int ElementVectorBase::GetOuter(int i) const {
-  DLOG_IF(FATAL, !MatchesDefinition(*def_)) << "Element vector definition mismatch";
-  return def_->GetOuterIndex(i);
+  return GetDefinition()->GetOuter(i);
 }
 
 int ElementVectorBase::GetInner(int i) const {
-  DLOG_IF(FATAL, !MatchesDefinition(*def_)) << "Element vector definition mismatch";
-  return def_->GetInnerIndex(i);
+  return GetDefinition()->GetInner(i);
+}
+
+std::string ElementVectorBase::GetName(int outer_index) const {
+  return GetDefinition()->GetName(outer_index);
+}
+
+int ElementVectorBase::FindName(const std::string& name) const {
+  return GetDefinition()->FindName(name);
 }
 
 ElementBase* ElementVector::GetElement(int i) {

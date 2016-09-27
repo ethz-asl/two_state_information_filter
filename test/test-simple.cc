@@ -170,9 +170,9 @@ TEST_F(NewStateTest, constructor) {
   std::cout << s1a.Print();
 
   // Boxplus and BoxMinus
-  Eigen::VectorXd v(s1a.GetDimension());
+  Eigen::VectorXd v(s1a.GetDim());
   v.setZero();
-  for (int i = 0; i < s1a.GetDimension(); i++) {
+  for (int i = 0; i < s1a.GetDim(); i++) {
     v(i) = i;
   }
   s1a.BoxPlus(v, &s1b);
@@ -187,8 +187,8 @@ TEST_F(NewStateTest, constructor) {
 
   // Transformation
   ElementVector s2(t.OutputDefinition());
-  MatX P1(s1a.GetDimension(), s1a.GetDimension());
-  MatX P2(s2.GetDimension(), s2.GetDimension());
+  MatX P1(s1a.GetDim(), s1a.GetDim());
+  MatX P2(s2.GetDim(), s2.GetDim());
   t.TransformState(&s2, s1a);
   t.TransformCovMat(P2, s1a, P1);
   t.JacTest(s1a, 1e-6, 1e-6);

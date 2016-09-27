@@ -14,11 +14,11 @@ class Prediction;
 
 template<typename ... Sta, typename ... Noi, typename Meas>
 class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
-    public BinaryResidual<ElementPack<Sta...>, ElementPack<Sta...>,
+    public BinaryResidual<ElementPack<Vec<ElementTraits<Sta>::kDim>...>, ElementPack<Sta...>,
                           ElementPack<Sta...>, ElementPack<Noi...>, Meas> {
  public:
   typedef Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> mtPrediction;
-  typedef BinaryResidual<ElementPack<Sta...>, ElementPack<Sta...>,
+  typedef BinaryResidual<ElementPack<Vec<ElementTraits<Sta>::kDim>...>, ElementPack<Sta...>,
                          ElementPack<Sta...>, ElementPack<Noi...>, Meas> mtBinaryRedidual;
   Prediction(const std::array<std::string, ElementPack<Sta...>::n_>& namesSta,
              const std::array<std::string, ElementPack<Noi...>::n_>& namesNoi)
@@ -36,7 +36,7 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
  protected:
   template<typename ... Ts,
            typename std::enable_if<(sizeof...(Ts)<ElementPack<Sta...>::n_)>::type* = nullptr>
-  void PredictWrapper(ElementVectorBase* cur,
+  inline void PredictWrapper(ElementVectorBase* cur,
                       const Sta&... pre, const Noi&... noi, Ts&... elements) const {
     DLOG_IF(FATAL,!cur->MatchesDefinition(*this->CurDefinition())) <<
         "Element vector definition mismatch";
@@ -49,47 +49,49 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
 
   template<typename... Ts,
            typename std::enable_if<(sizeof...(Ts)==ElementPack<Sta...>::n_)>::type* = nullptr>
-  void PredictWrapper(ElementVectorBase* cur,
+  inline void PredictWrapper(ElementVectorBase* cur,
                 const Sta&... pre, const Noi&... noi, Ts&... elements) const {
     Predict(elements..., pre..., noi...);
   }
 
   // Wrapping from BinaryResidual to Prediction implementation
-  void Eval(Sta&... inn, const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
+  inline void Eval(Vec<ElementTraits<Sta>::kDim>&... inn,
+                   const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
     // First compute prediction
     PredictWrapper(&prediction_, pre..., noi...);
-    // Then evaluate difference to posterior
+    // Then evaluate difference to posterior (inn = prediction - cur)
     ComputeInnovation(inn...,cur...,&prediction_);
   }
-  void JacPre(MatX& J, const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
+  inline void JacPre(MatX& J, const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
     PredictJacPre(J,pre...,noi...);
+    PredictWrapper(&prediction_, pre..., noi...); // TODO: cash or avoid
+    ComputePreJacobian(J,&prediction_,cur...);
   }
-  void JacCur(MatX& J, const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
+  inline void JacCur(MatX& J, const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
     J.setZero();
     PredictWrapper(&prediction_, pre..., noi...); // TODO: cash or avoid
     ComputeCurJacobian(J,&prediction_,cur...);
   }
-  void JacNoi(MatX& J, const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
+  inline void JacNoi(MatX& J, const Sta&... pre, const Sta&... cur, const Noi&... noi) const {
     PredictJacNoi(J,pre...,noi...);
+    PredictWrapper(&prediction_, pre..., noi...); // TODO: cash or avoid
+    ComputeNoiJacobian(J,&prediction_,cur...);
   }
 
   template<int i = 0, typename std::enable_if<(i<sizeof...(Sta))>::type* = nullptr>
-  inline void ComputeInnovation(Sta&... inn, const Sta&... cur,
+  inline void ComputeInnovation(Vec<ElementTraits<Sta>::kDim>&... inn, const Sta&... cur,
                                 const ElementVectorBase* prediction) const {
+    DLOG_IF(FATAL,!prediction->MatchesDefinition(*this->CurDefinition())) <<
+        "Element vector definition mismatch";
     typedef typename std::tuple_element<i, typename ElementPack<Sta...>::Tuple>::type mtElementType;
     typedef ElementTraits<mtElementType> Trait;
-
-    // inn = I+(pred-cur)
-    // TODO: make more efficient (could be done directly on Boxminus, but then jacobian becomes more annoying)
-    Eigen::Matrix<double,Trait::kDim,1> vec;
     Trait::Boxminus(prediction->template GetValue<mtElementType>(i),
                     std::get<i>(std::forward_as_tuple(cur...)),
-                    vec);
-    Trait::Boxplus(Trait::Identity(), vec, std::get<i>(std::forward_as_tuple(inn...)));
+                    std::get<i>(std::forward_as_tuple(inn...)));
     ComputeInnovation<i+1>(inn...,cur...,prediction);
   }
   template<int i = 0, typename std::enable_if<(i>=sizeof...(Sta))>::type* = nullptr>
-  inline void ComputeInnovation(Sta&... inn, const Sta&... cur,
+  inline void ComputeInnovation(Vec<ElementTraits<Sta>::kDim>&... inn, const Sta&... cur,
                                 const ElementVectorBase* prediction) const {}
 
   template<int i = 0, int j = 0, typename std::enable_if<(i<sizeof...(Sta))>::type* = nullptr>
@@ -99,17 +101,49 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
         "Element vector definition mismatch";
     typedef typename std::tuple_element<i,typename ElementPack<Sta...>::Tuple>::type mtElementType;
     typedef ElementTraits<mtElementType> Trait;
-    Eigen::Matrix<double,Trait::kDim,1> vec;
-    Trait::Boxminus(prediction->template GetValue<mtElementType>(i),
-                    std::get<i>(std::forward_as_tuple(cur...)),
-                    vec);
-    J.template block<Trait::kDim, Trait::kDim>(j,j) = Trait::BoxplusJacVec(Trait::Identity(),vec) *
+    J.template block<Trait::kDim, Trait::kDim>(j,j) =
       Trait::BoxminusJacRef(prediction->template GetValue<mtElementType>(i),
                             std::get<i>(std::forward_as_tuple(cur...)));
     ComputeCurJacobian<i+1,j+Trait::kDim>(J,prediction,cur...);
   }
   template<int i = 0, int j = 0, typename std::enable_if<(i>=sizeof...(Sta))>::type* = nullptr>
   void ComputeCurJacobian(MatX& J, ElementVectorBase* prediction, const Sta&... cur) const{}
+
+  template<int i = 0, int j = 0, typename std::enable_if<(i<sizeof...(Sta))>::type* = nullptr>
+  void ComputePreJacobian(MatX& J, ElementVectorBase* prediction,
+                          const Sta&... cur) const{
+    DLOG_IF(FATAL,!prediction->MatchesDefinition(*this->CurDefinition())) <<
+        "Element vector definition mismatch";
+    typedef typename std::tuple_element<i,typename ElementPack<Sta...>::Tuple>::type mtElementType;
+    typedef ElementTraits<mtElementType> Trait;
+    if(!Trait::kIsVectorSpace){
+      J.template block<Trait::kDim, ElementPack<Sta...>::kDim>(j,0) =
+        Trait::BoxminusJacInp(prediction->template GetValue<mtElementType>(i),
+                              std::get<i>(std::forward_as_tuple(cur...))) *
+                              J.template block<Trait::kDim, ElementPack<Sta...>::kDim>(j,0);
+    }
+    ComputePreJacobian<i+1,j+Trait::kDim>(J,prediction,cur...);
+  }
+  template<int i = 0, int j = 0, typename std::enable_if<(i>=sizeof...(Sta))>::type* = nullptr>
+  void ComputePreJacobian(MatX& J, ElementVectorBase* prediction, const Sta&... cur) const{}
+
+  template<int i = 0, int j = 0, typename std::enable_if<(i<sizeof...(Sta))>::type* = nullptr>
+  void ComputeNoiJacobian(MatX& J, ElementVectorBase* prediction,
+                          const Sta&... cur) const{
+    DLOG_IF(FATAL,!prediction->MatchesDefinition(*this->CurDefinition())) <<
+        "Element vector definition mismatch";
+    typedef typename std::tuple_element<i,typename ElementPack<Sta...>::Tuple>::type mtElementType;
+    typedef ElementTraits<mtElementType> Trait;
+    if(!Trait::kIsVectorSpace){
+      J.template block<Trait::kDim, ElementPack<Noi...>::kDim>(j,0) =
+        Trait::BoxminusJacInp(prediction->template GetValue<mtElementType>(i),
+                              std::get<i>(std::forward_as_tuple(cur...))) *
+                              J.template block<Trait::kDim, ElementPack<Sta...>::kDim>(j,0);
+    }
+    ComputeNoiJacobian<i+1,j+Trait::kDim>(J,prediction,cur...);
+  }
+  template<int i = 0, int j = 0, typename std::enable_if<(i>=sizeof...(Sta))>::type* = nullptr>
+  void ComputeNoiJacobian(MatX& J, ElementVectorBase* prediction, const Sta&... cur) const{}
 
  protected:
   mutable ElementVector prediction_;

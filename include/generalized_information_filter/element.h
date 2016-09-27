@@ -92,7 +92,7 @@ template<typename T>
 class Element : public ElementBase {
  public:
   typedef ElementTraits<T> Traits;
-  Element(const ElementDescription<T>* description)
+  Element(const typename ElementDescription<T>::CPtr description)
       : description_(description) {
     DLOG_IF(FATAL, description == nullptr) << "Passing nullptr";
   }
@@ -146,7 +146,7 @@ class Element : public ElementBase {
   }
  protected:
   T x_;
-  const ElementDescription<T>* description_;
+  const typename ElementDescription<T>::CPtr description_;
 };
 
 // ==================== Traits Implementation ==================== //

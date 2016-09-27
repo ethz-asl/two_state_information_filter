@@ -26,13 +26,14 @@ class ElementVectorDefinition {
   bool MatchesDefinition(const ElementVectorBase& other) const;
   inline int GetDim() const;
   inline int GetNumElements() const;
-  inline int GetStartIndex(int outer_index) const;
-  inline int GetOuterIndex(int i) const;
-  inline int GetInnerIndex(int i) const;
+  inline int GetStart(int outer_index) const;
+  inline int GetOuter(int i) const;
+  inline int GetInner(int i) const;
   std::string GetName(int outer_index) const;
   int FindName(const std::string& name) const;
-  const ElementDescriptionBase& GetElementDescription(int outer_index) const;
-  int AddElement(const std::string& name, const ElementDescriptionBase& new_element_definition);
+  const ElementDescriptionBase::CPtr& GetElementDescription(int outer_index) const;
+  int AddElement(const std::string& name,
+                 const ElementDescriptionBase::CPtr& new_element_definition);
   template<typename T>
   int AddElement(const std::string& name);
   void ExtendWithOtherElementVectorDefinition(const ElementVectorDefinition& other);
@@ -89,26 +90,26 @@ int ElementVectorDefinition::GetNumElements() const {
   return descriptions_.size();
 }
 
-int ElementVectorDefinition::GetStartIndex(int outer_index) const {
+int ElementVectorDefinition::GetStart(int outer_index) const {
   return start_indices_.at(outer_index);
 }
 
-int ElementVectorDefinition::GetOuterIndex(int i) const {
+int ElementVectorDefinition::GetOuter(int i) const {
   DLOG_IF(FATAL, i < 0 | i >= GetDim()) << "Index out of range";
   int outer_index = GetNumElements()-1;
-  while (GetStartIndex(outer_index) > i) {
+  while (GetStart(outer_index) > i) {
     --outer_index;
   }
   return outer_index;
 }
 
-int ElementVectorDefinition::GetInnerIndex(int i) const {
-  return i - GetStartIndex(GetOuterIndex(i));
+int ElementVectorDefinition::GetInner(int i) const {
+  return i - GetStart(GetOuter(i));
 }
 
 template<typename T>
 int ElementVectorDefinition::AddElement(const std::string& name) {
-  AddElement(name, ElementDescription<T>());
+  AddElement(name, std::make_shared<ElementDescription<T>>());
 }
 
 template<typename T, typename ... Ts>

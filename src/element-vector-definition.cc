@@ -18,7 +18,7 @@ bool ElementVectorDefinition::MatchesDefinition(const ElementVectorDefinition& o
     if (other_outer_index != entry.second) {
       return false;
     }
-    if (!GetElementDescription(entry.second).MatchesDescription(
+    if (!GetElementDescription(entry.second)->MatchesDescription(
         other.GetElementDescription(other_outer_index))) {
       return false;
     }
@@ -46,21 +46,21 @@ int ElementVectorDefinition::FindName(const std::string& name) const {
   return (query != names_map_.end()) ? query->second : -1;
 }
 
-const ElementDescriptionBase& ElementVectorDefinition::GetElementDescription(int outer_index) const {
-  return *descriptions_.at(outer_index);
+const ElementDescriptionBase::CPtr& ElementVectorDefinition::GetElementDescription(int outer_index) const {
+  return descriptions_.at(outer_index);
 }
 
 int ElementVectorDefinition::AddElement(const std::string& name,
-                                        const ElementDescriptionBase& description) {
+                                        const ElementDescriptionBase::CPtr& description) {
   int outer_index = FindName(name);
   if (outer_index != -1) {
-    DLOG_IF(ERROR,!GetElementDescription(outer_index).MatchesDescription(description)) <<
+    DLOG_IF(ERROR,!GetElementDescription(outer_index)->MatchesDescription(description)) <<
         "Invalid addition to element vector definition";
     return outer_index;
   } else {
-    descriptions_.push_back(description.Copy());
+    descriptions_.push_back(description);
     start_indices_.push_back(dim_);
-    dim_ += description.GetDimension();
+    dim_ += description->GetDim();
     names_map_.insert(std::pair<std::string, int>(name, GetNumElements() - 1));
     return GetNumElements() - 1;
   }
