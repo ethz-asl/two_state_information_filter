@@ -10,6 +10,7 @@
 #include "generalized_information_filter/residuals/landmark-prediction.h"
 #include "generalized_information_filter/residuals/leg-kinematic-update.h"
 #include "generalized_information_filter/residuals/pose-update.h"
+#include "generalized_information_filter/residuals/random-walk-prediction.h"
 #include "generalized_information_filter/transformation.h"
 #include "generalized_information_filter/unary-update.h"
 
@@ -285,9 +286,14 @@ TEST_F(NewStateTest, constructor) {
                                                      {"JrJC", "qCJ"}));
   poseUpd->GetNoiseCovariance() = 1e-8 * poseUpd->GetNoiseCovariance();
   poseUpd->TestJacs(1e-6, 1e-6);
+  std::shared_ptr<RandomWalkPrediction<ElementPack<Vec3,Quat>>> extPre(
+      new RandomWalkPrediction<ElementPack<Vec3,Quat>>({"IrIJ", "qJI"},{"IrIJ", "qJI"}));
+  extPre->GetNoiseCovariance() = 1e-8 * extPre->GetNoiseCovariance();
+  extPre->TestJacs(1e-6, 1e-6);
 
   Filter imuPoseFilter;
   int imuPreInd = imuPoseFilter.AddResidual(imuPre,fromSec(0.1),fromSec(0.0),"ImuRes");
+  int textPreInd = imuPoseFilter.AddResidual(extPre,fromSec(0.1),fromSec(0.0),"ExtRes");
   int poseUpdInd = imuPoseFilter.AddResidual(poseUpd,fromSec(0.1),fromSec(0.0),"PoseRes");
   std::cout << imuPoseFilter.PrintConnectivity();
   imuPoseFilter.AddMeasurement(imuPreInd, std::shared_ptr<ImuMeas>(
