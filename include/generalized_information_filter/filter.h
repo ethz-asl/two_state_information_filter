@@ -36,6 +36,7 @@ struct ResidualStruct {
     jacPre_.resize(innDim_, res->PreDefinition()->GetDim());
     jacCur_.resize(innDim_, res->CurDefinition()->GetDim());
     jacNoi_.resize(innDim_, res->NoiDefinition()->GetDim());
+    isActive_ = false;
   }
   ~ResidualStruct() {
   }
@@ -52,6 +53,7 @@ struct ResidualStruct {
   MatX jacNoi_;
   int innDim_;
   std::string name_;
+  bool isActive_;
 };
 
 /*! \brief Filter
@@ -80,7 +82,7 @@ class Filter {
     } else {
       state_.SetIdentity();
     }
-    cov_.setIdentity();
+    inf_.setIdentity();
     is_initialized_ = true;
   }
 
@@ -90,7 +92,7 @@ class Filter {
     curLinState_.Construct();
     noise_.Construct();
     noise_.SetIdentity();
-    cov_.resize(stateDefinition_->GetDim(), stateDefinition_->GetDim());
+    inf_.resize(stateDefinition_->GetDim(), stateDefinition_->GetDim());
   }
 
   int AddResidual(const BinaryResidualBase::Ptr& res,
@@ -253,14 +255,14 @@ class Filter {
     std::vector<bool> hasMeas(residuals_.size(), false);
     ElementVectorBase::CPtr meas;
     for (int i = 0; i < residuals_.size(); i++) {
-      hasMeas.at(i) = residuals_.at(i).mt_.GetMeasurement(t, meas);
-      if (hasMeas.at(i)) {
+      residuals_.at(i).isActive_ = residuals_.at(i).mt_.GetMeasurement(t, meas);
+      if (residuals_.at(i).isActive_) {
         residuals_.at(i).res_->SetDt(toSec(t-time_));
         residuals_.at(i).res_->SetMeas(meas);
-        PreProcess(i);
         innDim += residuals_.at(i).res_->InnDefinition()->GetDim();
       }
     }
+    PreProcess();
 
     // Temporaries
     VecX y(innDim);
@@ -278,7 +280,7 @@ class Filter {
     // Evaluate residuals and Jacobians
     int count = 0;
     for (int i = 0; i < residuals_.size(); i++) {
-      if (hasMeas.at(i)) {
+      if (residuals_.at(i).isActive_) {
         ResidualStruct rs = residuals_.at(i);
         rs.preWrap_.SetElementVector(&state_);
         rs.curWrap_.SetElementVector(&curLinState_);
@@ -316,14 +318,14 @@ class Filter {
     }
     LOG(INFO) << "Innovation:\t" << y.transpose();
 
-    // Compute weighting // TODO: make more efficient
+    // Compute weighting // TODO: make more efficient, exploit sparsity
     Winv = (JacNoi*R*JacNoi.transpose()).llt().solve(GIF::MatX::Identity(innDim,innDim));
 
-    // Compute Kalman Update // TODO: make more efficient and numerically stable
-    MatX D = cov_.inverse() + JacPre.transpose() * Winv * JacPre;
+    // Compute Kalman Update
+    MatX D = inf_ + JacPre.transpose() * Winv * JacPre;
     MatX S = JacCur.transpose() * (Winv - Winv * JacPre * D.inverse() * JacPre.transpose() * Winv);
-    cov_ = (S * JacCur).inverse();
-    VecX dx = -(cov_ * S * y);
+    inf_ = S * JacCur;
+    VecX dx = -inf_.llt().solve(S * y);
 
     // Apply Kalman Update
     curLinState_.BoxPlus(dx, &state_);
@@ -332,10 +334,9 @@ class Filter {
     LOG(INFO) << state_.Print();
 
     // Post Processing
+    PostProcess();
     for (int i = 0; i < residuals_.size(); i++) {
-      if (hasMeas.at(i)) {
-        PostProcess(i);
-
+      if (residuals_.at(i).isActive_) {
         // Remove processed measurement
         if(residuals_.at(i).mt_.GetFirstTime() == t){
           residuals_.at(i).mt_.RemoveProcessedFirst();
@@ -356,17 +357,29 @@ class Filter {
     }
   }
 
-  virtual void PreProcess(int residual_id){};
-  virtual void PostProcess(int residual_id){};
+  virtual void PreProcess(){};
+  virtual void PostProcess(){};
 
   ElementVector& GetState(){
     LOG_IF(ERROR,!is_initialized_) << "Accessing state before initialization";
     return state_;
   }
 
-  GIF::MatX& GetCovariance(){
+  ElementVector& GetLinState(){
+    LOG_IF(ERROR,!is_initialized_) << "Accessing state before initialization";
+    return curLinState_;
+  }
+
+  MatX GetCovariance(){
     LOG_IF(ERROR,!is_initialized_) << "Accessing cov before initialization";
-    return cov_;
+    const int stateDim = stateDefinition_->GetDim();
+    return (inf_).llt().solve(GIF::MatX::Identity(stateDim,stateDim));
+  }
+
+  void SetCovariance(MatX cov){
+    LOG_IF(ERROR,!is_initialized_) << "Accessing cov before initialization";
+    const int stateDim = stateDefinition_->GetDim();
+    inf_ = (cov).llt().solve(GIF::MatX::Identity(stateDim,stateDim));
   }
 
   TimePoint& GetTime(){
@@ -423,7 +436,7 @@ class Filter {
   ElementVector state_;
   ElementVector noise_;
   ElementVector curLinState_;
-  MatX cov_;
+  MatX inf_;
   bool is_initialized_;
 
 };
