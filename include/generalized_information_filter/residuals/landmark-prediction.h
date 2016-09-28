@@ -30,6 +30,9 @@ class RobocentricLandmarkPrediction
     : mtPrediction(staName, noiName),
       imuPrediction_({staName[0], staName[1], staName[2], staName[3], staName[4]},
                      {noiName[0], noiName[1], noiName[2], noiName[3], noiName[4]}){
+    for(int i=0;i<NumLandmark;i++){
+      propagation_flags_[i] = true;
+    }
   }
   virtual ~RobocentricLandmarkPrediction() {
   }
@@ -46,8 +49,12 @@ class RobocentricLandmarkPrediction
                            IrIM_pre, MvM_pre, MwM_bias_pre, MfM_bias_pre, qIM_pre,
                            IrIM_noi, MvM_noi, MwM_bias_noi, MfM_bias_noi, qIM_noi);
     for(int i=0;i<NumLandmark;i++){
-      MrML_cur[i] = (Mat3::Identity() - gSM(dt_ * imuPrediction_.GetMwMCor())) * MrML_pre[i]
-                    - dt_ * MvM_pre + MrML_noi[i] * sqrt(dt_);
+      if(propagation_flags_[i]){
+        MrML_cur[i] = (Mat3::Identity() - gSM(dt_ * imuPrediction_.GetMwMCor())) * MrML_pre[i]
+                      - dt_ * MvM_pre + MrML_noi[i] * sqrt(dt_);
+      } else {
+        MrML_cur[i] = MrML_noi[i] * sqrt(dt_);
+      }
     }
   }
   void PredictJacPre(MatX& J, const Vec3& IrIM_pre, const Vec3& MvM_pre, const Vec3& MwM_bias_pre,
@@ -66,12 +73,14 @@ class RobocentricLandmarkPrediction
     J.block(0,0,imuPrediction_.PreDefinition()->GetDim(), imuPrediction_.CurDefinition()->GetDim())
         = JImu;
     for(int i=0;i<NumLandmark;i++){
-      this->template GetJacBlockNoi<FEA, VEL>(J).template block<3,3>(i*3,0) =
-          -dt_ * Mat3::Identity();
-      this->template GetJacBlockNoi<FEA, GYB>(J).template block<3,3>(i*3,0) =
-          -dt_ * gSM(MrML_pre[i]);
-      this->template GetJacBlockNoi<FEA, FEA>(J).template block<3,3>(i*3,i*3) =
-          (Mat3::Identity() - gSM(dt_ * imuPrediction_.GetMwMCor()));
+      if(propagation_flags_[i]){
+        this->template GetJacBlockNoi<FEA, VEL>(J).template block<3,3>(i*3,0) =
+            -dt_ * Mat3::Identity();
+        this->template GetJacBlockNoi<FEA, GYB>(J).template block<3,3>(i*3,0) =
+            -dt_ * gSM(MrML_pre[i]);
+        this->template GetJacBlockNoi<FEA, FEA>(J).template block<3,3>(i*3,i*3) =
+            (Mat3::Identity() - gSM(dt_ * imuPrediction_.GetMwMCor()));
+      }
     }
   }
   void PredictJacNoi(MatX& J, const Vec3& IrIM_pre, const Vec3& MvM_pre, const Vec3& MwM_bias_pre,
@@ -90,8 +99,10 @@ class RobocentricLandmarkPrediction
     J.block(0,0,imuPrediction_.PreDefinition()->GetDim(), imuPrediction_.NoiDefinition()->GetDim())
         = JImu;
     for(int i=0;i<NumLandmark;i++){
-      this->template GetJacBlockNoi<FEA, ATT>(J).template block<3,3>(i*3,0) =
-          sqrt(dt_) * gSM(MrML_pre[i]);
+      if(propagation_flags_[i]){
+        this->template GetJacBlockNoi<FEA, ATT>(J).template block<3,3>(i*3,0) =
+            sqrt(dt_) * gSM(MrML_pre[i]);
+      }
       this->template GetJacBlockNoi<FEA, FEA>(J).template block<3,3>(i*3,i*3) =
           sqrt(dt_) * Mat3::Identity();
     }
@@ -100,7 +111,12 @@ class RobocentricLandmarkPrediction
     return meas_->MwM_;
   }
 
+  void SetPropagationFlag(int i, bool flag) {
+    propagation_flags_[i] = flag;
+  }
+
  protected:
+  std::array<bool,NumLandmark> propagation_flags_;
   mutable ImuPrediction imuPrediction_;
 };
 
