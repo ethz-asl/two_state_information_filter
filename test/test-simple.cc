@@ -1,14 +1,15 @@
 #include "gtest/gtest.h"
 
-#include "../include/generalized_information_filter/element-vector.h"
 #include "generalized_information_filter/binary-residual.h"
 #include "generalized_information_filter/common.h"
+#include "generalized_information_filter/element-vector.h"
 #include "generalized_information_filter/filter.h"
 #include "generalized_information_filter/prediction.h"
 #include "generalized_information_filter/residuals/imu-prediction.h"
 #include "generalized_information_filter/residuals/kinematics-model.h"
 #include "generalized_information_filter/residuals/landmark-prediction.h"
 #include "generalized_information_filter/residuals/leg-kinematic-update.h"
+#include "generalized_information_filter/residuals/legged-robot-dynamic-residual.h"
 #include "generalized_information_filter/residuals/pose-update.h"
 #include "generalized_information_filter/residuals/random-walk-prediction.h"
 #include "generalized_information_filter/transformation.h"
@@ -319,6 +320,9 @@ TEST_F(NewStateTest, constructor) {
   std::shared_ptr<LeggedRobotModelExample> model(new LeggedRobotModelExample());
   legKinematicUpd->SetModelPtr(model);
   legKinematicUpd->TestJacs(1e-6,1e-6);
+
+  // Test dynamic error term
+  std::shared_ptr<LeggedRobotDynamicResidual<LeggedRobotModelExample>> legDynamicRes(new LeggedRobotDynamicResidual<LeggedRobotModelExample>());
 }
 
 int main(int argc, char **argv) {
