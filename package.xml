@@ -10,4 +10,5 @@
   <maintainer email="bloeschm@ethz.ch">Michael Bloesch</maintainer>
   <license>BSD</license>
   <buildtool_depend>catkin</buildtool_depend>
+  <depend>glog_catkin</depend>
 </package>
