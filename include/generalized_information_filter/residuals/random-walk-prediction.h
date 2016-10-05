@@ -3,6 +3,7 @@
 
 #include "generalized_information_filter/common.h"
 #include "generalized_information_filter/prediction.h"
+#include "generalized_information_filter/measurement.h"
 
 namespace GIF {
 
