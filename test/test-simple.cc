@@ -282,12 +282,12 @@ TEST_F(NewStateTest, constructor) {
   imuPre->GetNoiseCovariance() = 1e-8 * imuPre->GetNoiseCovariance();
   imuPre->TestJacs(1e-6, 1e-6);
   std::shared_ptr<PoseUpdate> poseUpd(new PoseUpdate({"JrJC", "qCJ"},
-                                                     {"IrIM", "qIM", "IrIJ", "qJI"},
+                                                     {"IrIM", "qIM", "IrIJ", "qIJ"},
                                                      {"JrJC", "qCJ"}));
   poseUpd->GetNoiseCovariance() = 1e-8 * poseUpd->GetNoiseCovariance();
   poseUpd->TestJacs(1e-6, 1e-6);
   std::shared_ptr<RandomWalkPrediction<ElementPack<Vec3,Quat>>> extPre(
-      new RandomWalkPrediction<ElementPack<Vec3,Quat>>({"IrIJ", "qJI"},{"IrIJ", "qJI"}));
+      new RandomWalkPrediction<ElementPack<Vec3,Quat>>({"IrIJ", "qIJ"},{"IrIJ", "qIJ"}));
   extPre->GetNoiseCovariance() = 1e-8 * extPre->GetNoiseCovariance();
   extPre->TestJacs(1e-6, 1e-6);
 
@@ -298,13 +298,20 @@ TEST_F(NewStateTest, constructor) {
   std::cout << imuPoseFilter.PrintConnectivity();
   imuPoseFilter.AddMeasurement(imuPreInd, std::shared_ptr<ImuMeas>(
       new ImuMeas(Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 9.81))), start);
+  imuPoseFilter.Update();
   for (int i = 1; i <= 10; i++) {
     imuPoseFilter.AddMeasurement(imuPreInd, std::shared_ptr<ImuMeas>(
         new ImuMeas(Vec3(0.3, 0.0, 0.1), Vec3(0.0, 0.2, 9.81))),
-        start + fromSec(1+0.1*i));
+        start + fromSec(0.1*i));
+    std::cout << "Update1 " << i << std::endl;
+    imuPoseFilter.Update();
     imuPoseFilter.AddMeasurement(poseUpdInd, std::shared_ptr<PoseMeas>(
         new PoseMeas(Vec3(0.0, 0.0, 0.0), Quat(1.0, 0.0, 0.0, 0.0))),
-        start + fromSec(1+0.1*i));
+        start + fromSec(0.05+0.1*i));
+    imuPoseFilter.AddMeasurement(textPreInd, std::make_shared<EmptyMeas>(),
+        start + fromSec(0.05+0.1*i));
+    std::cout << "Update2 " << i << std::endl;
+    imuPoseFilter.Update();
   }
   TimePoint startFilter = Clock::now();
   imuPoseFilter.Update();

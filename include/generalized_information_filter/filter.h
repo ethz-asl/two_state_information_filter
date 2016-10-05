@@ -73,8 +73,7 @@ class Filter {
   }
 
   virtual void Init(const TimePoint& t, const ElementVectorBase* initState = nullptr) {
-    LOG(INFO) << "Initializing state at t = "
-        << std::chrono::system_clock::to_time_t(t) << std::endl;
+    LOG(INFO) << "Initializing state at t = " << Print(t) << std::endl;
     startTime_ = t;
     time_ = t;
     if(initState != nullptr){
@@ -129,12 +128,16 @@ class Filter {
     return maxUpdateTime;
   }
 
-  TimePoint GetMinMeasTime() const {
-    TimePoint minMeasTime = TimePoint::max();
+  TimePoint GetMaxMinMeasTime() const {
+    TimePoint maxMinMeasTime = TimePoint::min();
+    bool check = true;
     for (int i = 0; i < residuals_.size(); i++) {
-      minMeasTime = std::min(minMeasTime, residuals_.at(i).mt_.GetFirstTime());
+      if(!residuals_.at(i).res_->isUnary_){
+        check = check & (residuals_.at(i).mt_.GetLastProcessedTime() != TimePoint::min());
+        maxMinMeasTime = std::max(maxMinMeasTime, residuals_.at(i).mt_.GetLastProcessedTime());
+      }
     }
-    return minMeasTime;
+    return check ? maxMinMeasTime : TimePoint::min();
   }
 
   void GetMeasurementTimeList(std::set<TimePoint>& times,
@@ -173,8 +176,7 @@ class Filter {
       LOG(WARNING) << "Adding measurements before current time (will be discarded)" << std::endl;
       return;
     }
-    LOG(INFO) << "Adding measurement with ID " << i << " at  t = "
-        << std::chrono::system_clock::to_time_t(t) << std::endl;
+    LOG(INFO) << "Adding measurement with ID " << i << " at  t = " << Print(t) << std::endl;
     if(residuals_.at(i).res_->CheckMeasType(meas)){
       residuals_.at(i).mt_.AddMeasurement(meas, t);
     } else {
@@ -194,23 +196,11 @@ class Filter {
     }
   }
 
-  void AttemptInitialization(){
-    bool check = true;
-    for (int i = 0; i < residuals_.size(); i++) {
-      if(residuals_.at(i).mt_.GetFirstTime() == TimePoint::max()
-         && !residuals_.at(i).res_->isUnary_){
-        check = false;
-      }
-    }
-    if(check){
-      Init(GetMinMeasTime());
-    }
-  }
-
   void Update() {
     // Initialize if possible
-    if(!is_initialized_ && GetMinMeasTime() != TimePoint::max()){
-      AttemptInitialization();
+    if(!is_initialized_ && GetMaxMinMeasTime() != TimePoint::min()){
+//      AttemptInitialization();
+      Init(GetMaxMinMeasTime());
     }
 
     if(is_initialized_){
@@ -289,15 +279,19 @@ class Filter {
                                 rs.curWrap_,
                                 rs.noiWrap_);
         rs.inn_.BoxMinus(rs.innRef_, y.block(count, 0, rs.innDim_, 1));
+        LOG_IF(ERROR,y.hasNaN()) << "Residual " << rs.name_ << " contains NaN!\n" << y.transpose();
         rs.res_->JacPre(rs.jacPre_, rs.preWrap_,
                                     rs.curWrap_,
                                     rs.noiWrap_);
+        LOG_IF(ERROR,rs.jacPre_.hasNaN()) << "jacPre " << rs.name_ << " contains NaN!";
         rs.res_->JacCur(rs.jacCur_, rs.preWrap_,
                                     rs.curWrap_,
                                     rs.noiWrap_);
+        LOG_IF(ERROR,rs.jacCur_.hasNaN()) << "jacCur " << rs.name_ << " contains NaN!";
         rs.res_->JacNoi(rs.jacNoi_, rs.preWrap_,
                                     rs.curWrap_,
                                     rs.noiWrap_);
+        LOG_IF(ERROR,rs.jacNoi_.hasNaN()) << "jacNoi " << rs.name_ << " contains NaN!";
         for(int j=0;j<rs.res_->InnDefinition()->GetNumElements();j++){
           const ElementDescriptionBase::CPtr& description =
               rs.res_->InnDefinition()->GetElementDescription(j);

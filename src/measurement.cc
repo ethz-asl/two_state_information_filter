@@ -172,7 +172,8 @@ void MeasurementTimeline::MergeUndesired(const std::set<TimePoint>& times,
 
 void MeasurementTimeline::RemoveOutdated(const TimePoint& time) {
   while (!meas_map_.empty() && meas_map_.begin()->first <= time) {
-    LOG(WARNING) << "Removing outdated measurement, normal at beginning." << std::endl;
+    LOG(WARNING) << "Removing outdated measurement at "
+                 << GIF::Print(meas_map_.begin()->first) << "(normal at beginning)." << std::endl;
     RemoveProcessedFirst();
   }
 }
@@ -200,7 +201,7 @@ std::string MeasurementTimeline::Print(const TimePoint& start, int start_offset,
   return out.str();
 }
 
-TimePoint MeasurementTimeline::GetLastProcessedTime(){
+TimePoint MeasurementTimeline::GetLastProcessedTime() const{
   return last_processed_time_;
 }
 

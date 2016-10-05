@@ -44,7 +44,7 @@ class MeasurementTimeline {
   void MergeUndesired(const std::set<TimePoint>& times, const BinaryResidualBase* res);
   void RemoveOutdated(const TimePoint& time);
   std::string Print(const TimePoint& start, int start_offset, double resolution) const;
-  TimePoint GetLastProcessedTime();
+  TimePoint GetLastProcessedTime() const;
  protected:
   std::map<TimePoint, ElementVectorBase::CPtr> meas_map_;
   Duration max_wait_time_;
