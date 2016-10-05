@@ -6,7 +6,6 @@ set(GTEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/googletest CACHE STRING "gtest directo
 ##################### Find/Include #####################
 find_package(kindr REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(glog REQUIRED)
 
 include_directories(include)
 include_directories(${kindr_INCLUDE_DIRS})
@@ -14,13 +13,16 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 
 ##################### Catkin #####################
 if(DEFINED CATKIN_DEVEL_PREFIX)
-	find_package(catkin REQUIRED COMPONENTS
+	find_package(catkin REQUIRED COMPONENTS glog_catkin
 	)
 	catkin_package(
 		INCLUDE_DIRS include ${catkin_INCLUDE_DIRS}
-	    LIBRARIES ${PROJECT_NAME} glog
+	    LIBRARIES ${PROJECT_NAME}
 		CATKIN_DEPENDS
+		glog_catkin
 	)
+else()
+	find_package(glog REQUIRED)
 endif()
 
 ##################### Create library #####################
@@ -29,7 +31,12 @@ add_library(${PROJECT_NAME}
 	src/element-vector.cc
 	src/element-vector-definition.cc
 )
-target_link_libraries(${PROJECT_NAME} pthread glog)
+
+if(DEFINED CATKIN_DEVEL_PREFIX)
+	target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} pthread)
+else()
+	target_link_libraries(${PROJECT_NAME} pthread glog)
+endif()
 
 ##################### Check for gtest #####################
 if(EXISTS "${GTEST_DIR}" AND NOT DEFINED CATKIN_DEVEL_PREFIX)
