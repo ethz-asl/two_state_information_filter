@@ -320,7 +320,7 @@ class Filter {
           const int start1 = rs.res_->NoiDefinition()->GetStart(j);
           const int start2 = NoiseDefinition()->GetStart(NoiseDefinition()->FindName(rs.res_->NoiDefinition()->GetName(j)));
           R.block(start2,start2,noiDim,noiDim) = rs.res_->GetNoiseCovariance().block(start1,start1,noiDim,noiDim); // TODO: speed up and clean up
-   	}
+        }
 
         count += rs.innDim_;
       }
