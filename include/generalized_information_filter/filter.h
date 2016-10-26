@@ -313,6 +313,15 @@ class Filter {
         rs.preWrap_.EmbedJacobian(JacPre, rs.jacPre_, count);
         rs.curWrap_.EmbedJacobian(JacCur, rs.jacCur_, count);
         rs.noiWrap_.EmbedJacobian(JacNoi, rs.jacNoi_, count);
+
+        for(int j=0;j<rs.res_->NoiDefinition()->GetNumElements();j++){
+          const ElementDescriptionBase::CPtr& description = rs.res_->NoiDefinition()->GetElementDescription(j);
+          const int noiDim = description->GetDim();
+          const int start1 = rs.res_->NoiDefinition()->GetStart(j);
+          const int start2 = NoiseDefinition()->GetStart(NoiseDefinition()->FindName(rs.res_->NoiDefinition()->GetName(j)));
+          R.block(start2,start2,noiDim,noiDim) = rs.res_->GetNoiseCovariance().block(start1,start1,noiDim,noiDim); // TODO: speed up and clean up
+        }
+
         count += rs.innDim_;
       }
     }
