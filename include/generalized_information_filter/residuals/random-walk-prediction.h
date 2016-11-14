@@ -3,6 +3,7 @@
 
 #include "generalized_information_filter/common.h"
 #include "generalized_information_filter/prediction.h"
+#include "generalized_information_filter/measurement.h"
 
 namespace GIF {
 
@@ -23,8 +24,8 @@ class RandomWalkPrediction<ElementPack<Sta...>>: public Prediction<ElementPack<S
   using mtPrediction = Prediction<ElementPack<Sta...>,
                                   ElementPack<Vec<ElementTraits<Sta>::kDim>...>,
                                   EmptyMeas>;
-  RandomWalkPrediction(const StringArr& staName, const StringArr& noiName)
-      : mtPrediction(staName, noiName){
+  RandomWalkPrediction(const std::string& name, const StringArr& staName, const StringArr& noiName)
+      : mtPrediction(name, staName, noiName){
   }
   virtual ~RandomWalkPrediction() {
   }

@@ -38,10 +38,11 @@ class PoseMeas : public ElementVector {
 class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
     ElementPack<Vec3, Quat, Vec3, Quat>, ElementPack<Vec3, Vec3>, PoseMeas> {
  public:
-  PoseUpdate(const std::array<std::string,2>& errorName = {"JrJC", "qJC"},
+  PoseUpdate(const std::string& name,
+             const std::array<std::string,2>& errorName = {"JrJC", "qJC"},
              const std::array<std::string,4>& stateName = {"IrIB", "qIB", "IrIJ", "qIJ"},
              const std::array<std::string,2>& noiseName = {"JrJC", "qJC"})
-       : mtUnaryUpdate(errorName, stateName, noiseName),
+       : mtUnaryUpdate(name, errorName, stateName, noiseName),
          BrBC_(0,0,0),
          qBC_(1,0,0,0){
   }
@@ -52,10 +53,10 @@ class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
   void Eval(Vec3& JrJC_inn, Quat& qJC_inn,
             const Vec3& IrIB_cur, const Quat& qIB_cur, const Vec3& IrIJ_cur, const Quat& qIJ_cur,
             const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
-    JrJC_inn = qIJ_cur.inverseRotate(Vec3(IrIB_cur - IrIJ_cur + qIB_cur.rotate(BrBC_)))
+    JrJC_inn = ComputeExternalPosition(IrIB_cur, qIB_cur, IrIJ_cur, qIJ_cur)
         - meas_->JrJC_ + JrJC_noi;
     Quat dQ = dQ.exponentialMap(qJC_noi);
-    qJC_inn = dQ * qIJ_cur.inverted() * qIB_cur * qBC_ * meas_->qJC_.inverted();
+    qJC_inn = dQ * ComputeExternalAttitude(qIB_cur,qIJ_cur) * meas_->qJC_.inverted();
   }
 
   void JacCur(MatX& J,
@@ -83,6 +84,32 @@ class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
   void SetExtrinsics(Vec3 BrBC, Quat qBC){
     BrBC_  = BrBC;
     qBC_ = qBC;
+  }
+
+  void GetExtrinsics(Vec3* BrBC, Quat* qBC) const{
+    *BrBC  =  BrBC_;
+    *qBC = qBC_;
+  }
+
+  Vec3 ComputeExternalPosition(const Vec3& IrIB, const Quat& qIB,
+                               const Vec3& IrIJ, const Quat& qIJ) const{
+    return qIJ.inverseRotate(Vec3(IrIB - IrIJ + qIB.rotate(BrBC_)));
+  }
+
+  Vec3 ComputeExternalPosition(const ElementVectorBase& state) const{
+    return ComputeExternalPosition(state.template GetValue<Vec3>(this->CurDefinition()->GetName(0)),
+                                   state.template GetValue<Quat>(this->CurDefinition()->GetName(1)),
+                                   state.template GetValue<Vec3>(this->CurDefinition()->GetName(2)),
+                                   state.template GetValue<Quat>(this->CurDefinition()->GetName(3)));
+  }
+
+  Quat ComputeExternalAttitude(const Quat& qIB, const Quat& qIJ) const{
+    return qIJ.inverted() * qIB * qBC_;
+  };
+
+  Quat ComputeExternalAttitude(const ElementVectorBase& state) const{
+    return ComputeExternalAttitude(state.template GetValue<Quat>(this->CurDefinition()->GetName(1)),
+                                   state.template GetValue<Quat>(this->CurDefinition()->GetName(3)));
   }
 
  protected:

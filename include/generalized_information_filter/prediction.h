@@ -20,9 +20,10 @@ class Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> :
   typedef Prediction<ElementPack<Sta...>, ElementPack<Noi...>, Meas> mtPrediction;
   typedef BinaryResidual<ElementPack<Vec<ElementTraits<Sta>::kDim>...>, ElementPack<Sta...>,
                          ElementPack<Sta...>, ElementPack<Noi...>, Meas> mtBinaryRedidual;
-  Prediction(const std::array<std::string, ElementPack<Sta...>::n_>& namesSta,
+  Prediction(const std::string& name,
+             const std::array<std::string, ElementPack<Sta...>::n_>& namesSta,
              const std::array<std::string, ElementPack<Noi...>::n_>& namesNoi)
-      : mtBinaryRedidual(namesSta, namesSta, namesSta, namesNoi, false, true, true),
+      : mtBinaryRedidual(name, namesSta, namesSta, namesSta, namesNoi, false, true, true),
         prediction_(this->CurDefinition()) {
   }
 

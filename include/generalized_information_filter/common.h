@@ -48,8 +48,13 @@ inline Duration fromSec(const double sec) {
       > (std::chrono::duration<double>(sec));
 }
 inline double toSec(const Duration& duration) {
-  return std::chrono::duration_cast<std::chrono::duration<double>>(duration)
-      .count();
+  return std::chrono::duration_cast<std::chrono::duration<double>>(duration).count();
+}
+static std::string Print(TimePoint t){
+  std::ostringstream out;
+  out.precision(15);
+  out << ((double)t.time_since_epoch().count()*Duration::period::num)/(Duration::period::den);
+  return out.str();
 }
 inline Mat3 gSM(const Vec3& vec) {
   return kindr::getSkewMatrixFromVector(vec);
