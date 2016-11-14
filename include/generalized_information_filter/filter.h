@@ -15,15 +15,13 @@ struct ResidualStruct {
                  const ElementVectorDefinition::Ptr& stateDefinition,
                  const ElementVectorDefinition::Ptr& noiseDefinition,
                  const Duration& maxWaitTime,
-                 const Duration& minWaitTime,
-                 const std::string& name):
+                 const Duration& minWaitTime):
                      mt_(!res->isUnary_, maxWaitTime, minWaitTime),
                      preWrap_(res->PreDefinition(), stateDefinition),
                      curWrap_(res->CurDefinition(), stateDefinition),
                      noiWrap_(res->NoiDefinition(), noiseDefinition),
                      inn_(res->InnDefinition()),
-                     innRef_(res->InnDefinition()),
-                     name_(name){
+                     innRef_(res->InnDefinition()){
     stateDefinition->ExtendWithOtherElementVectorDefinition(*res->PreDefinition());
     stateDefinition->ExtendWithOtherElementVectorDefinition(*res->CurDefinition());
     noiseDefinition->ExtendWithOtherElementVectorDefinition(*res->NoiDefinition());
@@ -52,7 +50,6 @@ struct ResidualStruct {
   MatX jacCur_;
   MatX jacNoi_;
   int innDim_;
-  std::string name_;
   bool isActive_;
 };
 
@@ -96,9 +93,8 @@ class Filter {
 
   int AddResidual(const BinaryResidualBase::Ptr& res,
                   const Duration& maxWaitTime,
-                  const Duration& minWaitTime,
-                  const std::string& name) {
-    residuals_.emplace_back(res, stateDefinition_, noiseDefinition_, maxWaitTime, minWaitTime,name);
+                  const Duration& minWaitTime) {
+    residuals_.emplace_back(res, stateDefinition_, noiseDefinition_, maxWaitTime, minWaitTime);
     Construct();
     return residuals_.size() - 1;
   }
@@ -190,7 +186,7 @@ class Filter {
       out << " ";
     }
     out << "|";
-    LOG(INFO) << out;
+    LOG(INFO) << out.str();
     for (int i = 0; i < residuals_.size(); i++) {
       LOG(INFO) << residuals_.at(i).mt_.Print(start, startOffset, resolution);
     }
@@ -213,19 +209,19 @@ class Filter {
         }
       }
       PrintMeasurementTimelines(time_, 20, 0.001);
-      LOG(INFO) << "stateTime:\t" << toSec(time_ - startTime_);
+      LOG(INFO) << "stateTime:\t" << Print(time_);
       TimePoint currentTime = GetCurrentTimeFromMeasurements();
-      LOG(INFO) << "currentTime:\t" << toSec(currentTime - startTime_);
+      LOG(INFO) << "currentTime:\t" << Print(currentTime);
       TimePoint maxUpdateTime = GetMaxUpdateTime(currentTime);
-      LOG(INFO) << "maxUpdateTime:\t" << toSec(maxUpdateTime - startTime_);
+      LOG(INFO) << "maxUpdateTime:\t" << Print(maxUpdateTime);
       std::set<TimePoint> times;
       GetMeasurementTimeList(times, maxUpdateTime, false);
       std::ostringstream out;
       out << "updateTimes:\t";
       for (const auto& t : times) {
-        out << toSec(t - startTime_) << "\t";
+        out << Print(t) << "\t";
       }
-      LOG(INFO) << out;
+      LOG(INFO) << out.str();
       SplitAndMergeMeasurements(times);
       PrintMeasurementTimelines(time_, 20, 0.001);
 
@@ -256,6 +252,7 @@ class Filter {
 
     // Temporaries
     VecX y(innDim);
+    y.setZero();
     MatX JacPre(innDim, stateDefinition_->GetDim());
     MatX JacCur(innDim, stateDefinition_->GetDim());
     MatX JacNoi(innDim, noiseDefinition_->GetDim());
@@ -279,19 +276,20 @@ class Filter {
                                 rs.curWrap_,
                                 rs.noiWrap_);
         rs.inn_.BoxMinus(rs.innRef_, y.block(count, 0, rs.innDim_, 1));
-        LOG_IF(ERROR,y.hasNaN()) << "Residual " << rs.name_ << " contains NaN!\n" << y.transpose();
+        LOG_IF(ERROR,y.hasNaN()) << "Residual " << rs.res_->name_
+                                 << " contains NaN!\n" << y.transpose();
         rs.res_->JacPre(rs.jacPre_, rs.preWrap_,
                                     rs.curWrap_,
                                     rs.noiWrap_);
-        LOG_IF(ERROR,rs.jacPre_.hasNaN()) << "jacPre " << rs.name_ << " contains NaN!";
+        LOG_IF(ERROR,rs.jacPre_.hasNaN()) << "jacPre " << rs.res_->name_ << " contains NaN!";
         rs.res_->JacCur(rs.jacCur_, rs.preWrap_,
                                     rs.curWrap_,
                                     rs.noiWrap_);
-        LOG_IF(ERROR,rs.jacCur_.hasNaN()) << "jacCur " << rs.name_ << " contains NaN!";
+        LOG_IF(ERROR,rs.jacCur_.hasNaN()) << "jacCur " << rs.res_->name_ << " contains NaN!";
         rs.res_->JacNoi(rs.jacNoi_, rs.preWrap_,
                                     rs.curWrap_,
                                     rs.noiWrap_);
-        LOG_IF(ERROR,rs.jacNoi_.hasNaN()) << "jacNoi " << rs.name_ << " contains NaN!";
+        LOG_IF(ERROR,rs.jacNoi_.hasNaN()) << "jacNoi " << rs.res_->name_ << " contains NaN!";
         for(int j=0;j<rs.res_->InnDefinition()->GetNumElements();j++){
           const ElementDescriptionBase::CPtr& description =
               rs.res_->InnDefinition()->GetElementDescription(j);
@@ -307,6 +305,15 @@ class Filter {
         rs.preWrap_.EmbedJacobian(JacPre, rs.jacPre_, count);
         rs.curWrap_.EmbedJacobian(JacCur, rs.jacCur_, count);
         rs.noiWrap_.EmbedJacobian(JacNoi, rs.jacNoi_, count);
+
+        for(int j=0;j<rs.res_->NoiDefinition()->GetNumElements();j++){
+          const ElementDescriptionBase::CPtr& description =
+              rs.res_->NoiDefinition()->GetElementDescription(j);
+          const int noiDim = description->GetDim();
+          const int start1 = rs.res_->NoiDefinition()->GetStart(j);
+          const int start2 = NoiseDefinition()->GetStart(NoiseDefinition()->FindName(rs.res_->NoiDefinition()->GetName(j)));
+          R.block(start2,start2,noiDim,noiDim) = rs.res_->GetNoiseCovariance().block(start1,start1,noiDim,noiDim); // TODO: speed up and clean up
+        }
         count += rs.innDim_;
       }
     }
@@ -376,6 +383,19 @@ class Filter {
     inf_ = (cov).llt().solve(GIF::MatX::Identity(stateDim,stateDim));
   }
 
+  inline MatRefX GetNoiseInfBlock(int i){
+    const int dim = StateDefinition()->GetElementDescription(i)->GetDim();
+    const int start = StateDefinition()->GetStart(i);
+    return inf_.block(start,start,dim,dim);
+  }
+
+  inline MatRefX GetNoiseInfBlock(const std::string& str){
+    const int outer_index = StateDefinition()->FindName(str);
+    LOG_IF(FATAL, outer_index == -1) << "No element with name "
+                                     << str << " for GetNoiseInfBlock!";
+    return GetNoiseInfBlock(outer_index);
+  }
+
   TimePoint& GetTime(){
     LOG_IF(ERROR,!is_initialized_) << "Accessing time before initialization";
     return time_;
@@ -407,7 +427,7 @@ class Filter {
         out << std::string(lengthState.at(i), c);
         out << " ";
       }
-      const std::string resName = rs.name_.substr(0,resNamePadding);
+      const std::string resName = rs.res_->name_.substr(0,resNamePadding);
       const int frontPadding = (resNamePadding-resName.length())/2;
       const int endPadding = resNamePadding-resName.length()-frontPadding+1;
       out << std::string(frontPadding, ' ') << resName << std::string(endPadding, ' ');

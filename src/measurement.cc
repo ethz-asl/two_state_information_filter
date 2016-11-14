@@ -118,6 +118,8 @@ void MeasurementTimeline::GetLastInRange(std::set<TimePoint>& times,
 void MeasurementTimeline::Split(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
                                 const BinaryResidualBase* res) {
   DLOG_IF(ERROR,t0 > t1 || t1 > t2) << "No chronological times";
+  LOG(INFO) << "Insert measurement in " << res->name_
+            << " at " << GIF::Print(t1);
   AddMeasurement(ElementVectorBase::CPtr(), t1);
   res->SplitMeasurements(t0, t1, t2, meas_map_.at(t2), meas_map_.at(t1), meas_map_.at(t2));
 }
@@ -126,7 +128,8 @@ void MeasurementTimeline::Split(const std::set<TimePoint>& times, const BinaryRe
   for (const auto& t : times) {
     auto it = meas_map_.lower_bound(t);
     if (it == meas_map_.end()) {
-      LOG(ERROR) << "Range error while splitting!" << std::endl;
+      LOG(ERROR) << "Range error while splitting while searching lower bound for "
+                 << GIF::Print(t) << "! (" << res->name_ << ")" << std::endl;
       continue;
     }
     if (it->first == t) {
@@ -141,6 +144,8 @@ void MeasurementTimeline::Split(const std::set<TimePoint>& times, const BinaryRe
 void MeasurementTimeline::Merge(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
                                 const BinaryResidualBase* res) {
   DLOG_IF(ERROR,t0 > t1 || t1 > t2) << "No chronological times";
+  LOG(INFO) << "Merging measurement in " << res->name_
+            << ", removed at " << GIF::Print(t1);
   res->MergeMeasurements(t0, t1, t2, meas_map_.at(t1), meas_map_.at(t2), meas_map_.at(t2));
   meas_map_.erase(t1);  // does not count as processed
 }

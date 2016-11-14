@@ -22,10 +22,11 @@ class UnaryUpdate<ElementPack<Inn...>, ElementPack<Sta...>, ElementPack<Noi...>,
                       Meas> mtUnaryUpdate;
   typedef BinaryResidual<ElementPack<Inn...>, ElementPack<>, ElementPack<Sta...>,
                          ElementPack<Noi...>, Meas> mtBinaryRedidual;
-  UnaryUpdate(const std::array<std::string, ElementPack<Inn...>::n_>& namesInn,
+  UnaryUpdate(const std::string& name,
+              const std::array<std::string, ElementPack<Inn...>::n_>& namesInn,
               const std::array<std::string, ElementPack<Sta...>::n_>& namesSta,
               const std::array<std::string, ElementPack<Noi...>::n_>& namesNoi)
-      : mtBinaryRedidual(namesInn, std::array<std::string, 0>(), namesSta,
+      : mtBinaryRedidual(name, namesInn, std::array<std::string, 0>(), namesSta,
                          namesNoi, true, false, false) {
   }
 

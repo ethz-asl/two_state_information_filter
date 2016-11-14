@@ -24,11 +24,11 @@ class RobocentricLandmarkPrediction
                  ImuMeas>;
   using mtPrediction::meas_;
   using mtPrediction::dt_;
-  RobocentricLandmarkPrediction(
+  RobocentricLandmarkPrediction(const std::string& name,
       const String6& staName = {"IrIM", "MvM", "MwM_bias", "MfM_bias", "qIM", "MrML"},
       const String6& noiName = {"IrIM", "MvM", "MwM_bias", "MfM_bias", "qIM", "MrML"})
-    : mtPrediction(staName, noiName),
-      imuPrediction_({staName[0], staName[1], staName[2], staName[3], staName[4]},
+    : mtPrediction(name, staName, noiName),
+      imuPrediction_(name, {staName[0], staName[1], staName[2], staName[3], staName[4]},
                      {noiName[0], noiName[1], noiName[2], noiName[3], noiName[4]}){
     for(int i=0;i<NumLandmark;i++){
       propagation_flags_[i] = true;

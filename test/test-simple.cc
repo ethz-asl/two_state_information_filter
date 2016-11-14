@@ -43,7 +43,7 @@ class BinaryRedidualVelocity : public BinaryResidual<ElementPack<Vec3>,
     ElementPack<Vec3, Vec3>, ElementPack<Vec3>, ElementPack<Vec3>, EmptyMeas> {
  public:
   BinaryRedidualVelocity()
-      : mtBinaryRedidual( { "pos" }, { "pos", "vel" }, { "pos" }, { "pos" },
+      : mtBinaryRedidual("velRes", { "pos" }, { "pos", "vel" }, { "pos" }, { "pos" },
                          false, false, false) {
     dt_ = 0.1;
   }
@@ -92,7 +92,7 @@ class BinaryRedidualAccelerometer : public BinaryResidual<ElementPack<Vec3>,
     ElementPack<Vec3>, ElementPack<Vec3>, ElementPack<Vec3>, AccelerometerMeas> {
  public:
   BinaryRedidualAccelerometer()
-      : mtBinaryRedidual( { "vel" }, { "vel" }, { "vel" }, { "vel" }, false,
+      : mtBinaryRedidual("accRes", { "vel" }, { "vel" }, { "vel" }, { "vel" }, false,
                          true, true) {
     dt_ = 0.1;
   }
@@ -128,7 +128,7 @@ class PredictionAccelerometer : public Prediction<ElementPack<Vec3>,
     ElementPack<Vec3>, AccelerometerMeas> {
  public:
   PredictionAccelerometer()
-      : mtPrediction( { "vel" }, { "vel" }) {
+      : mtPrediction("accPre", { "vel" }, { "vel" }) {
     dt_ = 0.1;
   }
 
@@ -209,8 +209,8 @@ TEST_F(NewStateTest, constructor) {
 
   // Filter
   Filter f;
-  f.AddResidual(velRes,fromSec(0.1),fromSec(0.0),"VelRes");
-  f.AddResidual(accRes,fromSec(0.1),fromSec(0.0),"AccRes");
+  f.AddResidual(velRes,fromSec(0.1),fromSec(0.0));
+  f.AddResidual(accRes,fromSec(0.1),fromSec(0.0));
   std::cout << f.PrintConnectivity();
   ElementVector preState(f.StateDefinition());
   preState.SetIdentity();
@@ -256,8 +256,8 @@ TEST_F(NewStateTest, constructor) {
 
   // Test measurements
   Filter f2;
-  f2.AddResidual(velRes,fromSec(0.1),fromSec(0.0),"VelRes");
-  f2.AddResidual(accPre,fromSec(0.1),fromSec(0.0),"AccRes");
+  f2.AddResidual(velRes,fromSec(0.1),fromSec(0.0));
+  f2.AddResidual(accPre,fromSec(0.1),fromSec(0.0));
   std::cout << f2.PrintConnectivity();
   f2.AddMeasurement(0,eptMeas,start+fromSec(-0.1));
   f2.AddMeasurement(0,eptMeas,start+fromSec(0.0));
@@ -278,23 +278,23 @@ TEST_F(NewStateTest, constructor) {
   f2.Update();
 
   // Test Imu + Pose filter
-  std::shared_ptr<ImuPrediction> imuPre(new ImuPrediction());
+  std::shared_ptr<ImuPrediction> imuPre(new ImuPrediction("ImuPre"));
   imuPre->GetNoiseCovariance() = 1e-8 * imuPre->GetNoiseCovariance();
   imuPre->TestJacs(1e-6, 1e-6);
-  std::shared_ptr<PoseUpdate> poseUpd(new PoseUpdate({"JrJC", "qCJ"},
+  std::shared_ptr<PoseUpdate> poseUpd(new PoseUpdate("PoseUpd", {"JrJC", "qCJ"},
                                                      {"IrIM", "qIM", "IrIJ", "qIJ"},
                                                      {"JrJC", "qCJ"}));
   poseUpd->GetNoiseCovariance() = 1e-8 * poseUpd->GetNoiseCovariance();
   poseUpd->TestJacs(1e-6, 1e-6);
   std::shared_ptr<RandomWalkPrediction<ElementPack<Vec3,Quat>>> extPre(
-      new RandomWalkPrediction<ElementPack<Vec3,Quat>>({"IrIJ", "qIJ"},{"IrIJ", "qIJ"}));
+      new RandomWalkPrediction<ElementPack<Vec3,Quat>>("ExtPre", {"IrIJ", "qIJ"},{"IrIJ", "qIJ"}));
   extPre->GetNoiseCovariance() = 1e-8 * extPre->GetNoiseCovariance();
   extPre->TestJacs(1e-6, 1e-6);
 
   Filter imuPoseFilter;
-  int imuPreInd = imuPoseFilter.AddResidual(imuPre,fromSec(0.1),fromSec(0.0),"ImuRes");
-  int textPreInd = imuPoseFilter.AddResidual(extPre,fromSec(0.1),fromSec(0.0),"ExtRes");
-  int poseUpdInd = imuPoseFilter.AddResidual(poseUpd,fromSec(0.1),fromSec(0.0),"PoseRes");
+  int imuPreInd = imuPoseFilter.AddResidual(imuPre,fromSec(0.1),fromSec(0.0));
+  int textPreInd = imuPoseFilter.AddResidual(extPre,fromSec(0.1),fromSec(0.0));
+  int poseUpdInd = imuPoseFilter.AddResidual(poseUpd,fromSec(0.1),fromSec(0.0));
   std::cout << imuPoseFilter.PrintConnectivity();
   imuPoseFilter.AddMeasurement(imuPreInd, std::shared_ptr<ImuMeas>(
       new ImuMeas(Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 9.81))), start);
@@ -318,11 +318,11 @@ TEST_F(NewStateTest, constructor) {
   std::cout << toSec(Clock::now()-startFilter)*1000 << " ms" << std::endl;
 
   // Test Landmark Prediction
-  std::shared_ptr<RobocentricLandmarkPrediction<4>> rcLMPre(new RobocentricLandmarkPrediction<4>());
+  std::shared_ptr<RobocentricLandmarkPrediction<4>> rcLMPre(new RobocentricLandmarkPrediction<4>("rcLMPre"));
   rcLMPre->TestJacs(1e-6,1e-6);
 
   // Test Leg Kinematic Update
-  std::shared_ptr<LegKinematicUpdate<LeggedRobotModelExample>> legKinematicUpd(new LegKinematicUpdate<LeggedRobotModelExample>());
+  std::shared_ptr<LegKinematicUpdate<LeggedRobotModelExample>> legKinematicUpd(new LegKinematicUpdate<LeggedRobotModelExample>("legKinematicUpd"));
   std::shared_ptr<LeggedRobotModelExample> model(new LeggedRobotModelExample());
   legKinematicUpd->SetModelPtr(model);
   legKinematicUpd->TestJacs(1e-6,1e-6);

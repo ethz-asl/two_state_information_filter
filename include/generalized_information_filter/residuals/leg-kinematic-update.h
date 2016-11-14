@@ -54,10 +54,11 @@ class LegKinematicUpdate : public UnaryUpdate<ElementPack<std::array<Vec3,KinMod
   typedef std::array<Vec3,KinModel::kNumLeg> LegArray;
   enum Elements {KIN};
 
-  LegKinematicUpdate(const std::string& errorName = "BrBF",
+  LegKinematicUpdate(const std::string& name,
+                     const std::string& errorName = "BrBF",
                      const std::string& stateName = "MrMF",
                      const std::string& noiseName = "BrBF")
-      : mtUnaryUpdate({errorName},{stateName},{noiseName}) {
+      : mtUnaryUpdate(name,{errorName},{stateName},{noiseName}) {
   }
 
   virtual ~LegKinematicUpdate() {

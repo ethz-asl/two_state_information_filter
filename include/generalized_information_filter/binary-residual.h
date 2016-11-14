@@ -13,9 +13,10 @@ class BinaryResidualBase {
  public:
   typedef std::shared_ptr<BinaryResidualBase> Ptr;
   typedef std::shared_ptr<const BinaryResidualBase> CPtr;
-  BinaryResidualBase(bool isUnary = false, bool isSplitable = false, bool isMergeable = false)
+  BinaryResidualBase(const std::string& name, bool isUnary = false, bool isSplitable = false, bool isMergeable = false)
       : isUnary_(isUnary), isSplitable_(isSplitable), isMergeable_(isMergeable){
     dt_ = 0.1;
+    name_ = name;
   }
   virtual ~BinaryResidualBase() {
   }
@@ -56,6 +57,9 @@ class BinaryResidualBase {
   virtual bool CheckMeasType(const ElementVectorBase::CPtr& meas) const = 0;
   virtual const MatX& GetNoiseCovariance() const = 0;
   virtual MatX& GetNoiseCovariance() = 0;
+  virtual MatRefX GetNoiseCovarianceBlock(int i) = 0;
+  virtual MatRefX GetNoiseCovarianceBlock(const std::string& str) = 0;
+
   virtual bool TestJacs(const ElementVectorBase& pre,
                         const ElementVectorBase& cur,
                         const ElementVectorBase& noi,
@@ -66,6 +70,7 @@ class BinaryResidualBase {
   const bool isSplitable_;
   const bool isMergeable_;
   double dt_;
+  std::string name_;
 };
 
 /*! \brief Binary Residual
@@ -87,13 +92,14 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
       ElementPack<Noi...>, Meas> mtBinaryRedidual;
   using mtBase = Model<mtBinaryRedidual,ElementPack<Inn...>,ElementPack<Pre...>,ElementPack<Cur...>,
       ElementPack<Noi...>>;
-  BinaryResidual(const std::array<std::string, ElementPack<Inn...>::n_>& namesInn,
+  BinaryResidual(const std::string& name,
+                 const std::array<std::string, ElementPack<Inn...>::n_>& namesInn,
                  const std::array<std::string, ElementPack<Pre...>::n_>& namesPre,
                  const std::array<std::string, ElementPack<Cur...>::n_>& namesCur,
                  const std::array<std::string, ElementPack<Noi...>::n_>& namesNoi,
                  bool isUnary, bool isSplitable, bool isMergeable)
         : mtBase(namesInn, std::forward_as_tuple(namesPre, namesCur, namesNoi)),
-          BinaryResidualBase(isUnary, isSplitable, isMergeable),
+          BinaryResidualBase(name, isUnary, isSplitable, isMergeable),
           meas_(new Meas()) {
     R_.resize(NoiDefinition()->GetDim(), NoiDefinition()->GetDim());
     R_.setIdentity();
@@ -261,6 +267,17 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
   }
   inline MatX& GetNoiseCovariance() {
     return R_;
+  }
+  inline MatRefX GetNoiseCovarianceBlock(int i){
+    const int dim = NoiDefinition()->GetElementDescription(i)->GetDim();
+    const int start = NoiDefinition()->GetStart(i);
+    return GetNoiseCovariance().block(start,start,dim,dim);
+  }
+  inline MatRefX GetNoiseCovarianceBlock(const std::string& str){
+    const int outer_index = NoiDefinition()->FindName(str);
+    LOG_IF(FATAL, outer_index == -1) << "No element with name "
+                                     << str << " for GetNoiseCovarianceBlock!";
+    return GetNoiseCovarianceBlock(outer_index);
   }
 
  protected:
