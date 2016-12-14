@@ -19,7 +19,7 @@ class KinematicMeasurement : public ElementVector {
         kin_(ElementVector::GetValue<Kin>("kin")) {
     kin_ = kin;
     for(int i=0;i<NumLeg;i++){
-      contact_flag_[i] = false;
+      contact_flag_[i] = true;
     }
   }
   Kin& kin_;

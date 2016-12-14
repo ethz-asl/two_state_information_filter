@@ -183,14 +183,14 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
   inline void JacFDPre(MatX& J, const ElementVectorBase& pre,
                          const ElementVectorBase& cur,
                          const ElementVectorBase& noi,
-                         const double delta) {
+                         const double delta) const{
     const std::array<const ElementVectorBase*, 3> ins = {&pre, &cur, &noi};
     this->template JacFDImpl<0>(J, ins, delta);
   }
   inline void JacFDCur(MatX& J, const ElementVectorBase& pre,
                          const ElementVectorBase& cur,
                          const ElementVectorBase& noi,
-                         const double delta) {
+                         const double delta) const{
     const std::array<const ElementVectorBase*, 3> ins = {&pre, &cur, &noi};
     this->template JacFDImpl<1>(J, ins, delta);
   }
@@ -198,7 +198,7 @@ class BinaryResidual<ElementPack<Inn...>, ElementPack<Pre...>,ElementPack<Cur...
   inline void JacFDNoi(MatX& J, const ElementVectorBase& pre,
                          const ElementVectorBase& cur,
                          const ElementVectorBase& noi,
-                         const double delta) {
+                         const double delta) const{
     const std::array<const ElementVectorBase*, 3> ins = {&pre, &cur, &noi};
     this->template JacFDImpl<2>(J, ins, delta);
   }

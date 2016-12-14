@@ -195,7 +195,6 @@ class Filter {
   void Update() {
     // Initialize if possible
     if(!is_initialized_ && GetMaxMinMeasTime() != TimePoint::min()){
-//      AttemptInitialization();
       Init(GetMaxMinMeasTime());
     }
 
@@ -233,12 +232,11 @@ class Filter {
   }
 
   void MakeUpdateStep(const TimePoint& t) {
-    // Compute linearisation point
+    // Compute linearisation point // TODO: allow generic initialization
     curLinState_ = state_;
 
     // Check available measurements and prepare residuals
     int innDim = 0;
-    std::vector<bool> hasMeas(residuals_.size(), false);
     ElementVectorBase::CPtr meas;
     for (int i = 0; i < residuals_.size(); i++) {
       residuals_.at(i).isActive_ = residuals_.at(i).mt_.GetMeasurement(t, meas);
@@ -320,13 +318,17 @@ class Filter {
     LOG(INFO) << "Innovation:\t" << y.transpose();
 
     // Compute weighting // TODO: make more efficient, exploit sparsity
-    Winv = (JacNoi*R*JacNoi.transpose()).llt().solve(GIF::MatX::Identity(innDim,innDim));
+    Eigen::LDLT<MatX> W_LDLT(JacNoi*R*JacNoi.transpose());
+    LOG_IF(ERROR,W_LDLT.info() != Eigen::Success) << "Computation of Winv failed";
+    Winv = W_LDLT.solve(GIF::MatX::Identity(innDim,innDim));
 
     // Compute Kalman Update
     MatX D = inf_ + JacPre.transpose() * Winv * JacPre;
     MatX S = JacCur.transpose() * (Winv - Winv * JacPre * D.inverse() * JacPre.transpose() * Winv);
     inf_ = S * JacCur;
-    VecX dx = -inf_.llt().solve(S * y);
+    Eigen::LDLT<MatX> I_LDLT(inf_);
+    LOG_IF(ERROR,I_LDLT.info() != Eigen::Success) << "Computation of Iinv failed";
+    VecX dx = -I_LDLT.solve(S * y);
 
     // Apply Kalman Update
     curLinState_.BoxPlus(dx, &state_);
@@ -374,13 +376,13 @@ class Filter {
   MatX GetCovariance(){
     LOG_IF(ERROR,!is_initialized_) << "Accessing cov before initialization";
     const int stateDim = stateDefinition_->GetDim();
-    return (inf_).llt().solve(GIF::MatX::Identity(stateDim,stateDim));
+    return (inf_).ldlt().solve(GIF::MatX::Identity(stateDim,stateDim));
   }
 
   void SetCovariance(MatX cov){
     LOG_IF(ERROR,!is_initialized_) << "Accessing cov before initialization";
     const int stateDim = stateDefinition_->GetDim();
-    inf_ = (cov).llt().solve(GIF::MatX::Identity(stateDim,stateDim));
+    inf_ = (cov).ldlt().solve(GIF::MatX::Identity(stateDim,stateDim));
   }
 
   inline MatRefX GetNoiseInfBlock(int i){
