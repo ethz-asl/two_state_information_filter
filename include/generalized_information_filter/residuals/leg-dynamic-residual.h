@@ -41,7 +41,7 @@ class DynamicMeasurement : public ElementVector {
 template<typename RobotModel>
 class LegDynamicResidual : public BinaryResidual<
     ElementPack<Vec<RobotModel::kNumLeg*RobotModel::kNumDof+6>>,
-    ElementPack<Vec3, Vec3, Quat>,
+    ElementPack<Vec3, Vec3, Quat, double, Vec3>,
     ElementPack<Vec3, Vec3>,
     ElementPack<Vec<RobotModel::kNumLeg*RobotModel::kNumDof+6>>,
     DynamicMeasurement<RobotModel::kNumLeg, RobotModel::kNumDof>> {
@@ -50,7 +50,7 @@ class LegDynamicResidual : public BinaryResidual<
   typedef Vec<kDof_> DynRes;
   using mtBinaryResidual = BinaryResidual<
       ElementPack<DynRes>,
-      ElementPack<Vec3, Vec3, Quat>,
+      ElementPack<Vec3, Vec3, Quat, double, Vec3>,
       ElementPack<Vec3, Vec3>,
       ElementPack<Vec<kDof_>>,
       DynamicMeasurement<RobotModel::kNumLeg, RobotModel::kNumDof>>;
@@ -66,18 +66,21 @@ class LegDynamicResidual : public BinaryResidual<
 
   LegDynamicResidual(const std::string& name,
                      const std::string& innName = "dyn",
-                     const std::array<std::string,3>& preName = {"MvM", "MwM", "qIM"},
+                     const std::array<std::string,5>& preName = {"MvM", "MwM", "qIM", "m", "mo"},
                      const std::array<std::string,2>& curName = {"MvM", "MwM"},
                      const std::string& noiName = "dyn")
       : mtBinaryResidual(name,{innName},preName,curName,{noiName},false,false,false) { // TODO
     hasPreviousEncData_ = false;
     verbose_ = true;
+    calibrateMass_ = true;
+    calibrateMassOffset_ = true;
   }
 
   virtual ~LegDynamicResidual() {
   }
 
   void Eval(DynRes& dyn_inn, const Vec3& MvM_pre, const Vec3& MwM_pre, const Quat& qIM_pre,
+                             const double& m_pre, const Vec3& mo_pre,
                              const Vec3& MvM_cur, const Vec3& MwM_cur,
                              const DynRes& dyn_noi) const {
     if(hasPreviousEncData_){
@@ -98,6 +101,12 @@ class LegDynamicResidual : public BinaryResidual<
       genAcc = (genVel_cur-genVel_pre)/dt_;
 
       // Pass to model
+      if(calibrateMass_){
+        model_->setMass(m_pre);
+      }
+      if(calibrateMassOffset_){
+        model_->setMassOffset(mo_pre);
+      }
       model_->setGeneralizedPositions(Vec3(0,0,0),qIB_pre,enc_pre_);
       model_->setGeneralizedVelocities(qIB_pre.rotate(BvB_pre),BwB_pre,end_pre_);
       model_->updateKinematics(true,true,false);
@@ -136,18 +145,7 @@ class LegDynamicResidual : public BinaryResidual<
       VecX y(18);
       y.setZero();
       y.head(18-rank) = N*(M*genAcc+h-S.transpose()*jointTorques);
-
-//
-//
-//
-//      VecX F = J.transpose().jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(h-S.transpose()*jointTorques);
-//
-//
-//
-//      VecX HHH = -h+S.transpose()*jointTorques + J.transpose()*F;
-//      std::cout << HHH.transpose() << std::endl;
-//
-
+      std::cout << y.head(18-rank).transpose() << std::endl;
 
 //      if(verbose_){
 //        std::cout << "----" << std::endl;
@@ -213,18 +211,20 @@ class LegDynamicResidual : public BinaryResidual<
 //
 //      }
       dyn_inn = y + dyn_noi;
-//      dyn_inn = dyn_noi;
     } else {
       dyn_inn = dyn_noi;
     }
   }
   void JacPre(MatX& J, const Vec3& MvM_pre, const Vec3& MwM_pre, const Quat& qIM_pre,
+                       const double& m_pre, const Vec3& mo_pre,
                        const Vec3& MvM_cur, const Vec3& MwM_cur,
                        const DynRes& dyn_noi) const {
     ElementVector pre(PreDefinition());
     pre.GetValue<Vec3>(0) = MvM_pre;
     pre.GetValue<Vec3>(1) = MwM_pre;
     pre.GetValue<Quat>(2) = qIM_pre;
+    pre.GetValue<double>(3) = m_pre;
+    pre.GetValue<Vec3>(4) = mo_pre;
     ElementVector cur(CurDefinition());
     cur.GetValue<Vec3>(0) = MvM_cur;
     cur.GetValue<Vec3>(1) = MwM_cur;
@@ -235,12 +235,15 @@ class LegDynamicResidual : public BinaryResidual<
     verbose_ = true;
   }
   void JacCur(MatX& J, const Vec3& MvM_pre, const Vec3& MwM_pre, const Quat& qIM_pre,
+                       const double& m_pre, const Vec3& mo_pre,
                        const Vec3& MvM_cur, const Vec3& MwM_cur,
                        const DynRes& dyn_noi) const {
     ElementVector pre(PreDefinition());
     pre.GetValue<Vec3>(0) = MvM_pre;
     pre.GetValue<Vec3>(1) = MwM_pre;
     pre.GetValue<Quat>(2) = qIM_pre;
+    pre.GetValue<double>(3) = m_pre;
+    pre.GetValue<Vec3>(4) = mo_pre;
     ElementVector cur(CurDefinition());
     cur.GetValue<Vec3>(0) = MvM_cur;
     cur.GetValue<Vec3>(1) = MwM_cur;
@@ -251,6 +254,7 @@ class LegDynamicResidual : public BinaryResidual<
     verbose_ = true;
   }
   void JacNoi(MatX& J, const Vec3& MvM_pre, const Vec3& MwM_pre, const Quat& qIM_pre,
+                       const double& m_pre, const Vec3& mo_pre,
                        const Vec3& MvM_cur, const Vec3& MwM_cur,
                        const DynRes& dyn_noi) const {
     J.setIdentity();
@@ -289,6 +293,8 @@ class LegDynamicResidual : public BinaryResidual<
   mutable VecX genVel_pre;
   mutable VecX genVel_cur;
   mutable VecX genAcc;
+  bool calibrateMass_;
+  bool calibrateMassOffset_;
 };
 
 
