@@ -145,7 +145,7 @@ class LegDynamicResidual : public BinaryResidual<
       VecX y(18);
       y.setZero();
       y.head(18-rank) = N*(M*genAcc+h-S.transpose()*jointTorques);
-      std::cout << y.head(18-rank).transpose() << std::endl;
+//      std::cout << y.head(18-rank).transpose() << std::endl;
 
 //      if(verbose_){
 //        std::cout << "----" << std::endl;
