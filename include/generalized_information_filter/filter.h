@@ -64,6 +64,7 @@ class Filter {
             noiseDefinition_(new ElementVectorDefinition()),
             noise_(noiseDefinition_){
     is_initialized_ = false;
+    include_max_ = false;
   }
 
   virtual ~Filter() {
@@ -214,7 +215,7 @@ class Filter {
       TimePoint maxUpdateTime = GetMaxUpdateTime(currentTime);
       LOG(INFO) << "maxUpdateTime:\t" << Print(maxUpdateTime);
       std::set<TimePoint> times;
-      GetMeasurementTimeList(times, maxUpdateTime, false);
+      GetMeasurementTimeList(times, maxUpdateTime, include_max_);
       std::ostringstream out;
       out << "updateTimes:\t";
       for (const auto& t : times) {
@@ -454,6 +455,7 @@ class Filter {
   ElementVector curLinState_;
   MatX inf_;
   bool is_initialized_;
+  bool include_max_;
 
 };
 
