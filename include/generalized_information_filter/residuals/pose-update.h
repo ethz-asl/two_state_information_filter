@@ -2,26 +2,10 @@
 #define GIF_POSEUPDATE_HPP_
 
 #include "generalized_information_filter/common.h"
+#include "generalized_information_filter/residuals/pose-meas.h"
 #include "generalized_information_filter/unary-update.h"
 
 namespace GIF {
-
-/*! \brief Pose Measurement
- *         ElementVector that can be used to hold a generic pose measurements (position + attitude).
- */
-class PoseMeas : public ElementVector {
- public:
-  PoseMeas(const Vec3& JrJC = Vec3(0, 0, 0), const Quat& qJC = Quat())
-      : ElementVector(std::shared_ptr<ElementVectorDefinition>(
-            new ElementPack<Vec3, Quat>({ "JrJC", "qJC" }))),
-        JrJC_(ElementVector::GetValue<Vec3>("JrJC")),
-        qJC_(ElementVector::GetValue<Quat>("qJC")) {
-    JrJC_ = JrJC;
-    qJC_ = qJC;
-  }
-  Vec3& JrJC_;
-  Quat& qJC_;
-};
 
 /*! \brief Pose Update
  *         Builds a residual between current estimate pose and an external measured pose. The state
@@ -45,6 +29,9 @@ class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
        : mtUnaryUpdate(name, errorName, stateName, noiseName),
          BrBC_(0,0,0),
          qBC_(1,0,0,0){
+    usePosition_ = true;
+    useRotation_ = true;
+    huberTh_ = -1.0;
   }
 
   virtual ~PoseUpdate() {
@@ -53,24 +40,36 @@ class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
   void Eval(Vec3& JrJC_inn, Quat& qJC_inn,
             const Vec3& IrIB_cur, const Quat& qIB_cur, const Vec3& IrIJ_cur, const Quat& qIJ_cur,
             const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
-    JrJC_inn = ComputeExternalPosition(IrIB_cur, qIB_cur, IrIJ_cur, qIJ_cur)
-        - meas_->JrJC_ + JrJC_noi;
+    if(usePosition_){
+      JrJC_inn = ComputeExternalPosition(IrIB_cur, qIB_cur, IrIJ_cur, qIJ_cur)
+          - meas_->JrJC_ + JrJC_noi;
+    } else {
+      JrJC_inn = JrJC_noi;
+    }
     Quat dQ = dQ.exponentialMap(qJC_noi);
-    qJC_inn = dQ * ComputeExternalAttitude(qIB_cur,qIJ_cur) * meas_->qJC_.inverted();
+    if(useRotation_){
+      qJC_inn = dQ * ComputeExternalAttitude(qIB_cur,qIJ_cur) * meas_->qJC_.inverted();
+    } else {
+      qJC_inn = dQ;
+    }
   }
 
   void JacCur(MatX& J,
               const Vec3& IrIB_cur, const Quat& qIB_cur, const Vec3& IrIJ_cur, const Quat& qIJ_cur,
               const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
     J.setZero();
-    GetJacBlockCur<POS, POS>(J) = RotMat(qIJ_cur).matrix().transpose();
-    GetJacBlockCur<POS, ATT>(J) = -gSM(RotMat(qIJ_cur.inverted() * qIB_cur).rotate(BrBC_))
-                                  *RotMat(qIJ_cur).matrix().transpose();
-    GetJacBlockCur<POS, IJP>(J) = -RotMat(qIJ_cur).matrix().transpose();
-    GetJacBlockCur<POS, IJA>(J) = RotMat(qIJ_cur).matrix().transpose()*gSM(Vec3(IrIB_cur
-                                  - IrIJ_cur + qIB_cur.rotate(BrBC_)));
-    GetJacBlockCur<ATT, ATT>(J) = RotMat(qIJ_cur.inverted()).matrix();
-    GetJacBlockCur<ATT, IJA>(J) = -RotMat(qIJ_cur.inverted()).matrix();
+    if(usePosition_){
+      GetJacBlockCur<POS, POS>(J) = RotMat(qIJ_cur).matrix().transpose();
+      GetJacBlockCur<POS, ATT>(J) = -gSM(RotMat(qIJ_cur.inverted() * qIB_cur).rotate(BrBC_))
+                                    *RotMat(qIJ_cur).matrix().transpose();
+      GetJacBlockCur<POS, IJP>(J) = -RotMat(qIJ_cur).matrix().transpose();
+      GetJacBlockCur<POS, IJA>(J) = RotMat(qIJ_cur).matrix().transpose()*gSM(Vec3(IrIB_cur
+                                    - IrIJ_cur + qIB_cur.rotate(BrBC_)));
+    }
+    if(useRotation_){
+      GetJacBlockCur<ATT, ATT>(J) = RotMat(qIJ_cur.inverted()).matrix();
+      GetJacBlockCur<ATT, IJA>(J) = -RotMat(qIJ_cur.inverted()).matrix();
+    }
   }
 
   void JacNoi(MatX& J,
@@ -112,6 +111,29 @@ class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
                                    state.template GetValue<Quat>(this->CurDefinition()->GetName(3)));
   }
 
+  void SetPositionFlag(bool use){
+    usePosition_ = use;
+  }
+  void SetRotationFlag(bool use){
+    useRotation_ = use;
+  }
+  void SetHuberTh(double th){
+    huberTh_ = th;
+  }
+  double GetNoiseWeighting(const ElementVector& inn, int i){
+    if(huberTh_ >= 0){
+      double norm = inn.GetValue<Vec3>("JrJC").norm();
+      if(norm > huberTh_){
+        LOG(WARNING) << "Outlier on position update: " << norm << std::endl;
+        return sqrt(huberTh_ * (norm - 0.5 * huberTh_)/(norm*norm));
+      } else {
+        return 1.0;
+      }
+    } else {
+      return 1.0;
+    }
+  }
+
  protected:
   enum Elements {
     POS,
@@ -121,6 +143,9 @@ class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
   };
   Vec3 BrBC_;
   Quat qBC_;
+  bool useRotation_;
+  bool usePosition_;
+  double huberTh_;
 };
 
 }
