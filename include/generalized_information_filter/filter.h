@@ -65,6 +65,7 @@ class Filter {
             noise_(noiseDefinition_){
     is_initialized_ = false;
     include_max_ = false;
+    num_iter_ = 3;
   }
 
   virtual ~Filter() {
@@ -264,7 +265,7 @@ class Filter {
     Winv.setZero();
     MatX newInf(stateDefinition_->GetDim(),stateDefinition_->GetDim());
 
-    for(int step=0;step<3;step++){
+    for(int step=0;step<num_iter_;step++){
       // Reset value (might be superflucious)
       y.setZero();
       JacPre.setZero();
@@ -482,6 +483,7 @@ class Filter {
   MatX inf_;
   bool is_initialized_;
   bool include_max_;
+  int num_iter_;
 
 };
 
