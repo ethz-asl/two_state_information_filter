@@ -71,6 +71,10 @@ class BinaryResidualBase {
   const bool isMergeable_;
   double dt_;
   std::string name_;
+
+  virtual double GetNoiseWeighting(const ElementVector& inn, int i){
+    return 1.0;
+  }
 };
 
 /*! \brief Binary Residual
