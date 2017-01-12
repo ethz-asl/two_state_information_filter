@@ -20,6 +20,7 @@ class RobcenImurorUpdate : public BinaryResidual<ElementPack<Vec3>, ElementPack<
              const std::array<std::string,2>& curName = {"MwM", "MwM_bias"},
              const std::array<std::string,1>& noiName = {"MwM"})
        : mtResidual(name, innName, preName, curName, noiName,false,true,true){
+    huberTh_ = -1.0;
   }
   virtual ~RobcenImurorUpdate() {
   }
@@ -45,6 +46,25 @@ class RobcenImurorUpdate : public BinaryResidual<ElementPack<Vec3>, ElementPack<
     J.setZero();
     this->template GetJacBlockNoi<ROR, ROR>(J) = -1/sqrt(dt_) * Mat3::Identity();
   }
+  void SetHuberTh(double th){
+    huberTh_ = th;
+  }
+  double GetNoiseWeighting(const ElementVector& inn, int i){
+    if(huberTh_ >= 0){
+      double norm = inn.GetValue<Vec3>(0).norm();
+      if(norm > huberTh_){
+        LOG(WARNING) << "Outlier on ror: " << norm << std::endl;
+        return sqrt(huberTh_ * (norm - 0.5 * huberTh_)/(norm*norm));
+      } else {
+        return 1.0;
+      }
+    } else {
+      return 1.0;
+    }
+  }
+
+ protected:
+  double huberTh_;
 };
 
 }
