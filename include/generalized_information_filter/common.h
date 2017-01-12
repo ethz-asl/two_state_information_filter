@@ -32,7 +32,9 @@ using Mat = Eigen::Matrix<double,N,M>;
 using Mat3 = Mat<3>;
 using MatX = Mat<>;
 template<int N = -1, int M = N>
-using MatRef = Eigen::Ref<Mat<N,M>>;
+using MatRef = typename std::conditional<(N==1 & M>1),
+                                         Eigen::Ref<Mat<N,M>,0,Eigen::InnerStride<>>,
+                                         Eigen::Ref<Mat<N,M>>>::type;
 using MatRef3 = MatRef<3>;
 using MatRefX = MatRef<>;
 template<int N = -1, int M = N>
@@ -80,10 +82,21 @@ class NormalRandomNumberGenerator
   double Get(){
     return distribution_(generator_);
   }
+  template<int N>
+  Vec<N> GetVec(){
+    Vec<N> n;
+    for(int i=0;i<N;i++){
+      n(i) = Get();
+    }
+    return n;
+  }
   static NormalRandomNumberGenerator& Instance()
   {
     static NormalRandomNumberGenerator instance;
     return instance;
+  }
+  std::default_random_engine& GetGenerator(){
+    return generator_;
   }
  protected:
   std::default_random_engine generator_;
