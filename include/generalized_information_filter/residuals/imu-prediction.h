@@ -2,7 +2,7 @@
 #define GIF_IMUPREDICTION_HPP_
 
 #include "generalized_information_filter/common.h"
-#include "generalized_information_filter/residuals/imu-meas.h"
+#include "generalized_information_filter/measurements/imu-meas.h"
 #include "generalized_information_filter/prediction.h"
 
 namespace GIF {

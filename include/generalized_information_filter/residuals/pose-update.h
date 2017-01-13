@@ -3,7 +3,7 @@
 
 #include "generalized_information_filter/common.h"
 #include "generalized_information_filter/unary-update.h"
-#include "generalized_information_filter/residuals/pose-meas.h"
+#include "generalized_information_filter/measurements/pose-meas.h"
 
 namespace GIF {
 

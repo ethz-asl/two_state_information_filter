@@ -2,7 +2,7 @@
 #define GIF_ROBCENIMUACCFINDIFRESIDUAL_HPP_
 
 #include "generalized_information_filter/common.h"
-#include "generalized_information_filter/residuals/acc-meas.h"
+#include "generalized_information_filter/measurements/acc-meas.h"
 #include "generalized_information_filter/binary-residual.h"
 
 namespace GIF {

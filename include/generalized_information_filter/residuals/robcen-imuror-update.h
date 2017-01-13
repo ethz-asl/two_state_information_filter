@@ -2,7 +2,7 @@
 #define GIF_ROBCENIMURORUPDATE_HPP_
 
 #include "generalized_information_filter/common.h"
-#include "generalized_information_filter/residuals/ror-meas.h"
+#include "generalized_information_filter/measurements/ror-meas.h"
 #include "generalized_information_filter/unary-update.h"
 
 namespace GIF {
