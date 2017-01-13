@@ -1,5 +1,5 @@
-#ifndef GIF_ROBCENIMURORUPDATE_HPP_
-#define GIF_ROBCENIMURORUPDATE_HPP_
+#ifndef GIF_IMURORUPDATE_HPP_
+#define GIF_IMURORUPDATE_HPP_
 
 #include "generalized_information_filter/common.h"
 #include "generalized_information_filter/measurements/ror-meas.h"
@@ -9,12 +9,12 @@ namespace GIF {
 
 /*! \brief Imu based robocentric rotational rate update
  */
-class RobcenImurorUpdate : public BinaryResidual<ElementPack<Vec3>, ElementPack<>,
+class ImurorUpdate : public BinaryResidual<ElementPack<Vec3>, ElementPack<>,
                                         ElementPack<Vec3,Vec3>, ElementPack<Vec3>, RorMeas> {
  public:
   using mtResidual = BinaryResidual<ElementPack<Vec3>, ElementPack<>,
       ElementPack<Vec3,Vec3>, ElementPack<Vec3>, RorMeas>;
-  RobcenImurorUpdate(const std::string& name,
+  ImurorUpdate(const std::string& name,
              const std::array<std::string,1>& innName = {"MwM"},
              const std::array<std::string,0>& preName = {},
              const std::array<std::string,2>& curName = {"MwM", "MwM_bias"},
@@ -22,7 +22,7 @@ class RobcenImurorUpdate : public BinaryResidual<ElementPack<Vec3>, ElementPack<
        : mtResidual(name, innName, preName, curName, noiName,false,true,true){
     huberTh_ = -1.0;
   }
-  virtual ~RobcenImurorUpdate() {
+  virtual ~ImurorUpdate() {
   }
   enum Elements {ROR, GYB};
   void Eval(Vec3& MwM_inn, const Vec3& MwM_cur, const Vec3& MwM_bias_cur,
@@ -69,4 +69,4 @@ class RobcenImurorUpdate : public BinaryResidual<ElementPack<Vec3>, ElementPack<
 
 }
 
-#endif /* GIF_ROBCENIMURORUPDATE_HPP_ */
+#endif /* GIF_IMURORUPDATE_HPP_ */

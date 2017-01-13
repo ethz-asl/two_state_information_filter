@@ -1,5 +1,5 @@
-#ifndef GIF_ROBCENLANDMARKFINDIFRESIDUAL_HPP_
-#define GIF_ROBCENLANDMARKFINDIFRESIDUAL_HPP_
+#ifndef GIF_LANDMARKFINDIF_HPP_
+#define GIF_LANDMARKFINDIF_HPP_
 
 #include "generalized_information_filter/common.h"
 #include "generalized_information_filter/binary-residual.h"
@@ -9,7 +9,7 @@ namespace GIF {
 /*! \brief Robocentric landmark residual.
  */
 template<int NumLandmark>
-class RobcenLandmarkFindifResidual
+class LandmarkFindif
       : public BinaryResidual<ElementPack<std::array<Vec3,NumLandmark>>,
                               ElementPack<std::array<Vec3,NumLandmark>, Vec3>,
                               ElementPack<std::array<Vec3,NumLandmark>, Vec3>,
@@ -23,7 +23,7 @@ class RobcenLandmarkFindifResidual
   using mtResidual::GetJacBlockPre;
   using mtResidual::GetJacBlockCur;
   using mtResidual::GetJacBlockNoi;
-  RobcenLandmarkFindifResidual(const std::string& name,
+  LandmarkFindif(const std::string& name,
             const std::array<std::string,1>& innName = {"MrML"},
             const std::array<std::string,2>& preName = {"MrML", "MvM"},
             const std::array<std::string,2>& curName = {"MrML", "MwM"},
@@ -33,7 +33,7 @@ class RobcenLandmarkFindifResidual
       propagation_flags_[i] = true;
     }
   }
-  virtual ~RobcenLandmarkFindifResidual() {
+  virtual ~LandmarkFindif() {
   }
   enum ElementsInn {FEA_INN};
   enum ElementsPre {FEA_PRE, VEL_PRE};
@@ -99,4 +99,4 @@ class RobcenLandmarkFindifResidual
 };
 
 }
-#endif /* GIF_ROBCENLANDMARKFINDIFRESIDUAL_HPP_ */
+#endif /* GIF_LANDMARKFINDIF_HPP_ */

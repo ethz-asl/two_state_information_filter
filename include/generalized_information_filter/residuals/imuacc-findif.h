@@ -1,5 +1,5 @@
-#ifndef GIF_ROBCENIMUACCFINDIFRESIDUAL_HPP_
-#define GIF_ROBCENIMUACCFINDIFRESIDUAL_HPP_
+#ifndef GIF_IMUACCFINDIF_HPP_
+#define GIF_IMUACCFINDIF_HPP_
 
 #include "generalized_information_filter/common.h"
 #include "generalized_information_filter/measurements/acc-meas.h"
@@ -9,13 +9,13 @@ namespace GIF {
 
 /*! \brief Imu based robocentric acceleration finite difference residual
  */
-class RobcenImuaccFindifResidual
+class ImuaccFindif
       : public BinaryResidual<ElementPack<Vec3>, ElementPack<Vec3, Vec3, Vec3, Quat>,
                               ElementPack<Vec3>, ElementPack<Vec3>, AccMeas> {
  public:
   using mtResidual = BinaryResidual<ElementPack<Vec3>, ElementPack<Vec3, Vec3, Vec3, Quat>,
                                     ElementPack<Vec3>, ElementPack<Vec3>, AccMeas>;
-  RobcenImuaccFindifResidual(const std::string& name,
+  ImuaccFindif(const std::string& name,
             const std::array<std::string,1>& innName = {"MvM"},
             const std::array<std::string,4>& preName = {"MvM", "MwM", "MfM_bias", "qIM"},
             const std::array<std::string,1>& curName = {"MvM"},
@@ -24,7 +24,7 @@ class RobcenImuaccFindifResidual
       Ig_(0, 0, -9.81){
     huberTh_ = -1.0;
   }
-  virtual ~RobcenImuaccFindifResidual() {
+  virtual ~ImuaccFindif() {
   }
   enum ElementsInn {VEL_INN};
   enum ElementsPre {VEL_PRE, ROR_PRE, ACB_PRE, ATT_PRE};
@@ -78,4 +78,4 @@ class RobcenImuaccFindifResidual
 };
 
 }
-#endif /* GIF_ROBCENIMUACCFINDIFRESIDUAL_HPP_ */
+#endif /* GIF_IMUACCFINDIF_HPP_ */

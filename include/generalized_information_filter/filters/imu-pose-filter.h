@@ -1,12 +1,12 @@
 #ifndef GIF_IMUPOSEFILTER_HPP_
 #define GIF_IMUPOSEFILTER_HPP_
 
+#include "generalized_information_filter/residuals/attitude-findif.h"
+#include "generalized_information_filter/residuals/imuacc-findif.h"
+#include "generalized_information_filter/residuals/imuror-update.h"
+#include "generalized_information_filter/residuals/position-findif.h"
 #include "generalized_information_filter/common.h"
 #include "generalized_information_filter/residuals/random-walk-prediction.h"
-#include "generalized_information_filter/residuals/robcen-imuacc-findif-residual.h"
-#include "generalized_information_filter/residuals/robcen-velocity-findif-residual.h"
-#include "generalized_information_filter/residuals/robcen-rotrate-findif-residual.h"
-#include "generalized_information_filter/residuals/robcen-imuror-update.h"
 #include "generalized_information_filter/residuals/pose-update.h"
 #include "generalized_information_filter/filter.h"
 
@@ -19,17 +19,17 @@ template<int NumImu, bool doInertialAlignment, bool doBodyAlignment>
 class ImuPoseFilter: public GIF::Filter{
  public:
   typedef GIF::RandomWalkPrediction<GIF::ElementPack<GIF::Vec3,GIF::Vec3>> ImuBiasPrediction;
-  typedef GIF::RobcenImuaccFindifResidual RobcenImuaccFindifResidual;
-  typedef GIF::RobcenVelocityFindifResidual RobcenVelocityFindifResidual;
-  typedef GIF::RobcenRotrateFindifResidual RobcenRotrateFindifResidual;
-  typedef GIF::RobcenImurorUpdate RobcenImurorUpdate;
+  typedef GIF::ImuaccFindif ImuaccFindif;
+  typedef GIF::PositionFindif PositionFindif;
+  typedef GIF::AttitudeFindif AttitudeFindif;
+  typedef GIF::ImurorUpdate ImurorUpdate;
   typedef GIF::PoseUpdate<doInertialAlignment,doBodyAlignment> PoseUpdate;
   typedef GIF::RandomWalkPrediction<GIF::ElementPack<GIF::Vec3,GIF::Quat>> PosePrediction;
   std::shared_ptr<ImuBiasPrediction> imuBiasPrediction_[NumImu];
-  std::shared_ptr<RobcenImuaccFindifResidual> robcenImuaccFindifResidual_[NumImu];
-  std::shared_ptr<RobcenVelocityFindifResidual> robcenVelocityFindifResidual_;
-  std::shared_ptr<RobcenRotrateFindifResidual> robcenRotrateFindifResidual_;
-  std::shared_ptr<RobcenImurorUpdate> robcenImurorUpdate_[NumImu];
+  std::shared_ptr<ImuaccFindif> imuaccFindif_[NumImu];
+  std::shared_ptr<PositionFindif> positionFindif_;
+  std::shared_ptr<AttitudeFindif> attitudeFindif_;
+  std::shared_ptr<ImurorUpdate> imurorUpdate_[NumImu];
   std::shared_ptr<PoseUpdate> poseUpdate_;
   std::shared_ptr<PosePrediction> inertialCalibPrediction_;
   std::shared_ptr<PosePrediction> bodyCalibPrediction_;
@@ -74,16 +74,16 @@ class ImuPoseFilter: public GIF::Filter{
   const double JrJC_huber_ = 0.1;
 
   ImuPoseFilter(){
-    robcenVelocityFindifResidual_.reset(new RobcenVelocityFindifResidual(
-        "RobcenVelocityFindifResidual", {"IrIM"}, {"IrIM", "MvM", "qIM"}, {"IrIM"}, {"IrIM"}));
-    robcenVelocityFindifResidual_->GetNoiseCovarianceBlock("IrIM") = GIF::Mat3::Identity()*IrIM_pre;
-    robcen_velocity_findif_residual_id_ = AddResidual(robcenVelocityFindifResidual_,
+    positionFindif_.reset(new PositionFindif(
+        "PositionFindif", {"IrIM"}, {"IrIM", "MvM", "qIM"}, {"IrIM"}, {"IrIM"}));
+    positionFindif_->GetNoiseCovarianceBlock("IrIM") = GIF::Mat3::Identity()*IrIM_pre;
+    robcen_velocity_findif_residual_id_ = AddResidual(positionFindif_,
                                                       GIF::fromSec(10.0), GIF::fromSec(0.0));
 
-    robcenRotrateFindifResidual_.reset(new RobcenRotrateFindifResidual(
-        "RobcenRotrateFindifResidual", {"qIM_vec"}, {"qIM", "MwM"}, {"qIM"}, {"qIM_vec"}));
-    robcenRotrateFindifResidual_->GetNoiseCovarianceBlock("qIM_vec") = GIF::Mat3::Identity()*qIM_pre;
-    robcen_rotrate_findif_residual_id_ = AddResidual(robcenRotrateFindifResidual_,
+    attitudeFindif_.reset(new AttitudeFindif(
+        "AttitudeFindif", {"qIM_vec"}, {"qIM", "MwM"}, {"qIM"}, {"qIM_vec"}));
+    attitudeFindif_->GetNoiseCovarianceBlock("qIM_vec") = GIF::Mat3::Identity()*qIM_pre;
+    robcen_rotrate_findif_residual_id_ = AddResidual(attitudeFindif_,
                                                      GIF::fromSec(10.0), GIF::fromSec(0.0));
 
     inertial_calib_prediction_id_ = -1;
@@ -129,19 +129,19 @@ class ImuPoseFilter: public GIF::Filter{
       imuBiasPrediction_[i]->GetNoiseCovarianceBlock("MfM_bias" + num) = GIF::Mat3::Identity()*MfM_bias_pre;
       imu_bias_prediction_id_[i] = AddResidual(imuBiasPrediction_[i], GIF::fromSec(10.0), GIF::fromSec(0.0));
 
-      robcenImuaccFindifResidual_[i].reset(new RobcenImuaccFindifResidual(
-          "RobcenImuaccFindifResidual" + num, {"MvM" + num},
+      imuaccFindif_[i].reset(new ImuaccFindif(
+          "ImuaccFindif" + num, {"MvM" + num},
           {"MvM", "MwM", "MfM_bias" + num, "qIM"}, {"MvM"}, {"MvM" + num}));
-      robcenImuaccFindifResidual_[i]->GetNoiseCovarianceBlock("MvM" + num) = GIF::Mat3::Identity()*MvM_pre;
-      robcenImuaccFindifResidual_[i]->SetHuberTh(MvM_huber_);
-      robcen_imuacc_findif_residual_id_[i] = AddResidual(robcenImuaccFindifResidual_[i],
+      imuaccFindif_[i]->GetNoiseCovarianceBlock("MvM" + num) = GIF::Mat3::Identity()*MvM_pre;
+      imuaccFindif_[i]->SetHuberTh(MvM_huber_);
+      robcen_imuacc_findif_residual_id_[i] = AddResidual(imuaccFindif_[i],
                                                          GIF::fromSec(10.0), GIF::fromSec(0.0));
 
-      robcenImurorUpdate_[i].reset(new RobcenImurorUpdate("RobcenImurorUpdate" + num,
+      imurorUpdate_[i].reset(new ImurorUpdate("ImurorUpdate" + num,
           {"MwM" + num}, {}, {"MwM", "MwM_bias" + num}, {"MwM" + num}));
-      robcenImurorUpdate_[i]->GetNoiseCovarianceBlock("MwM" + num) = GIF::Mat3::Identity()*MwM_pre;
-      robcenImurorUpdate_[i]->SetHuberTh(MwM_huber_);
-      robcen_imuror_update_id_[i] = AddResidual(robcenImurorUpdate_[i],
+      imurorUpdate_[i]->GetNoiseCovarianceBlock("MwM" + num) = GIF::Mat3::Identity()*MwM_pre;
+      imurorUpdate_[i]->SetHuberTh(MwM_huber_);
+      robcen_imuror_update_id_[i] = AddResidual(imurorUpdate_[i],
                                                 GIF::fromSec(10.0), GIF::fromSec(0.0));
     }
 

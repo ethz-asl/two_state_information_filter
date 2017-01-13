@@ -1,27 +1,28 @@
-#ifndef GIF_ROBCENROTRATEFINDIFRESIDUAL_HPP_
-#define GIF_ROBCENROTRATEFINDIFRESIDUAL_HPP_
+#ifndef GIF_ATTITUDEFINDIF_HPP_
+#define GIF_ATTITUDEFINDIF_HPP_
 
 #include "generalized_information_filter/common.h"
 #include "generalized_information_filter/binary-residual.h"
+#include "generalized_information_filter/measurement.h"
 
 namespace GIF {
 
 /*! \brief Robocentric rotational rate residual using finite differences.
  */
-class RobcenRotrateFindifResidual
+class AttitudeFindif
       : public BinaryResidual<ElementPack<Vec3>, ElementPack<Quat, Vec3>,
                               ElementPack<Quat>, ElementPack<Vec3>, EmptyMeas> {
  public:
   using mtResidual = BinaryResidual<ElementPack<Vec3>, ElementPack<Quat, Vec3>,
                                     ElementPack<Quat>, ElementPack<Vec3>, EmptyMeas>;
-  RobcenRotrateFindifResidual(const std::string& name,
+  AttitudeFindif(const std::string& name,
             const std::array<std::string,1>& innName = {"qIM"},
             const std::array<std::string,2>& preName = {"qIM", "MwM"},
             const std::array<std::string,1>& curName = {"qIM"},
             const std::array<std::string,1>& noiName = {"qIM"})
     : mtResidual(name,innName,preName,curName,noiName,false,true,true){
   }
-  virtual ~RobcenRotrateFindifResidual() {
+  virtual ~AttitudeFindif() {
   }
   enum Elements {ATT, ROR};
   void Eval(Vec3& qIM_inn, const Quat& qIM_pre, const Vec3& MwM_pre,
@@ -57,4 +58,4 @@ class RobcenRotrateFindifResidual
 };
 
 }
-#endif /* GIF_ROBCENROTRATEFINDIFRESIDUAL_HPP_ */
+#endif /* GIF_ATTITUDEFINDIF_HPP_ */
