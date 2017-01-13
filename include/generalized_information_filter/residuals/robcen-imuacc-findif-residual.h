@@ -42,8 +42,8 @@ class RobcenImuaccFindifResidual
     this->template GetJacBlockPre<VEL_INN, VEL_PRE>(J) = (Mat3::Identity() - gSM(dt_ * MwM_pre));
     this->template GetJacBlockPre<VEL_INN, ROR_PRE>(J) = dt_ * gSM(MvM_pre);
     this->template GetJacBlockPre<VEL_INN, ACB_PRE>(J) = -dt_ * Mat3::Identity();
-    this->template GetJacBlockPre<VEL_INN, ATT_PRE>(J) = dt_ * RotMat(qIM_pre).matrix().transpose() *
-        gSM(Ig_);
+    this->template GetJacBlockPre<VEL_INN, ATT_PRE>(J) = dt_ * RotMat(qIM_pre).matrix().transpose()
+        * gSM(Ig_);
   }
   void JacCur(MatX& J, const Vec3& MvM_pre, const Vec3& MwM_pre, const Vec3& MfM_bias_pre,
               const Quat& qIM_pre, const Vec3& MvM_cur, const Vec3& MvM_noi) const {
