@@ -1,7 +1,8 @@
-#ifndef GIF_MAVDYNAMICRESIDUAL_H_
-#define GIF_MAVDYNAMICRESIDUAL_H_
+#ifndef GIF_MAVDYNAMICFINDIF_H_
+#define GIF_MAVDYNAMICFINDIF_H_
 
 #include <Eigen/Dense>
+#include "generalized_information_filter/binary-residual.h"
 
 namespace GIF {
 
@@ -24,18 +25,18 @@ class RotorSpeedMeasurement : public ElementVector {
  *         Based on an aerodynamic model
  */
 template<int NumRot>
-class MavDynamicResidual : public BinaryResidual<
-ElementPack<Vec<6>>,
-ElementPack<Vec3, Vec3, Quat, double, double, double, double, Vec3, Vec3, Vec3>,
-ElementPack<Vec3, Vec3>,
-ElementPack<Vec<6>>,
+class MavDynamicFindif : public BinaryResidual<
+    ElementPack<Vec<3>,Vec<3>>,
+    ElementPack<Vec3, Vec3, Quat, double, double, double, double, Vec3, Vec3, Vec3>,
+    ElementPack<Vec3, Vec3>,
+    ElementPack<Vec<3>,Vec<3>>,
 RotorSpeedMeasurement<NumRot>> {
  public:
   using mtBinaryResidual = BinaryResidual<
-      ElementPack<Vec<6>>,
+      ElementPack<Vec<3>,Vec<3>>,
       ElementPack<Vec3, Vec3, Quat, double, double, double, double, Vec3, Vec3, Vec3>,
       ElementPack<Vec3, Vec3>,
-      ElementPack<Vec<6>>,
+      ElementPack<Vec<3>,Vec<3>>,
       RotorSpeedMeasurement<NumRot>>;
   using mtBinaryResidual::meas_;
   using mtBinaryResidual::dt_;
@@ -48,11 +49,11 @@ RotorSpeedMeasurement<NumRot>> {
 
   static constexpr int kNumRot_ = NumRot;
 
-  MavDynamicResidual(const std::string& name,
-                     const std::string& innName = "dyn",
+  MavDynamicFindif(const std::string& name,
+                     const std::string& innName = {"dyn_pos", "dyn_att"},
                      const std::array<std::string,10>& preName = {"MvM", "MwM", "qIM", "m", "cT", "cM", "cD", "BrBM", "BrBC", "I"},
                      const std::array<std::string,2>& curName = {"MvM", "MwM"},
-                     const std::string& noiName = "dyn")
+                     const std::string& noiName = {"dyn_pos", "dyn_att"})
       : mtBinaryResidual(name,{innName},preName,curName,{noiName},false,true,true),
         g_(0,0,-9.81){
     doCalibration_ = false;
@@ -101,14 +102,15 @@ RotorSpeedMeasurement<NumRot>> {
 
   }
 
-  virtual ~MavDynamicResidual() {
+  virtual ~MavDynamicFindif() {
   }
 
-  void Eval(Vec<6>& dyn_inn, const Vec3& MvM_pre, const Vec3& MwM_pre, const Quat& qIM_pre,
-                             const double& m_pre, const double& cT_pre, const double& cM_pre, const double& cD_pre,
-                             const Vec3& BrBM_pre, const Vec3& BrBC_pre, const Vec3& I_pre,
-                             const Vec3& MvM_cur, const Vec3& MwM_cur,
-                             const Vec<6>& dyn_noi) const {
+  void Eval(Vec<3>& dyn_pos_inn, Vec<3>& dyn_att_inn,
+            const Vec3& MvM_pre, const Vec3& MwM_pre, const Quat& qIM_pre,
+            const double& m_pre, const double& cT_pre, const double& cM_pre, const double& cD_pre,
+            const Vec3& BrBM_pre, const Vec3& BrBC_pre, const Vec3& I_pre,
+            const Vec3& MvM_cur, const Vec3& MwM_cur,
+            const Vec<3>& dyn_pos_noi, const Vec<3>& dyn_att_noi) const {
     double m = m_;
     double cD = cD_;
     double cM = cM_;
@@ -157,16 +159,16 @@ RotorSpeedMeasurement<NumRot>> {
     const Vec3 MrMC = qMB_.rotate(Vec3(BrBC - BrBM));
     const Vec3 dMvM = (MvM_cur - MvM_pre)/dt_;
     const Vec3 dMwM = (MwM_cur - MwM_pre)/dt_;
-    dyn_inn.head<3>() = (1/m*qMB_.rotate(B_F) + qIM_pre.inverseRotate(g_) - MwM_pre.cross(MvM_pre) - MwM_pre.cross(MwM_pre.cross(MrMC)) - dMwM.cross(MrMC) - dMvM)*dt_ + dyn_noi.head<3>()*sqrt(dt_);
+    dyn_pos_inn = (1/m*qMB_.rotate(B_F) + qIM_pre.inverseRotate(g_) - MwM_pre.cross(MvM_pre) - MwM_pre.cross(MwM_pre.cross(MrMC)) - dMwM.cross(MrMC) - dMvM)*dt_ + dyn_pos_noi*sqrt(dt_);
     const Vec3 BwM_pre = qMB_.inverseRotate(MwM_pre);
     const Vec3 dBwM = qMB_.inverseRotate(dMwM);
-    dyn_inn.tail<3>() = (B_M - BwM_pre.cross(I*BwM_pre) - I*dBwM)*dt_ + dyn_noi.tail<3>()*sqrt(dt_);
+    dyn_att_inn = (B_M - BwM_pre.cross(I*BwM_pre) - I*dBwM)*dt_ + dyn_att_noi*sqrt(dt_);
   }
   void JacPre(MatX& J, const Vec3& MvM_pre, const Vec3& MwM_pre, const Quat& qIM_pre,
                        const double& m_pre, const double& cT_pre, const double& cM_pre, const double& cD_pre,
                        const Vec3& BrBM_pre, const Vec3& BrBC_pre, const Vec3& I_pre,
                        const Vec3& MvM_cur, const Vec3& MwM_cur,
-                       const Vec<6>& dyn_noi) const {
+                       const Vec<3>& dyn_pos_noi, const Vec<3>& dyn_att_noi) const {
     ElementVector pre(PreDefinition());
     pre.GetValue<Vec3>(0) = MvM_pre;
     pre.GetValue<Vec3>(1) = MwM_pre;
@@ -182,14 +184,15 @@ RotorSpeedMeasurement<NumRot>> {
     cur.GetValue<Vec3>(0) = MvM_cur;
     cur.GetValue<Vec3>(1) = MwM_cur;
     ElementVector noi(NoiDefinition());
-    noi.GetValue<Vec<6>>(0) = dyn_noi;
+    noi.GetValue<Vec<3>>(0) = dyn_pos_noi;
+    noi.GetValue<Vec<3>>(1) = dyn_att_noi;
     JacFDPre(J,pre,cur,noi,1e-6);
   }
   void JacCur(MatX& J, const Vec3& MvM_pre, const Vec3& MwM_pre, const Quat& qIM_pre,
                        const double& m_pre, const double& cT_pre, const double& cM_pre, const double& cD_pre,
                        const Vec3& BrBM_pre, const Vec3& BrBC_pre, const Vec3& I_pre,
                        const Vec3& MvM_cur, const Vec3& MwM_cur,
-                       const Vec<6>& dyn_noi) const {
+                       const Vec<3>& dyn_pos_noi, const Vec<3>& dyn_att_noi) const {
     ElementVector pre(PreDefinition());
     pre.GetValue<Vec3>(0) = MvM_pre;
     pre.GetValue<Vec3>(1) = MwM_pre;
@@ -205,14 +208,15 @@ RotorSpeedMeasurement<NumRot>> {
     cur.GetValue<Vec3>(0) = MvM_cur;
     cur.GetValue<Vec3>(1) = MwM_cur;
     ElementVector noi(NoiDefinition());
-    noi.GetValue<Vec<6>>(0) = dyn_noi;
+    noi.GetValue<Vec<3>>(0) = dyn_pos_noi;
+    noi.GetValue<Vec<3>>(1) = dyn_att_noi;
     JacFDCur(J,pre,cur,noi,1e-6);
   }
   void JacNoi(MatX& J, const Vec3& MvM_pre, const Vec3& MwM_pre, const Quat& qIM_pre,
                        const double& m_pre, const double& cT_pre, const double& cM_pre, const double& cD_pre,
                        const Vec3& BrBM_pre, const Vec3& BrBC_pre, const Vec3& I_pre,
                        const Vec3& MvM_cur, const Vec3& MwM_cur,
-                       const Vec<6>& dyn_noi) const {
+                       const Vec<3>& dyn_pos_noi, const Vec<3>& dyn_att_noi) const {
     J.setIdentity();
     J = J*sqrt(dt_);
   }
@@ -239,4 +243,4 @@ RotorSpeedMeasurement<NumRot>> {
 
 }
 
-#endif /* GIF_MAVDYNAMICRESIDUAL_H_ */
+#endif /* GIF_MAVDYNAMICFINDIF_H_ */

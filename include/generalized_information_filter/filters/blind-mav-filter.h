@@ -4,7 +4,7 @@
 #include "generalized_information_filter/common.h"
 #include "generalized_information_filter/filter.h"
 #include "generalized_information_filter/residuals/height-update.h"
-#include "generalized_information_filter/residuals/mav-dynamic-residual.h"
+#include "generalized_information_filter/residuals/mav-dynamic-findif.h"
 #include "generalized_information_filter/residuals/pose-update.h"
 #include "generalized_information_filter/residuals/random-walk-prediction.h"
 #include "generalized_information_filter/residuals/robocentric/attitude-findif.h"
@@ -28,7 +28,7 @@ class BlindMavFilter: public GIF::Filter{
   typedef GIF::PositionFindif PositionFindif;
   typedef GIF::AttitudeFindif AttitudeFindif;
   typedef GIF::ImurorUpdate ImurorUpdate;
-  typedef GIF::MavDynamicResidual<6> MavDynamicResidual;
+  typedef GIF::MavDynamicFindif<6> MavDynamicResidual;
   typedef GIF::RandomWalkPrediction<GIF::ElementPack<double,double,double,double,GIF::Vec3,GIF::Vec3,GIF::Vec3>> MavParPrediction;
   typedef GIF::PoseUpdate<true,true> PoseUpdate;
   typedef GIF::RandomWalkPrediction<GIF::ElementPack<GIF::Vec3,GIF::Quat,GIF::Vec3,GIF::Quat>> ExternalCalibPrediction;
@@ -121,7 +121,8 @@ class BlindMavFilter: public GIF::Filter{
     imurorUpdate_(new ImurorUpdate("ImurorUpdate",
       {"MwM"}, {}, {"MwM", "MwM_bias"}, {"MwM"})),
     mavDynamicResidual_(new MavDynamicResidual("MavDynamicResidual",
-      "dyn", {"MvM", "MwM", "qIM", "m", "cT", "cM", "cD", "BrBM", "BrBC", "I"}, {"MvM", "MwM"}, "dyn")),
+        {"dyn_pos", "dyn_att"}, {"MvM", "MwM", "qIM", "m", "cT", "cM", "cD", "BrBM", "BrBC", "I"},
+        {"MvM", "MwM"}, {"dyn_pos", "dyn_att"})),
     mavParPrediction_(new MavParPrediction("MavParPrediction", {"m", "cT", "cM", "cD", "BrBM", "BrBC", "I"}, {"m", "cT", "cM", "cD", "BrBM", "BrBC", "I"})),
     poseUpdate_(new PoseUpdate("PoseUpdate", {"JrJC", "qJC"},
                                    {"IrIM", "qIM", "IrIJ", "qIJ", "MrMC", "qMC"}, {"JrJC", "qJC"})),
