@@ -1,10 +1,10 @@
 #ifndef GIF_IMUPOSEFILTER_HPP_
 #define GIF_IMUPOSEFILTER_HPP_
 
-#include "generalized_information_filter/residuals/attitude-findif.h"
-#include "generalized_information_filter/residuals/imuacc-findif.h"
-#include "generalized_information_filter/residuals/imuror-update.h"
-#include "generalized_information_filter/residuals/position-findif.h"
+#include "generalized_information_filter/residuals/robocentric/attitude-findif.h"
+#include "generalized_information_filter/residuals/robocentric/imuacc-findif.h"
+#include "generalized_information_filter/residuals/robocentric/imuror-update.h"
+#include "generalized_information_filter/residuals/robocentric/position-findif.h"
 #include "generalized_information_filter/common.h"
 #include "generalized_information_filter/residuals/random-walk-prediction.h"
 #include "generalized_information_filter/residuals/pose-update.h"
