@@ -1,14 +1,14 @@
 #ifndef GIF_IMUPOSEFILTER_HPP_
 #define GIF_IMUPOSEFILTER_HPP_
 
+#include "generalized_information_filter/common.h"
+#include "generalized_information_filter/filter.h"
 #include "generalized_information_filter/residuals/robocentric/attitude-findif.h"
 #include "generalized_information_filter/residuals/robocentric/imuacc-findif.h"
 #include "generalized_information_filter/residuals/robocentric/imuror-update.h"
 #include "generalized_information_filter/residuals/robocentric/position-findif.h"
-#include "generalized_information_filter/common.h"
 #include "generalized_information_filter/residuals/random-walk-prediction.h"
 #include "generalized_information_filter/residuals/pose-update.h"
-#include "generalized_information_filter/filter.h"
 
 namespace GIF {
 
@@ -115,7 +115,8 @@ class ImuPoseFilter: public GIF::Filter{
         "PoseUpdate", {"JrJC", "qJC"}, poseStateName, {"JrJC", "qJC"}));
     poseUpdate_->GetNoiseCovarianceBlock("JrJC") = GIF::Mat<3>::Identity()*JrJC_upd;
     poseUpdate_->GetNoiseCovarianceBlock("qJC") = GIF::Mat<3>::Identity()*qJC_upd;
-    poseUpdate_->SetBodyAlignment(GIF::Vec3(0.0204726667725, -0.0346315780816, 0.0284436991268),GIF::Quat(-0.999963138703, 0.00313250259206, 0.00788912255922, -0.00129244276308));
+    poseUpdate_->SetBodyAlignment(GIF::Vec3(0.0204726667725, -0.0346315780816, 0.0284436991268),
+        GIF::Quat(-0.999963138703, 0.00313250259206, 0.00788912255922, -0.00129244276308));
     poseUpdate_->SetAttitudeFlag(false);
     poseUpdate_->SetHuberTh(JrJC_huber_);
     pose_update_id_ = AddResidual(poseUpdate_, GIF::fromSec(10.0), GIF::fromSec(0.0));
