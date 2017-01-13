@@ -65,7 +65,8 @@ class BlindMavFilter: public GIF::Filter{
   const double qIM_pre = 1e-6;
   const double MwM_pre = 4e-6;         // IMU gyr
 
-  const double dyn_pre = 1e-1;
+  const double dyn_pos_pre = 1e-1;
+  const double dyn_att_pre = 1e-1;
   const double mass_pre = 1e-8;
   const double cT_pre = 1e-8;
   const double cM_pre = 1e-8;
@@ -169,9 +170,15 @@ class BlindMavFilter: public GIF::Filter{
                                                     GIF::fromSec(10.0), GIF::fromSec(0.0));
 
     if(includeDyn){
-      mavDynamicResidual_->GetNoiseCovarianceBlock("dyn") = GIF::Mat<6>::Identity()*dyn_pre;
+      mavDynamicResidual_->SetMass(1.678);
+      mavDynamicResidual_->SetAerodynamicCoefficient(5.69629e-6*1e6,-5.43366e-8*1e6,0.0369976);
+      mavDynamicResidual_->SetInertiaDiagonal(1.48542e-2,1.60995e-2,1.34006e-2);
+      mavDynamicResidual_->SetComOffset(Vec3(0.000169187, -0.000322526,    0.0324966));
+      mavDynamicResidual_->SetImuOffset(Vec3(-0.000736413, 0.00108263,  0.0337457),Quat(1,0,0,0));
+      mavDynamicResidual_->GetNoiseCovarianceBlock("dyn_pos") = GIF::Mat<6>::Identity()*dyn_pos_pre;
+      mavDynamicResidual_->GetNoiseCovarianceBlock("dyn_att") = GIF::Mat<6>::Identity()*dyn_att_pre;
       mav_dynamic_residual_id_ = AddResidual(mavDynamicResidual_,
-                                                      GIF::fromSec(10.0), GIF::fromSec(0.0));
+                                             GIF::fromSec(10.0), GIF::fromSec(0.0));
 
       mavParPrediction_->GetNoiseCovarianceBlock("m") = GIF::Mat<1>::Identity()*mass_pre;
       mavParPrediction_->GetNoiseCovarianceBlock("cT") = GIF::Mat<1>::Identity()*cT_pre;

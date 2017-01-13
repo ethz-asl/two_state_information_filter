@@ -50,13 +50,14 @@ RotorSpeedMeasurement<NumRot>> {
   static constexpr int kNumRot_ = NumRot;
 
   MavDynamicFindif(const std::string& name,
-                     const std::string& innName = {"dyn_pos", "dyn_att"},
-                     const std::array<std::string,10>& preName = {"MvM", "MwM", "qIM", "m", "cT", "cM", "cD", "BrBM", "BrBC", "I"},
-                     const std::array<std::string,2>& curName = {"MvM", "MwM"},
-                     const std::string& noiName = {"dyn_pos", "dyn_att"})
-      : mtBinaryResidual(name,{innName},preName,curName,{noiName},false,true,true),
+                   const std::array<std::string,2>& innName = {"dyn_pos", "dyn_att"},
+                   const std::array<std::string,10>& preName = {"MvM", "MwM", "qIM", "m", "cT",
+                                                                "cM", "cD", "BrBM", "BrBC", "I"},
+                   const std::array<std::string,2>& curName = {"MvM", "MwM"},
+                   const std::array<std::string,2>& noiName = {"dyn_pos", "dyn_att"})
+      : mtBinaryResidual(name,innName,preName,curName,noiName,false,true,true),
         g_(0,0,-9.81){
-    doCalibration_ = false;
+    SetCalibrationFlags(0,0,0,0,0,0,0);
     double planeOffset = -0.016;
     double armLength = 0.215;
     for(int i=0; i<NumRot; i++){
@@ -65,41 +66,11 @@ RotorSpeedMeasurement<NumRot>> {
       BrBA_[i](2) = planeOffset;
       sign_[i] = (i%2 == 0);
     }
-    cD_ = 0.018529;
-    cM_ = -4.2101e-8*1e6;
-    cT_ = 5.73311e-6*1e6;
-    m_ = 1.678;
-    I_.setIdentity();
-    I_(0,0) = 1.48542e-2;
-    I_(1,1) = 1.60995e-2;
-    I_(2,2) = 1.34006e-2;
-    BrBC_ = Vec3(0.0241, -0.0140, -0.0372);
-    SetExtrinsics(Vec3(-0.0275, 0.0158, 0.0377),Quat(1,0,0,0));
-//    m: 1.678
-//    cT: 5.70482
-//    cM: -0.0447642
-//    cD: 0.0382422
-//    BrBC:   0.00015684 -0.000322975   0.00679381
-//    BrBM: -0.000632626 0.000806683  0.00779867
-//    I: 0.0148542 0.0160995 0.0134006
-//    m: 1.678
-//    cT: 5.69629
-//    cM: -0.0543366
-//    cD: 0.0369976
-//    BrBC:  0.000169187 -0.000322526    0.0324966
-//    BrBM: -0.000736413 0.00108263  0.0337457
-//    I: 0.0148542 0.0160995 0.0134006
-    cD_ = 0.0369976;
-    cM_ = -5.43366e-8*1e6;
-    cT_ = 5.69629e-6*1e6;
-    m_ = 1.678;
-    I_.setIdentity();
-    I_(0,0) = 1.48542e-2;
-    I_(1,1) = 1.60995e-2;
-    I_(2,2) = 1.34006e-2;
-    BrBC_ = Vec3(0.000169187, -0.000322526,    0.0324966);
-    SetExtrinsics(Vec3(-0.000736413, 0.00108263,  0.0337457),Quat(1,0,0,0));
-
+    SetMass(1.678);
+    SetAerodynamicCoefficient(5.73311e-6*1e6,-4.2101e-8*1e6,0.018529);
+    SetInertiaDiagonal(1.48542e-2,1.60995e-2,1.34006e-2);
+    SetComOffset(Vec3(0.0241, -0.0140, -0.0372));
+    SetImuOffset(Vec3(-0.0275, 0.0158, 0.0377),Quat(1,0,0,0));
   }
 
   virtual ~MavDynamicFindif() {
@@ -111,22 +82,13 @@ RotorSpeedMeasurement<NumRot>> {
             const Vec3& BrBM_pre, const Vec3& BrBC_pre, const Vec3& I_pre,
             const Vec3& MvM_cur, const Vec3& MwM_cur,
             const Vec<3>& dyn_pos_noi, const Vec<3>& dyn_att_noi) const {
-    double m = m_;
-    double cD = cD_;
-    double cM = cM_;
-    double cT = cT_;
-    Vec3 BrBC = BrBC_;
-    Vec3 BrBM = BrBM_;
-    Mat3 I = I_;
-    if(doCalibration_){
-//      m = m_pre;
-      cT = cT_pre;
-      cM = cM_pre;
-      cD = cD_pre;
-      BrBM = BrBM_pre;
-      BrBC = BrBC_pre;
-//      I = I_pre.asDiagonal();
-    }
+    double m = calibrationFlags_[0] ? m_pre : m_;
+    double cT = calibrationFlags_[1] ? cT_pre : cT_;
+    double cM = calibrationFlags_[2] ? cM_pre : cM_;
+    double cD = calibrationFlags_[3] ? cD_pre : cD_;
+    Vec3 BrBM = calibrationFlags_[4] ? BrBM_pre : BrBM_;
+    Vec3 BrBC = calibrationFlags_[5] ? BrBC_pre : BrBC_;
+    Mat3 I = calibrationFlags_[6] ? I_pre.asDiagonal() : I_;
 
     // Compute Bforces
     std::array<Vec<3>,NumRot> Bforces;
@@ -159,7 +121,8 @@ RotorSpeedMeasurement<NumRot>> {
     const Vec3 MrMC = qMB_.rotate(Vec3(BrBC - BrBM));
     const Vec3 dMvM = (MvM_cur - MvM_pre)/dt_;
     const Vec3 dMwM = (MwM_cur - MwM_pre)/dt_;
-    dyn_pos_inn = (1/m*qMB_.rotate(B_F) + qIM_pre.inverseRotate(g_) - MwM_pre.cross(MvM_pre) - MwM_pre.cross(MwM_pre.cross(MrMC)) - dMwM.cross(MrMC) - dMvM)*dt_ + dyn_pos_noi*sqrt(dt_);
+    dyn_pos_inn = (1/m*qMB_.rotate(B_F) + qIM_pre.inverseRotate(g_) - MwM_pre.cross(MvM_pre)
+        - MwM_pre.cross(MwM_pre.cross(MrMC)) - dMwM.cross(MrMC) - dMvM)*dt_ + dyn_pos_noi*sqrt(dt_);
     const Vec3 BwM_pre = qMB_.inverseRotate(MwM_pre);
     const Vec3 dBwM = qMB_.inverseRotate(dMwM);
     dyn_att_inn = (B_M - BwM_pre.cross(I*BwM_pre) - I*dBwM)*dt_ + dyn_att_noi*sqrt(dt_);
@@ -220,9 +183,35 @@ RotorSpeedMeasurement<NumRot>> {
     J.setIdentity();
     J = J*sqrt(dt_);
   }
-  void SetExtrinsics(Vec3 BrBM, Quat qMB){
+  void SetImuOffset(Vec3 BrBM, Quat qMB){
     BrBM_  = BrBM;
     qMB_ = qMB;
+  }
+  void SetComOffset(Vec3 BrBC){
+    BrBC_ = BrBC;
+  }
+  void SetMass(double m){
+    m_ = m;
+  }
+  void SetAerodynamicCoefficient(double cT, double cM, double cD){
+    cT_ = cT;
+    cM_ = cM;
+    cD_ = cD;
+  }
+  void SetInertiaDiagonal(double Ix, double Iy, double Iz){
+    I_.setIdentity();
+    I_(0,0) = Ix;
+    I_(1,1) = Iy;
+    I_(2,2) = Iz;
+  }
+  void SetCalibrationFlags(bool m, bool cT, bool cM, bool cD, bool BrBM, bool BrBC, bool I){
+    calibrationFlags_[0] = m;
+    calibrationFlags_[1] = cT;
+    calibrationFlags_[2] = cM;
+    calibrationFlags_[3] = cD;
+    calibrationFlags_[4] = BrBM;
+    calibrationFlags_[5] = BrBC;
+    calibrationFlags_[6] = I;
   }
 
  protected:
@@ -237,7 +226,7 @@ RotorSpeedMeasurement<NumRot>> {
   double m_;
   Vec3 g_;
   Mat3 I_;
-  bool doCalibration_;
+  std::array<bool,7> calibrationFlags_;
 };
 
 
