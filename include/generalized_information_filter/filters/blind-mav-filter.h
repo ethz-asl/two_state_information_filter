@@ -59,63 +59,38 @@ class BlindMavFilter: public GIF::Filter{
   int height_update_id_;
   int height_prediction_id_;
 
-  // Covariances
-  const double IrIM_pre_ = 1e-6;
-  const double qIM_pre = 1e-6;
-  const double MvM_pre = 1e-4;         // IMU acc
-  const double MwM_pre = 4e-6;         // IMU gyr
-  const double MwM_bias_pre = 1e-8;    // IMU gyr bias
-  const double MfM_bias_pre = 1e-8;    // IMU acc bias
+  // Init Covariances
+  double MwM_bias_init_;
+  double MfM_bias_init_;
+  double IrIM_init_;
+  double qIM_init_;
+  double MvM_init_;
+  double MwM_init_;
 
-  const double IrIM_init = 1e-8;
-  const double qIM_init = 1e-2;
-  const double MvM_init = 1e-2;
-  const double MwM_init = 1e-2;
-  const double MwM_bias_init = 1e-2;
-  const double MfM_bias_init = 1e-2;
+  double mass_init_;
+  double I_init_;
+  double cT_init_;
+  double cM_init_;
+  double cD_init_;
+  double BrBM_init_;
+  double BrBC_init_;
+  double qMB_init_;
 
-  const double dyn_pos_pre = 1e-1;
-  const double dyn_att_pre = 1e-1;
-  const double mass_pre = 1e-8;
-  const double cT_pre = 1e-8;
-  const double cM_pre = 1e-8;
-  const double cD_pre = 1e-8;
-  const double BrBM_pre = 1e-8;
-  const double BrBC_pre = 1e-8;
-  const double I_pre = 1e-8;
-  const double qMB_pre = 1e-8;
+  double IrIJ_init_;
+  double qIJ_init_;
+  double MrMC_init_;
+  double qMC_init_;
+  double zRef_init_;
 
-  const double mass_init = 1e-2;
-  const double cT_init = 1e-2;
-  const double cM_init = 1e-2;
-  const double cD_init = 1e-2;
-  const double BrBM_init = 1e-2;
-  const double BrBC_init = 1e-2;
-  const double I_init = 1e-2;
-  const double qMB_init = 10;
+  const bool useImu_;
+  const bool useDyn_;
+  const bool usePose_;
+  const bool useHeight_;
 
-  const double IrIJ_pre = 1e-8;
-  const double qIJ_pre = 1e-8;
-  const double MrMC_pre = 1e-8;
-  const double qMC_pre = 1e-8;
-  const double JrJC_upd = 1e-4;
-  const double qJC_upd = 1e-4;
+  // Init State
+  ElementVector initState_;
 
-  const double IrIJ_init = 100;
-  const double qIJ_init = 10;
-  const double MrMC_init = 1;
-  const double qMC_init = 10;
-
-  const double zRef_init = 1e6;
-  const double zRef_pre = 1e-2;
-  const double z_upd = 0.1;
-
-  const bool includeIMU = true;
-  const bool includeDyn = true;
-  const bool includePose = false;
-  const bool includeHeight = true;
-
-  BlindMavFilter():
+  BlindMavFilter(bool useImu, bool useDyn, bool useHeight, bool usePose):
     imuBiasPrediction_(new ImuBiasPrediction("ImuBiasPrediction", {"MwM_bias", "MfM_bias"},
                                              {"MwM_bias", "MfM_bias"})),
     imuaccFindif_(new ImuaccFindif("ImuaccFindif", {"MvM"}, {"MvM", "MwM", "MfM_bias", "qIM"},
@@ -133,13 +108,15 @@ class BlindMavFilter: public GIF::Filter{
                                            {"m", "cT", "cM", "cD", "BrBM", "BrBC", "I", "qMB"})),
     poseUpdate_(new PoseUpdate("PoseUpdate", {"JrJC", "qJC"},
                                {"IrIM", "qIM", "IrIJ", "qIJ", "MrMC", "qMC"}, {"JrJC", "qJC"})),
-   externalCalibPrediction_(new ExternalCalibPrediction("ExternalCalibPrediction",
-                                                        {"IrIJ", "qIJ", "MrMC", "qMC"},
-                                                        {"IrIJ", "qIJ", "MrMC", "qMC"})),
+    externalCalibPrediction_(new ExternalCalibPrediction("ExternalCalibPrediction",
+                                                         {"IrIJ", "qIJ", "MrMC", "qMC"},
+                                                         {"IrIJ", "qIJ", "MrMC", "qMC"})),
    heightUpdate_(new HeightUpdate("HeightUpdate", {"z"}, {"zRef", "IrIM"}, {"z"})),
-   heightPrediction_(new HeightPrediction("HeightPrediction", {"zRef"}, {"zRef"}))
+   heightPrediction_(new HeightPrediction("HeightPrediction", {"zRef"}, {"zRef"})),
+   initState_(stateDefinition_),
+   useImu_(useImu), useDyn_(useDyn), useHeight_(useHeight), usePose_(usePose)
   {
-    include_max_ = !includePose & !includeHeight;
+    include_max_ = !usePose_ & !useHeight_;
 
     imu_bias_prediction_id_ = -1;
     imuacc_findif_id_ = -1;
@@ -154,85 +131,53 @@ class BlindMavFilter: public GIF::Filter{
     height_prediction_id_ = -1;
 
     // Imu Bias Prediction Properties
-    if(includeIMU){
-      imuBiasPrediction_->GetNoiseCovarianceBlock("MwM_bias") = GIF::Mat3::Identity()*MwM_bias_pre;
-      imuBiasPrediction_->GetNoiseCovarianceBlock("MfM_bias") = GIF::Mat3::Identity()*MfM_bias_pre;
-      imu_bias_prediction_id_ = AddResidual(imuBiasPrediction_, GIF::fromSec(10.0), GIF::fromSec(0.0));
-
-      imuaccFindif_->GetNoiseCovarianceBlock("MvM") = GIF::Mat3::Identity()*MvM_pre;
-      imuacc_findif_id_ = AddResidual(imuaccFindif_,
-                                                      GIF::fromSec(10.0), GIF::fromSec(0.0));
-
-      imurorUpdate_->GetNoiseCovarianceBlock("MwM") = GIF::Mat3::Identity()*MwM_pre;
-      imuror_update_id_ = AddResidual(imurorUpdate_,
-                                                      GIF::fromSec(10.0), GIF::fromSec(0.0));
+    if(useImu_){
+      imu_bias_prediction_id_ = AddResidual(imuBiasPrediction_, GIF::fromSec(10.0),
+                                            GIF::fromSec(0.0));
+      imuacc_findif_id_ = AddResidual(imuaccFindif_, GIF::fromSec(10.0), GIF::fromSec(0.0));
+      imuror_update_id_ = AddResidual(imurorUpdate_, GIF::fromSec(10.0), GIF::fromSec(0.0));
     }
+    position_findif_id_ = AddResidual(positionFindif_, GIF::fromSec(10.0), GIF::fromSec(0.0));
+    attitude_findif_id_ = AddResidual(attitudeFindif_, GIF::fromSec(10.0), GIF::fromSec(0.0));
 
-    positionFindif_->GetNoiseCovarianceBlock("IrIM") = GIF::Mat3::Identity()*IrIM_pre_;
-    position_findif_id_ = AddResidual(positionFindif_,
-                                                    GIF::fromSec(10.0), GIF::fromSec(0.0));
-
-    attitudeFindif_->GetNoiseCovarianceBlock("qIM_vec") = GIF::Mat3::Identity()*qIM_pre;
-    attitude_findif_id_ = AddResidual(attitudeFindif_,
-                                                    GIF::fromSec(10.0), GIF::fromSec(0.0));
-
-    if(includeDyn){
-//      mavDynamicResidual_->SetCalibrationFlags(0,1,1,1,1,1,0,1);
-      mavDynamicResidual_->SetCalibrationFlags(0,0,0,0,0,0,0,0);
-
-      // Aggressive dataset (identified)
-      mavDynamicResidual_->SetMass(1.678);
-      mavDynamicResidual_->SetAerodynamicCoefficient(5.69629e-6*1e6,-5.43366e-8*1e6,0.0369976);
-      mavDynamicResidual_->SetInertiaDiagonal(1.48542e-2,1.60995e-2,1.34006e-2);
-      mavDynamicResidual_->SetComOffset(Vec3(0.000169187, -0.000322526,    0.0324966));
-      mavDynamicResidual_->SetImuOffset(Vec3(-0.000736413, 0.00108263,  0.0337457),Quat(1,0,0,0));
-
-
-      // New datasets (identified)
-      mavDynamicResidual_->SetAerodynamicCoefficient(5.90423,-0.0306806,0.0205564);
-      mavDynamicResidual_->SetComOffset(Vec3(0.0048764, -6.45603e-05, 0.0116824));
-      mavDynamicResidual_->SetImuOffset(Vec3(0.000565769, 0.00741146, 0.0201034),Quat(1,0,0,0));
-      // New datasets, better IMU (identified)
-      mavDynamicResidual_->SetAerodynamicCoefficient(5.90668,-0.0305815,0.019972);
-      mavDynamicResidual_->SetComOffset(Vec3(0.00473559, -0.00016262, 0.0360432));
-      mavDynamicResidual_->SetImuOffset(Vec3(0.11471, 0.033082, 0.0239538),Quat(-0.0379607, 0.814306, -0.0509552, 0.576947));
-
-
-      mavDynamicResidual_->GetNoiseCovarianceBlock("dyn_pos") = GIF::Mat<6>::Identity()*dyn_pos_pre;
-      mavDynamicResidual_->GetNoiseCovarianceBlock("dyn_att") = GIF::Mat<6>::Identity()*dyn_att_pre;
-      mav_dynamic_residual_id_ = AddResidual(mavDynamicResidual_,
-                                             GIF::fromSec(10.0), GIF::fromSec(0.0));
-
-      mavParPrediction_->GetNoiseCovarianceBlock("m") = GIF::Mat<1>::Identity()*mass_pre;
-      mavParPrediction_->GetNoiseCovarianceBlock("cT") = GIF::Mat<1>::Identity()*cT_pre;
-      mavParPrediction_->GetNoiseCovarianceBlock("cM") = GIF::Mat<1>::Identity()*cM_pre;
-      mavParPrediction_->GetNoiseCovarianceBlock("cD") = GIF::Mat<1>::Identity()*cD_pre;
-      mavParPrediction_->GetNoiseCovarianceBlock("BrBC") = GIF::Mat<3>::Identity()*BrBC_pre;
-      mavParPrediction_->GetNoiseCovarianceBlock("BrBM") = GIF::Mat<3>::Identity()*BrBM_pre;
-      mavParPrediction_->GetNoiseCovarianceBlock("I") = GIF::Mat<3>::Identity()*I_pre;
-      mavParPrediction_->GetNoiseCovarianceBlock("qMB") = GIF::Mat<3>::Identity()*qMB_pre;
+    if(useDyn_){
+      mav_dynamic_residual_id_ = AddResidual(mavDynamicResidual_, GIF::fromSec(10.0),
+                                             GIF::fromSec(0.0));
       mavPar_prediction_id_ = AddResidual(mavParPrediction_, GIF::fromSec(10.0), GIF::fromSec(0.0));
     }
 
-    if(includePose){
-      poseUpdate_->GetNoiseCovarianceBlock("JrJC") = GIF::Mat<3>::Identity()*JrJC_upd;
-      poseUpdate_->GetNoiseCovarianceBlock("qJC") = GIF::Mat<3>::Identity()*qJC_upd;
+    if(usePose_){
       pose_IB_update_id_ = AddResidual(poseUpdate_, GIF::fromSec(10.0), GIF::fromSec(0.0));
-      externalCalibPrediction_->GetNoiseCovarianceBlock("IrIJ") = GIF::Mat<3>::Identity()*IrIJ_pre;
-      externalCalibPrediction_->GetNoiseCovarianceBlock("qIJ") = GIF::Mat<3>::Identity()*qIJ_pre;
-      externalCalibPrediction_->GetNoiseCovarianceBlock("MrMC") = GIF::Mat<3>::Identity()*MrMC_pre;
-      externalCalibPrediction_->GetNoiseCovarianceBlock("qMC") = GIF::Mat<3>::Identity()*qMC_pre;
-      external_calib_prediction_id_ = AddResidual(externalCalibPrediction_,
-                                                  GIF::fromSec(10.0), GIF::fromSec(0.0));
+      external_calib_prediction_id_ = AddResidual(externalCalibPrediction_,GIF::fromSec(10.0),
+                                                  GIF::fromSec(0.0));
     }
-    if(includeHeight){
-      heightUpdate_->GetNoiseCovarianceBlock("z") = GIF::Mat<1>::Identity()*z_upd;
+    if(useHeight_){
       height_update_id_ = AddResidual(heightUpdate_, GIF::fromSec(10.0), GIF::fromSec(0.0));
-      heightPrediction_->GetNoiseCovarianceBlock("zRef") = GIF::Mat<1>::Identity()*zRef_pre;
       height_prediction_id_ = AddResidual(heightPrediction_,GIF::fromSec(10.0), GIF::fromSec(0.0));
     }
-
     std::cout << PrintConnectivity();
+    initState_.Construct();
+
+    SetDynCalibrationFlags(0,0,0,0,0,0,0,0);
+
+    // Covariance parameter
+    SetImuCovParameter(1e-4, 4e-6, 1e-8, 1e-8, 1e-2, 1e-2);
+    SetIntegrationCovParameter(1e-6,1e-6, 1e-8, 1e-2, 1e-2, 1e-2);
+    SetDynamicCovParameter(1e-1,1e-1,1e-8,1e-8,1e-8,1e-8,1e-8,1e-8,1e-8,1e-8,
+                           1e-2,1e-2,1e-2,1e-2,1e-2,1e-2,1e-2,10);
+    SetPoseCovParameter(1e-8,1e-8,1e-8,1e-8,1e-4,1e-4,100,10,1,10);
+    SetHeightCovParameter(1e-2,0.1,1e6);
+
+    // Dynamic parameter (Firefly - bluebird)
+    SetMass(1.678);
+    SetAerodynamicCoefficient(5.73311,-0.042101,0.018529);
+    SetInertiaDiagonal(1.48542e-2,1.60995e-2,1.34006e-2);
+    SetDynComOffset(Vec3(0.0241, -0.0140, -0.0372));
+    SetDynImuOffset(Vec3(-0.0275, 0.0158, 0.0377),Quat(1,0,0,0));
+
+    // Pose parameter
+    SetInertialAlignment(Vec3(0,0,0),Quat(1,0,0,0));
+    SetBodyAlignment(Vec3(0,0,0),Quat(1,0,0,0));
   }
   virtual ~BlindMavFilter(){};
   void PreProcess(){
@@ -262,9 +207,9 @@ class BlindMavFilter: public GIF::Filter{
     }
   }
   void Init(const GIF::TimePoint& t = GIF::TimePoint::min(), const GIF::ElementVectorBase* initState = nullptr) {
-    bool check = !includeIMU;
+    bool check = !useImu_;
     std::shared_ptr<const GIF::ElementVectorBase> accMeas;
-    if(includeIMU){
+    if(useImu_){
       check = residuals_.at(imuacc_findif_id_).mt_.GetFirst(accMeas);
     }
 
@@ -272,57 +217,36 @@ class BlindMavFilter: public GIF::Filter{
       startTime_ = t;
       time_ = t;
       inf_.setIdentity();
-      GetNoiseInfBlock("IrIM") = GIF::Mat3::Identity()/IrIM_init;
-      GetNoiseInfBlock("MvM") = GIF::Mat3::Identity()/MvM_init;
-      GetNoiseInfBlock("MwM") = GIF::Mat3::Identity()/MwM_init;
-      GetNoiseInfBlock("qIM") = GIF::Mat3::Identity()/qIM_init;
-      if(includeIMU){
-        GetNoiseInfBlock("MwM_bias") = GIF::Mat3::Identity()/MwM_bias_init;
-        GetNoiseInfBlock("MfM_bias") = GIF::Mat3::Identity()/MfM_bias_init;
+      state_ = initState_;
+      GetNoiseInfBlock("IrIM") = GIF::Mat3::Identity()/IrIM_init_;
+      GetNoiseInfBlock("qIM") = GIF::Mat3::Identity()/qIM_init_;
+      GetNoiseInfBlock("MvM") = GIF::Mat3::Identity()/MvM_init_;
+      GetNoiseInfBlock("MwM") = GIF::Mat3::Identity()/MwM_init_;
+      if(useImu_){
+        GetNoiseInfBlock("MwM_bias") = GIF::Mat3::Identity()/MwM_bias_init_;
+        GetNoiseInfBlock("MfM_bias") = GIF::Mat3::Identity()/MfM_bias_init_;
       }
-      if(includeDyn){
-        GetNoiseInfBlock("m") = GIF::Mat<1>::Identity()/mass_init;
-        GetNoiseInfBlock("cT") = GIF::Mat<1>::Identity()/cT_init;
-        GetNoiseInfBlock("cM") = GIF::Mat<1>::Identity()/cM_init;
-        GetNoiseInfBlock("cD") = GIF::Mat<1>::Identity()/cD_init;
-        GetNoiseInfBlock("BrBC") = GIF::Mat<3>::Identity()/BrBC_init;
-        GetNoiseInfBlock("BrBM") = GIF::Mat<3>::Identity()/BrBM_init;
-        GetNoiseInfBlock("I") = GIF::Mat<3>::Identity()/I_init;
-        GetNoiseInfBlock("qMB") = GIF::Mat<3>::Identity()/qMB_init;
-        state_.GetValue<double>("m") = 1.678;
-        state_.GetValue<double>("cT") = 5.73311e-6 * 1e6;
-        state_.GetValue<double>("cM") = -4.2101e-8 * 1e6;
-        state_.GetValue<double>("cD") = 0.018529;
-        state_.GetValue<GIF::Vec3>("BrBC") = GIF::Vec3(0.0241, -0.0140, -0.0372);
-        state_.GetValue<GIF::Vec3>("BrBM") = GIF::Vec3(-0.0275, 0.0158, 0.0377);
-        state_.GetValue<GIF::Vec3>("I") = GIF::Vec3(1.48542e-2,1.60995e-2,1.34006e-2);
-        state_.GetValue<GIF::Quat>("qMB") = GIF::Quat(1,0,0,0);
-        state_.GetValue<GIF::Quat>("qMB") = GIF::Quat(-0.00464142246184, 0.813813125739, 0.00377470375119, 0.581095865743);
-
-        state_.GetValue<double>("cT") = 5.90387;
-  //      state_.GetValue<double>("cM") = -3.0513e-8 * 1e6;
-  //      state_.GetValue<double>("cD") = 0.018609;
-  //      state_.GetValue<GIF::Vec3>("BrBC") = GIF::Vec3(0.00489592, -4.94558e-05, 0.011715);
-  //      state_.GetValue<GIF::Vec3>("BrBM") = GIF::Vec3(-0.00109527, 0.00606688, 0.0202162);
+      if(useDyn_){
+        GetNoiseInfBlock("m") = GIF::Mat<1>::Identity()/mass_init_;
+        GetNoiseInfBlock("cT") = GIF::Mat<1>::Identity()/cT_init_;
+        GetNoiseInfBlock("cM") = GIF::Mat<1>::Identity()/cM_init_;
+        GetNoiseInfBlock("cD") = GIF::Mat<1>::Identity()/cD_init_;
+        GetNoiseInfBlock("BrBC") = GIF::Mat<3>::Identity()/BrBC_init_;
+        GetNoiseInfBlock("BrBM") = GIF::Mat<3>::Identity()/BrBM_init_;
+        GetNoiseInfBlock("I") = GIF::Mat<3>::Identity()/I_init_;
+        GetNoiseInfBlock("qMB") = GIF::Mat<3>::Identity()/qMB_init_;
       }
-      if(includePose){
-        GetNoiseInfBlock("IrIJ") = GIF::Mat<3>::Identity()/IrIJ_init;
-        GetNoiseInfBlock("qIJ") = GIF::Mat<3>::Identity()/qIJ_init;
-        GetNoiseInfBlock("MrMC") = GIF::Mat<3>::Identity()/MrMC_init;
-        GetNoiseInfBlock("qMC") = GIF::Mat<3>::Identity()/qMC_init;
-        state_.GetValue<GIF::Vec3>("IrIJ").setZero();
-        state_.GetValue<GIF::Quat>("qIJ") = GIF::Quat(-0.155377, 0.000959049, 0.00422654, 0.987846);
-//        state_.GetValue<GIF::Quat>("qIJ") = GIF::Quat(1,0,0,0);
-        state_.GetValue<GIF::Vec3>("MrMC").setZero();
-        state_.GetValue<GIF::Quat>("qMC") = GIF::Quat(-0.00464142246184, 0.813813125739, 0.00377470375119, 0.581095865743);
-//        state_.GetValue<GIF::Quat>("qMC") = GIF::Quat(1,0,0,0);
+      if(usePose_){
+        GetNoiseInfBlock("IrIJ") = GIF::Mat<3>::Identity()/IrIJ_init_;
+        GetNoiseInfBlock("qIJ") = GIF::Mat<3>::Identity()/qIJ_init_;
+        GetNoiseInfBlock("MrMC") = GIF::Mat<3>::Identity()/MrMC_init_;
+        GetNoiseInfBlock("qMC") = GIF::Mat<3>::Identity()/qMC_init_;
       }
-      if(includeHeight){
-        GetNoiseInfBlock("zRef") = GIF::Mat<1>::Identity()/zRef_init;
-        state_.GetValue<double>("zRef") = 0;
+      if(useHeight_){
+        GetNoiseInfBlock("zRef") = GIF::Mat<1>::Identity()/zRef_init_;
       }
 
-      if(includeIMU){
+      if(useImu_){
         // Use accelerometer to estimate initial attitude
         GIF::Vec3 unitZ(0,0,1);
         const GIF::Vec3 MfM = std::dynamic_pointer_cast<const GIF::AccMeas>(accMeas)->MfM_;
@@ -336,6 +260,121 @@ class BlindMavFilter: public GIF::Filter{
       // TODO: use first height measurement for initializing zRef
       LOG(INFO) << "Initializing state at t = " << GIF::Print(t) << std::endl;
       is_initialized_ = true;
+    }
+  }
+  void SetImuCovParameter(double MvM_pre, double MwM_pre, double MwM_bias_pre, double MfM_bias_pre,
+                       double MwM_bias_init, double MfM_bias_init){
+    imuaccFindif_->GetNoiseCovarianceBlock("MvM") = GIF::Mat3::Identity()*MvM_pre;
+    imurorUpdate_->GetNoiseCovarianceBlock("MwM") = GIF::Mat3::Identity()*MwM_pre;
+    imuBiasPrediction_->GetNoiseCovarianceBlock("MwM_bias") = GIF::Mat3::Identity()*MwM_bias_pre;
+    imuBiasPrediction_->GetNoiseCovarianceBlock("MfM_bias") = GIF::Mat3::Identity()*MfM_bias_pre;
+    MwM_bias_init_ = MwM_bias_init;
+    MfM_bias_init_ = MfM_bias_init;
+  }
+  void SetIntegrationCovParameter(double IrIM_pre, double qIM_pre,
+                               double IrIM_init, double qIM_init, double MvM_init, double MwM_init){
+    positionFindif_->GetNoiseCovarianceBlock("IrIM") = GIF::Mat3::Identity()*IrIM_pre;
+    attitudeFindif_->GetNoiseCovarianceBlock("qIM_vec") = GIF::Mat3::Identity()*qIM_pre;
+    IrIM_init_ = IrIM_init;
+    qIM_init_ = qIM_init;
+    MvM_init_ = MvM_init;
+    MwM_init_ = MwM_init;
+  }
+  void SetDynamicCovParameter(double dyn_pos_pre, double dyn_att_pre, double mass_pre, double I_pre,
+                           double cT_pre, double cM_pre, double cD_pre, double BrBC_pre,
+                           double BrBM_pre, double qMB_pre,
+                           double mass_init, double I_init, double cT_init, double cM_init,
+                           double cD_init, double BrBM_init, double BrBC_init, double qMB_init){
+    mavDynamicResidual_->GetNoiseCovarianceBlock("dyn_pos") = GIF::Mat<6>::Identity()*dyn_pos_pre;
+    mavDynamicResidual_->GetNoiseCovarianceBlock("dyn_att") = GIF::Mat<6>::Identity()*dyn_att_pre;
+    mavParPrediction_->GetNoiseCovarianceBlock("m") = GIF::Mat<1>::Identity()*mass_pre;
+    mavParPrediction_->GetNoiseCovarianceBlock("cT") = GIF::Mat<1>::Identity()*cT_pre;
+    mavParPrediction_->GetNoiseCovarianceBlock("cM") = GIF::Mat<1>::Identity()*cM_pre;
+    mavParPrediction_->GetNoiseCovarianceBlock("cD") = GIF::Mat<1>::Identity()*cD_pre;
+    mavParPrediction_->GetNoiseCovarianceBlock("BrBC") = GIF::Mat<3>::Identity()*BrBC_pre;
+    mavParPrediction_->GetNoiseCovarianceBlock("BrBM") = GIF::Mat<3>::Identity()*BrBM_pre;
+    mavParPrediction_->GetNoiseCovarianceBlock("I") = GIF::Mat<3>::Identity()*I_pre;
+    mavParPrediction_->GetNoiseCovarianceBlock("qMB") = GIF::Mat<3>::Identity()*qMB_pre;
+
+    mass_init_ = mass_init;
+    I_init_ = I_init;
+    cT_init_ = cT_init;
+    cM_init_ = cM_init;
+    cD_init_ = cD_init;
+    BrBM_init_ = BrBM_init;
+    BrBC_init_ = BrBC_init;
+    qMB_init_ = qMB_init;
+  }
+  void SetPoseCovParameter(double IrIJ_pre, double qIJ_pre, double MrMC_pre, double qMC_pre,
+                        double JrJC_upd, double qJC_upd,
+                        double IrIJ_init, double qIJ_init, double MrMC_init, double qMC_init){
+
+    poseUpdate_->GetNoiseCovarianceBlock("JrJC") = GIF::Mat<3>::Identity()*JrJC_upd;
+    poseUpdate_->GetNoiseCovarianceBlock("qJC") = GIF::Mat<3>::Identity()*qJC_upd;
+    externalCalibPrediction_->GetNoiseCovarianceBlock("IrIJ") = GIF::Mat<3>::Identity()*IrIJ_pre;
+    externalCalibPrediction_->GetNoiseCovarianceBlock("qIJ") = GIF::Mat<3>::Identity()*qIJ_pre;
+    externalCalibPrediction_->GetNoiseCovarianceBlock("MrMC") = GIF::Mat<3>::Identity()*MrMC_pre;
+    externalCalibPrediction_->GetNoiseCovarianceBlock("qMC") = GIF::Mat<3>::Identity()*qMC_pre;
+
+    IrIJ_init_ = IrIJ_init;
+    qIJ_init_ = qIJ_init;
+    MrMC_init_ = MrMC_init;
+    qMC_init_ = qMC_init;
+  }
+  void SetHeightCovParameter(double zRef_pre, double z_upd, double zRef_init){
+    heightUpdate_->GetNoiseCovarianceBlock("z") = GIF::Mat<1>::Identity()*z_upd;
+    heightPrediction_->GetNoiseCovarianceBlock("zRef") = GIF::Mat<1>::Identity()*zRef_pre;
+
+    zRef_init_ = zRef_init;
+  }
+  void SetDynImuOffset(Vec3 BrBM, Quat qMB){
+    mavDynamicResidual_->SetImuOffset(BrBM,qMB);
+    if(useDyn_){
+      initState_.GetValue<GIF::Vec3>("BrBM") = BrBM;
+      initState_.GetValue<GIF::Quat>("qMB") = qMB;
+    }
+  }
+  void SetDynComOffset(Vec3 BrBC){
+    mavDynamicResidual_->SetComOffset(BrBC);
+    if(useDyn_){
+      initState_.GetValue<GIF::Vec3>("BrBC") = BrBC;
+    }
+  }
+  void SetMass(double m){
+    mavDynamicResidual_->SetMass(m);
+    if(useDyn_){
+      initState_.GetValue<double>("m") = m;
+    }
+  }
+  void SetAerodynamicCoefficient(double cT, double cM, double cD){
+    mavDynamicResidual_->SetAerodynamicCoefficient(cT,cM,cD);
+    if(useDyn_){
+      initState_.GetValue<double>("cT") = cT;
+      initState_.GetValue<double>("cM") = cM;
+      initState_.GetValue<double>("cD") = cD;
+    }
+  }
+  void SetInertiaDiagonal(double Ix, double Iy, double Iz){
+    mavDynamicResidual_->SetInertiaDiagonal(Ix,Iy,Iz);
+    if(useDyn_){
+      initState_.GetValue<GIF::Vec3>("I") = GIF::Vec3(Ix,Iy,Iz);
+    }
+  }
+  void SetDynCalibrationFlags(bool m, bool cT, bool cM, bool cD, bool BrBM, bool BrBC, bool I, bool qMB){
+    mavDynamicResidual_->SetCalibrationFlags(m, cT, cM, cD, BrBM, BrBC, I, qMB);
+  }
+  void SetInertialAlignment(const Vec3& IrIJ, const Quat& qIJ){
+    poseUpdate_->SetInertialAlignment(IrIJ,qIJ);
+    if(usePose_){
+      initState_.GetValue<GIF::Vec3>("IrIJ") = IrIJ;
+      initState_.GetValue<GIF::Quat>("qIJ") = qIJ;
+    }
+  }
+  void SetBodyAlignment(const Vec3& BrBC, const Quat& qBC){
+    poseUpdate_->SetInertialAlignment(BrBC,qBC);
+    if(usePose_){
+      initState_.GetValue<GIF::Vec3>("BrBC") = BrBC;
+      initState_.GetValue<GIF::Quat>("qBC") = qBC;
     }
   }
 };
