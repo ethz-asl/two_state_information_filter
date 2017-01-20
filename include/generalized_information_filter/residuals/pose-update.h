@@ -179,6 +179,14 @@ class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
     BrBC_  = BrBC;
     qBC_ = qBC;
   }
+  void GetInertialAlignment(Vec3* IrIJ, Quat* qIJ){
+    *IrIJ  = IrIJ_;
+    *qIJ = qIJ_;
+  }
+  void GetBodyAlignment(Vec3* BrBC, Quat* qBC){
+    *BrBC  = BrBC_;
+    *qBC = qBC_;
+  }
   void SetPositionFlag(bool mb){
     usePosition_ = mb;
   }

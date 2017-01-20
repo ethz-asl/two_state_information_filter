@@ -66,6 +66,7 @@ class Filter {
     is_initialized_ = false;
     include_max_ = false;
     num_iter_ = 3;
+    iter_th_ = 0.0;
   }
 
   virtual ~Filter() {
@@ -265,7 +266,8 @@ class Filter {
     Winv.setZero();
     MatX newInf(stateDefinition_->GetDim(),stateDefinition_->GetDim());
 
-    for(int step=0;step<num_iter_;step++){
+    double weightedUpdate = iter_th_;
+    for(int step=0;step<num_iter_ && weightedUpdate >= iter_th_;step++){
       // Reset value (might be superflucious)
       y.setZero();
       JacPre.setZero();
@@ -352,6 +354,7 @@ class Filter {
       ElementVector newState(stateDefinition_);
       curLinState_.BoxPlus(dx, &newState);
       curLinState_ = newState;
+      weightedUpdate = (dx.transpose()*newInf*dx)(0)/dx.size();
     }
 
     state_ = curLinState_;
@@ -484,7 +487,7 @@ class Filter {
   bool is_initialized_;
   bool include_max_;
   int num_iter_;
-
+  double iter_th_;
 };
 
 }

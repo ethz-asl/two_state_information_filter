@@ -50,10 +50,10 @@ class ImuPoseFilter: public GIF::Filter{
   const double MfM_bias_pre = 1e-8;    // IMU acc bias
   const double MwM_pre = 4e-6;         // IMU gyr
 
-  const double IrIJ_pre = 1e-8;
-  const double qIJ_pre = 1e-8;
-  const double MrMC_pre = 1e-8;
-  const double qMC_pre = 1e-8;
+  const double IrIJ_pre = 1e-6;
+  const double qIJ_pre = 1e-6;
+  const double MrMC_pre = 1e-6;
+  const double qMC_pre = 1e-6;
   const double JrJC_upd = 1e-4;
   const double qJC_upd = 1e-4;
 
@@ -74,6 +74,8 @@ class ImuPoseFilter: public GIF::Filter{
   const double JrJC_huber_ = 0.1;
 
   ImuPoseFilter(){
+    num_iter_ = 10;
+    iter_th_ = 0.1;
     positionFindif_.reset(new PositionFindif(
         "PositionFindif", {"IrIM"}, {"IrIM", "MvM", "qIM"}, {"IrIM"}, {"IrIM"}));
     positionFindif_->GetNoiseCovarianceBlock("IrIM") = GIF::Mat3::Identity()*IrIM_pre;
@@ -165,6 +167,7 @@ class ImuPoseFilter: public GIF::Filter{
     if(doInertialAlignment){
       GetNoiseInfBlock("IrIJ") = GIF::Mat<3>::Identity()/IrIJ_init;
       GetNoiseInfBlock("qIJ") = GIF::Mat<3>::Identity()/qIJ_init;
+      state_.GetValue<GIF::Quat>("qIJ") = GIF::Quat(sqrt(1.0-0.4*0.4),0,0,0.4);
     }
     if(doBodyAlignment){
       GetNoiseInfBlock("MrMC") = GIF::Mat<3>::Identity()/MrMC_init;
@@ -181,12 +184,11 @@ class ImuPoseFilter: public GIF::Filter{
       if(MfM.norm()>1e-6){
         GIF::Quat q;
         q.setFromVectors(state_.GetValue<GIF::Quat>("qIM").rotate(MfM),unitZ);
-        state_.GetValue<GIF::Quat>("qIM") = q.inverted()*state_.GetValue<GIF::Quat>("qIM");
+        state_.GetValue<GIF::Quat>("qIM") = q*state_.GetValue<GIF::Quat>("qIM");
       }
+      LOG(INFO) << "Initializing state at t = " << GIF::Print(t) << std::endl;
+      is_initialized_ = true;
     }
-
-    LOG(INFO) << "Initializing state at t = " << GIF::Print(t) << std::endl;
-    is_initialized_ = true;
   }
 };
 
