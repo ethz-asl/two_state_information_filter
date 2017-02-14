@@ -158,6 +158,7 @@ class BlindMavFilter: public GIF::Filter{
     std::cout << PrintConnectivity();
     initState_.Construct();
 
+    SetIterationParameters(10,0.1);
     SetDynCalibrationFlags(0,0,0,0,0,0,0,0);
 
     // Covariance parameter
@@ -373,9 +374,13 @@ class BlindMavFilter: public GIF::Filter{
   void SetBodyAlignment(const Vec3& BrBC, const Quat& qBC){
     poseUpdate_->SetInertialAlignment(BrBC,qBC);
     if(usePose_){
-      initState_.GetValue<GIF::Vec3>("BrBC") = BrBC;
-      initState_.GetValue<GIF::Quat>("qBC") = qBC;
+      initState_.GetValue<GIF::Vec3>("MrMC") = BrBC;
+      initState_.GetValue<GIF::Quat>("qMC") = qBC;
     }
+  }
+  void SetIterationParameters(int num_iter, double iter_th){
+    num_iter_ = num_iter;
+    iter_th_ = iter_th;
   }
 };
 

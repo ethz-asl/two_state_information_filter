@@ -210,9 +210,9 @@ class LegDynamicResidual : public BinaryResidual<
 //
 //
 //      }
-      dyn_inn = y + dyn_noi;
+      dyn_inn = y + dyn_noi*sqrt(dt_);
     } else {
-      dyn_inn = dyn_noi;
+      dyn_inn = dyn_noi*sqrt(dt_);
     }
   }
   void JacPre(MatX& J, const Vec3& MvM_pre, const Vec3& MwM_pre, const Quat& qIM_pre,
@@ -232,6 +232,7 @@ class LegDynamicResidual : public BinaryResidual<
     noi.GetValue<DynRes>(0) = dyn_noi;
     verbose_ = false;
     JacFDPre(J,pre,cur,noi,1e-6);
+    J.col(8).setZero(); // Ensure that Jacobian w.r.t. equals zero
     verbose_ = true;
   }
   void JacCur(MatX& J, const Vec3& MvM_pre, const Vec3& MwM_pre, const Quat& qIM_pre,
@@ -258,6 +259,7 @@ class LegDynamicResidual : public BinaryResidual<
                        const Vec3& MvM_cur, const Vec3& MwM_cur,
                        const DynRes& dyn_noi) const {
     J.setIdentity();
+    J = J*sqrt(dt_);
   }
 
   void SetModelPtr(const std::shared_ptr<RobotModel>& model) {

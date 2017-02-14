@@ -65,7 +65,7 @@ class Filter {
             noise_(noiseDefinition_){
     is_initialized_ = false;
     include_max_ = false;
-    num_iter_ = 3;
+    num_iter_ = 1;
     iter_th_ = 0.0;
   }
 

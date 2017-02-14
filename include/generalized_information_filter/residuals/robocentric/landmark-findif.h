@@ -11,13 +11,13 @@ namespace GIF {
 template<int NumLandmark>
 class LandmarkFindif
       : public BinaryResidual<ElementPack<std::array<Vec3,NumLandmark>>,
-                              ElementPack<std::array<Vec3,NumLandmark>, Vec3>,
-                              ElementPack<std::array<Vec3,NumLandmark>, Vec3>,
+                              ElementPack<std::array<Vec3,NumLandmark>, Vec3, Vec3>,
+                              ElementPack<std::array<Vec3,NumLandmark>>,
                               ElementPack<std::array<Vec3,NumLandmark>>, EmptyMeas> {
  public:
   using mtResidual = BinaryResidual<ElementPack<std::array<Vec3,NumLandmark>>,
-                                    ElementPack<std::array<Vec3,NumLandmark>, Vec3>,
-                                    ElementPack<std::array<Vec3,NumLandmark>, Vec3>,
+                                    ElementPack<std::array<Vec3,NumLandmark>, Vec3, Vec3>,
+                                    ElementPack<std::array<Vec3,NumLandmark>>,
                                     ElementPack<std::array<Vec3,NumLandmark>>, EmptyMeas>;
   using mtResidual::dt_;
   using mtResidual::GetJacBlockPre;
@@ -25,8 +25,8 @@ class LandmarkFindif
   using mtResidual::GetJacBlockNoi;
   LandmarkFindif(const std::string& name,
             const std::array<std::string,1>& innName = {"MrML"},
-            const std::array<std::string,2>& preName = {"MrML", "MvM"},
-            const std::array<std::string,2>& curName = {"MrML", "MwM"},
+            const std::array<std::string,3>& preName = {"MrML", "MvM", "MwM"},
+            const std::array<std::string,1>& curName = {"MrML"},
             const std::array<std::string,1>& noiName = {"MrML"})
     : mtResidual(name,innName,preName,curName,noiName,false,true,true){
     for(int i=0;i<NumLandmark;i++){
@@ -36,16 +36,16 @@ class LandmarkFindif
   virtual ~LandmarkFindif() {
   }
   enum ElementsInn {FEA_INN};
-  enum ElementsPre {FEA_PRE, VEL_PRE};
-  enum ElementsCur {FEA_CUR, ROR_CUR};
+  enum ElementsPre {FEA_PRE, VEL_PRE, ROR_PRE};
+  enum ElementsCur {FEA_CUR};
   enum ElementsNoi {FEA_NOI};
   void Eval(std::array<Vec3,NumLandmark>& MrML_inn, const std::array<Vec3,NumLandmark>& MrML_pre,
-            const Vec3& MvM_pre,
-            const std::array<Vec3,NumLandmark>& MrML_cur, const Vec3& MwM_cur,
+            const Vec3& MvM_pre, const Vec3& MwM_pre,
+            const std::array<Vec3,NumLandmark>& MrML_cur,
             const std::array<Vec3,NumLandmark>& MrML_noi) const {
     for(int i=0;i<NumLandmark;i++){
       if(propagation_flags_[i]){
-        MrML_inn[i] = (Mat3::Identity() - gSM(dt_ * MwM_cur)) * MrML_pre[i]
+        MrML_inn[i] = (Mat3::Identity() - gSM(dt_ * MwM_pre)) * MrML_pre[i]
                       - dt_ * MvM_pre + MrML_noi[i] * sqrt(dt_) - MrML_cur[i];
       } else {
         MrML_inn[i] = MrML_noi[i] * sqrt(dt_);
@@ -53,36 +53,36 @@ class LandmarkFindif
     }
   }
   void JacPre(MatX& J, const std::array<Vec3,NumLandmark>& MrML_pre,
-              const Vec3& MvM_pre,
-              const std::array<Vec3,NumLandmark>& MrML_cur, const Vec3& MwM_cur,
+              const Vec3& MvM_pre, const Vec3& MwM_pre,
+              const std::array<Vec3,NumLandmark>& MrML_cur,
               const std::array<Vec3,NumLandmark>& MrML_noi) const {
     J.setZero();
     for(int i=0;i<NumLandmark;i++){
       if(propagation_flags_[i]){
         this->template GetJacBlockPre<FEA_INN, FEA_PRE>(J).template block<3,3>(i*3,i*3) =
-            (Mat3::Identity() - gSM(dt_ * MwM_cur));
+            (Mat3::Identity() - gSM(dt_ * MwM_pre));
         this->template GetJacBlockPre<FEA_INN, VEL_PRE>(J).template block<3,3>(i*3,0) =
             -dt_ * Mat3::Identity();
+        this->template GetJacBlockPre<FEA_INN, ROR_PRE>(J).template block<3,3>(i*3,0) =
+            dt_ * gSM(MrML_pre[i]);
       }
     }
   }
   void JacCur(MatX& J, const std::array<Vec3,NumLandmark>& MrML_pre,
-              const Vec3& MvM_pre,
-              const std::array<Vec3,NumLandmark>& MrML_cur, const Vec3& MwM_cur,
+              const Vec3& MvM_pre, const Vec3& MwM_pre,
+              const std::array<Vec3,NumLandmark>& MrML_cur,
               const std::array<Vec3,NumLandmark>& MrML_noi) const {
     J.setZero();
     for(int i=0;i<NumLandmark;i++){
       if(propagation_flags_[i]){
         this->template GetJacBlockCur<FEA_INN, FEA_CUR>(J).template block<3,3>(i*3,i*3) =
             -Mat3::Identity();
-        this->template GetJacBlockCur<FEA_INN, ROR_CUR>(J).template block<3,3>(i*3,0) =
-            dt_ * gSM(MrML_pre[i]);
       }
     }
   }
   void JacNoi(MatX& J, const std::array<Vec3,NumLandmark>& MrML_pre,
-              const Vec3& MvM_pre,
-              const std::array<Vec3,NumLandmark>& MrML_cur, const Vec3& MwM_cur,
+              const Vec3& MvM_pre, const Vec3& MwM_pre,
+              const std::array<Vec3,NumLandmark>& MrML_cur,
               const std::array<Vec3,NumLandmark>& MrML_noi) const {
     J.setZero();
     for(int i=0;i<NumLandmark;i++){
