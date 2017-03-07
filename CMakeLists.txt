@@ -1,73 +1,25 @@
 cmake_minimum_required (VERSION 2.8)
-project(generalized_information_filter)
+project(two_state_implicit_filter)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -march=native")
-set(GTEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/googletest CACHE STRING "gtest directory")
-
-##################### Find/Include #####################
-find_package(kindr REQUIRED)
-find_package(Eigen3 REQUIRED)
+set(TSIF_VERBOSE 0 CACHE STRING "Verbose flag")
+add_definitions(-DTSIF_VERBOSE=${TSIF_VERBOSE})
 
 include_directories(include)
-include_directories(${kindr_INCLUDE_DIRS})
+
+find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-##################### Catkin #####################
-if(DEFINED CATKIN_DEVEL_PREFIX)
-	find_package(catkin REQUIRED COMPONENTS glog_catkin
-	)
-	catkin_package(
-		INCLUDE_DIRS include ${catkin_INCLUDE_DIRS}
-	    LIBRARIES ${PROJECT_NAME}
-		CATKIN_DEPENDS
-		glog_catkin
-	)
-else()
-	find_package(glog REQUIRED)
+add_executable(test_state src/test_state.cpp)
+add_executable(test_quaternion src/test_quaternion.cpp)
+add_executable(test_unit_vector src/test_unit_vector.cpp)
+add_executable(test_timeline src/test_timeline.cpp)
+add_executable(test_imu_gps src/test_imu_gps.cpp src/simulator.cpp src/camera.cpp)
+
+add_executable(mytest src/test.cpp)
+
+if(ENABLE_OPENCV)
+ 	find_package(OpenCV REQUIRED)
+	add_executable(test_vio src/test_vio.cpp src/simulator.cpp src/camera.cpp)
+	target_link_libraries(test_vio ${OpenCV_LIBS})
 endif()
 
-##################### Create library #####################
-add_library(${PROJECT_NAME}
-	src/measurement.cc
-	src/element-vector.cc
-	src/element-vector-definition.cc
-)
-
-if(DEFINED CATKIN_DEVEL_PREFIX)
-	target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} pthread)
-else()
-	target_link_libraries(${PROJECT_NAME} pthread glog)
-endif()
-
-##################### Check for gtest #####################
-if(EXISTS "${GTEST_DIR}" AND NOT DEFINED CATKIN_DEVEL_PREFIX)
-	message(STATUS "Building GTests!")
-	option(BUILD_GTEST "build gtest" ON)
-	add_subdirectory(${GTEST_DIR} gtest_custom)
-	enable_testing()
-	include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
-	
-	add_executable(test_simple test/test-simple.cc)
-	target_link_libraries(test_simple ${PROJECT_NAME} gtest_main gtest)
-	add_test(test_simple test_simple)
-endif()
-
-##################### Cmake find generation #####################
-# Generate FindGIF.cmake file
-file(WRITE cmake/FindGIF.cmake
-"# This file was automatically generated during the installation of the genralized information filter library
-# and can be used through cmake to find the corresponding header files. A copy of this
-# file was created in ${CMAKE_ROOT}/Modules.
-
-set(GIF_INCLUDE_DIRS
-${CMAKE_INSTALL_PREFIX}/include/GIF/include
-)
-set(GIF_FOUND TRUE)
-message(\"-- GIF found (include: ${CMAKE_INSTALL_PREFIX}/include/GIF/include)\")
-"
-)
-
-##################### Install stuff if required #####################
-# Setting for make install
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_INSTALL_PREFIX}/include/GIF)")
-install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_PREFIX}/include/GIF)
-install(FILES cmake/FindGIF.cmake DESTINATION ${CMAKE_ROOT}/Modules)
