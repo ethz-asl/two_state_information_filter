@@ -15,18 +15,26 @@ class LeggedRobotModel{
   LeggedRobotModel(){};
   virtual ~LeggedRobotModel(){};
 
+  // TODO: cleanup
   virtual Eigen::Vector3d forwardKinematicsBaseToFootInBaseFrame(Eigen::Vector3d angles,unsigned int legId) = 0;
+  virtual Eigen::Matrix3d getJacobianTranslationBaseToSegment(Eigen::Vector3d angles,unsigned int legId,unsigned int segmentId) = 0;
   virtual Eigen::Matrix3d getJacobianTranslationBaseToFoot(Eigen::Vector3d angles,unsigned int legId){
     return getJacobianTranslationBaseToSegment(angles,legId,0);
   }
-  virtual Eigen::Matrix3d getJacobianTranslationBaseToSegment(Eigen::Vector3d angles,unsigned int legId,unsigned int segmentId) = 0;
+  virtual Eigen::Vector3d forwardKinematicsWorldToFootInWorldFrame(Eigen::Vector3d angles,unsigned int legId) = 0;
+  virtual Eigen::Matrix<double,3,18> getJacobianTranslationWorldToSegment(unsigned int legId,unsigned int segmentId) = 0;
+  virtual Eigen::Matrix<double,3,18> getJacobianTranslationWorldToFoot(unsigned int legId){
+    return getJacobianTranslationWorldToSegment(legId,0);
+  }
   virtual void setGeneralizedPositions(const Eigen::VectorXd& genPos, bool update){};
   virtual void setGeneralizedVelocities(const Eigen::VectorXd& genVel, bool update){};
   virtual bool getMassInertiaMatrix(Eigen::MatrixXd& M){return false;};
   virtual bool getNonlinearEffects(Eigen::VectorXd& h){return false;};
-  virtual bool getJacobianFullTranslationBaseToFoot(Eigen::MatrixXd& J, int i){return false;};
   virtual bool getSelectionMatrix(Eigen::MatrixXd& S){return false;};
+
+  // Not used atm
   virtual Eigen::Matrix3d getOrientationBaseToFoot(int legId){return Eigen::Matrix3d::Identity();};
+  virtual bool getJacobianFullTranslationBaseToFoot(Eigen::MatrixXd& J, int i){return false;};
 };
 
 class LeggedRobotModelExample: public LeggedRobotModel<4,3>{

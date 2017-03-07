@@ -64,6 +64,9 @@ class Filter {
             noiseDefinition_(new ElementVectorDefinition()),
             noise_(noiseDefinition_){
     is_initialized_ = false;
+    include_max_ = false;
+    num_iter_ = 1;
+    iter_th_ = 0.0;
   }
 
   virtual ~Filter() {
@@ -195,7 +198,6 @@ class Filter {
   void Update() {
     // Initialize if possible
     if(!is_initialized_ && GetMaxMinMeasTime() != TimePoint::min()){
-//      AttemptInitialization();
       Init(GetMaxMinMeasTime());
     }
 
@@ -215,7 +217,7 @@ class Filter {
       TimePoint maxUpdateTime = GetMaxUpdateTime(currentTime);
       LOG(INFO) << "maxUpdateTime:\t" << Print(maxUpdateTime);
       std::set<TimePoint> times;
-      GetMeasurementTimeList(times, maxUpdateTime, false);
+      GetMeasurementTimeList(times, maxUpdateTime, include_max_);
       std::ostringstream out;
       out << "updateTimes:\t";
       for (const auto& t : times) {
@@ -234,11 +236,10 @@ class Filter {
 
   void MakeUpdateStep(const TimePoint& t) {
     // Compute linearisation point
-    curLinState_ = state_;
+    ComputeLinearizationPoint(t);
 
     // Check available measurements and prepare residuals
     int innDim = 0;
-    std::vector<bool> hasMeas(residuals_.size(), false);
     ElementVectorBase::CPtr meas;
     for (int i = 0; i < residuals_.size(); i++) {
       residuals_.at(i).isActive_ = residuals_.at(i).mt_.GetMeasurement(t, meas);
@@ -254,82 +255,110 @@ class Filter {
     VecX y(innDim);
     y.setZero();
     MatX JacPre(innDim, stateDefinition_->GetDim());
-    MatX JacCur(innDim, stateDefinition_->GetDim());
-    MatX JacNoi(innDim, noiseDefinition_->GetDim());
     JacPre.setZero();
+    MatX JacCur(innDim, stateDefinition_->GetDim());
     JacCur.setZero();
+    MatX JacNoi(innDim, noiseDefinition_->GetDim());
     JacNoi.setZero();
     MatX R(noiseDefinition_->GetDim(), noiseDefinition_->GetDim());
-    MatX Winv(innDim, innDim);
     R.setIdentity();
+    MatX Winv(innDim, innDim);
     Winv.setZero();
+    MatX newInf(stateDefinition_->GetDim(),stateDefinition_->GetDim());
 
-    // Evaluate residuals and Jacobians
-    int count = 0;
-    for (int i = 0; i < residuals_.size(); i++) {
-      if (residuals_.at(i).isActive_) {
-        ResidualStruct rs = residuals_.at(i);
-        rs.preWrap_.SetElementVector(&state_);
-        rs.curWrap_.SetElementVector(&curLinState_);
-        rs.noiWrap_.SetElementVector(&noise_);
-        rs.res_->Eval(&rs.inn_, rs.preWrap_,
-                                rs.curWrap_,
-                                rs.noiWrap_);
-        rs.inn_.BoxMinus(rs.innRef_, y.block(count, 0, rs.innDim_, 1));
-        LOG_IF(ERROR,y.hasNaN()) << "Residual " << rs.res_->name_
-                                 << " contains NaN!\n" << y.transpose();
-        rs.res_->JacPre(rs.jacPre_, rs.preWrap_,
-                                    rs.curWrap_,
-                                    rs.noiWrap_);
-        LOG_IF(ERROR,rs.jacPre_.hasNaN()) << "jacPre " << rs.res_->name_ << " contains NaN!";
-        rs.res_->JacCur(rs.jacCur_, rs.preWrap_,
-                                    rs.curWrap_,
-                                    rs.noiWrap_);
-        LOG_IF(ERROR,rs.jacCur_.hasNaN()) << "jacCur " << rs.res_->name_ << " contains NaN!";
-        rs.res_->JacNoi(rs.jacNoi_, rs.preWrap_,
-                                    rs.curWrap_,
-                                    rs.noiWrap_);
-        LOG_IF(ERROR,rs.jacNoi_.hasNaN()) << "jacNoi " << rs.res_->name_ << " contains NaN!";
-        for(int j=0;j<rs.res_->InnDefinition()->GetNumElements();j++){
-          const ElementDescriptionBase::CPtr& description =
-              rs.res_->InnDefinition()->GetElementDescription(j);
-          if(!description->IsVectorSpace()){
-            rs.jacPre_.block(rs.res_->InnDefinition()->GetStart(j),0,
-                description->GetDim(),rs.preWrap_.GetDim()) =
-                    rs.inn_.GetElement(j)->BoxminusJacInp(*rs.innRef_.GetElement(j)) *
-                    rs.jacPre_.block(rs.res_->InnDefinition()->GetStart(j),0,
-                                    description->GetDim(),rs.preWrap_.GetDim());
+    double weightedUpdate = iter_th_;
+    for(int step=0;step<num_iter_ && weightedUpdate >= iter_th_;step++){
+      // Reset value (might be superflucious)
+      y.setZero();
+      JacPre.setZero();
+      JacCur.setZero();
+      JacNoi.setZero();
+      R.setIdentity();
+      Winv.setZero();
+
+      // Evaluate residuals and Jacobians
+      int count = 0;
+      for (int i = 0; i < residuals_.size(); i++) {
+        if (residuals_.at(i).isActive_) {
+          ResidualStruct& rs = residuals_.at(i);
+          rs.preWrap_.SetElementVector(&state_);
+          rs.curWrap_.SetElementVector(&curLinState_);
+          rs.noiWrap_.SetElementVector(&noise_);
+          rs.res_->Eval(&rs.inn_, rs.preWrap_,
+                                  rs.curWrap_,
+                                  rs.noiWrap_);
+          rs.inn_.BoxMinus(rs.innRef_, y.block(count, 0, rs.innDim_, 1));
+          LOG_IF(ERROR,y.hasNaN()) << "Residual " << rs.res_->name_
+                                   << " contains NaN!\n" << y.transpose();
+          rs.res_->JacPre(rs.jacPre_, rs.preWrap_,
+                                      rs.curWrap_,
+                                      rs.noiWrap_);
+          LOG_IF(ERROR,rs.jacPre_.hasNaN()) << "jacPre " << rs.res_->name_ << " contains NaN!";
+          rs.res_->JacCur(rs.jacCur_, rs.preWrap_,
+                                      rs.curWrap_,
+                                      rs.noiWrap_);
+          LOG_IF(ERROR,rs.jacCur_.hasNaN()) << "jacCur " << rs.res_->name_ << " contains NaN!";
+          rs.res_->JacNoi(rs.jacNoi_, rs.preWrap_,
+                                      rs.curWrap_,
+                                      rs.noiWrap_);
+          LOG_IF(ERROR,rs.jacNoi_.hasNaN()) << "jacNoi " << rs.res_->name_ << " contains NaN!";
+          for(int j=0;j<rs.res_->InnDefinition()->GetNumElements();j++){
+            const ElementDescriptionBase::CPtr& description =
+                rs.res_->InnDefinition()->GetElementDescription(j);
+            if(!description->IsVectorSpace()){
+              rs.jacPre_.block(rs.res_->InnDefinition()->GetStart(j),0,
+                  description->GetDim(),rs.preWrap_.GetDim()) =
+                      rs.inn_.GetElement(j)->BoxminusJacInp(*rs.innRef_.GetElement(j)) *
+                      rs.jacPre_.block(rs.res_->InnDefinition()->GetStart(j),0,
+                                      description->GetDim(),rs.preWrap_.GetDim());
+            }
           }
-        }
 
-        rs.preWrap_.EmbedJacobian(JacPre, rs.jacPre_, count);
-        rs.curWrap_.EmbedJacobian(JacCur, rs.jacCur_, count);
-        rs.noiWrap_.EmbedJacobian(JacNoi, rs.jacNoi_, count);
+          rs.preWrap_.EmbedJacobian(JacPre, rs.jacPre_, count);
+          rs.curWrap_.EmbedJacobian(JacCur, rs.jacCur_, count);
+          rs.noiWrap_.EmbedJacobian(JacNoi, rs.jacNoi_, count);
 
-        for(int j=0;j<rs.res_->NoiDefinition()->GetNumElements();j++){
-          const ElementDescriptionBase::CPtr& description =
-              rs.res_->NoiDefinition()->GetElementDescription(j);
-          const int noiDim = description->GetDim();
-          const int start1 = rs.res_->NoiDefinition()->GetStart(j);
-          const int start2 = NoiseDefinition()->GetStart(NoiseDefinition()->FindName(rs.res_->NoiDefinition()->GetName(j)));
-          R.block(start2,start2,noiDim,noiDim) = rs.res_->GetNoiseCovariance().block(start1,start1,noiDim,noiDim); // TODO: speed up and clean up
+          for(int j=0;j<rs.res_->NoiDefinition()->GetNumElements();j++){
+            const ElementDescriptionBase::CPtr& description =
+                rs.res_->NoiDefinition()->GetElementDescription(j);
+            const int noiDim = description->GetDim();
+            const int start1 = rs.res_->NoiDefinition()->GetStart(j);
+            const int start2 = NoiseDefinition()->GetStart(NoiseDefinition()->FindName(rs.res_->NoiDefinition()->GetName(j)));
+            const double weight = rs.res_->GetNoiseWeighting(rs.inn_,j);
+            R.block(start2,start2,noiDim,noiDim) = 1/pow(weight,2)*rs.res_->GetNoiseCovariance().block(start1,start1,noiDim,noiDim); // TODO: speed up and clean up
+          }
+          count += rs.innDim_;
         }
-        count += rs.innDim_;
       }
+      LOG(INFO) << "Innovation:\t" << y.transpose();
+//      std::cout << JacPre << std::endl;
+//      std::cout << JacCur << std::endl;
+//      std::cout << JacNoi << std::endl;
+//      std::cout << R << std::endl;
+//      std::cout << "Innovation:\t" << y.transpose() << std::endl;
+
+      // Compute weighting // TODO: make more efficient, exploit sparsity
+      Eigen::LDLT<MatX> W_LDLT(JacNoi*R*JacNoi.transpose());
+      LOG_IF(ERROR,W_LDLT.info() != Eigen::Success) << "Computation of Winv failed";
+      Winv = W_LDLT.solve(GIF::MatX::Identity(innDim,innDim));
+
+      // Compute Kalman Update
+      MatX D = inf_ + JacPre.transpose() * Winv * JacPre;
+      MatX S = JacCur.transpose() * (Winv - Winv * JacPre * D.inverse() * JacPre.transpose() * Winv);
+      newInf = S * JacCur;
+      Eigen::LDLT<MatX> I_LDLT(newInf);
+      LOG_IF(ERROR,I_LDLT.info() != Eigen::Success) << "Computation of Iinv failed";
+      VecX dx = -I_LDLT.solve(S * y);
+
+      // Apply Kalman Update
+      ElementVector newState(stateDefinition_);
+      curLinState_.BoxPlus(dx, &newState);
+      curLinState_ = newState;
+      weightedUpdate = (dx.transpose()*newInf*dx)(0)/dx.size();
     }
-    LOG(INFO) << "Innovation:\t" << y.transpose();
 
-    // Compute weighting // TODO: make more efficient, exploit sparsity
-    Winv = (JacNoi*R*JacNoi.transpose()).llt().solve(GIF::MatX::Identity(innDim,innDim));
-
-    // Compute Kalman Update
-    MatX D = inf_ + JacPre.transpose() * Winv * JacPre;
-    MatX S = JacCur.transpose() * (Winv - Winv * JacPre * D.inverse() * JacPre.transpose() * Winv);
-    inf_ = S * JacCur;
-    VecX dx = -inf_.llt().solve(S * y);
-
-    // Apply Kalman Update
-    curLinState_.BoxPlus(dx, &state_);
+    state_ = curLinState_;
+    inf_ = newInf;
     time_ = t;
     LOG(INFO) << "state after Update:";
     LOG(INFO) << state_.Print();
@@ -349,6 +378,7 @@ class Filter {
   }
 
   void TestJacs(const double delta, const double th, int i){
+    LOG(INFO) << "==== Testing " << residuals_.at(i).res_->name_ << " ====" << std::endl;
     residuals_.at(i).res_->TestJacs(delta, th);
   }
 
@@ -360,6 +390,9 @@ class Filter {
 
   virtual void PreProcess(){};
   virtual void PostProcess(){};
+  virtual void ComputeLinearizationPoint(const TimePoint& t){
+    curLinState_ = state_;
+  }
 
   ElementVector& GetState(){
     LOG_IF(ERROR,!is_initialized_) << "Accessing state before initialization";
@@ -374,13 +407,13 @@ class Filter {
   MatX GetCovariance(){
     LOG_IF(ERROR,!is_initialized_) << "Accessing cov before initialization";
     const int stateDim = stateDefinition_->GetDim();
-    return (inf_).llt().solve(GIF::MatX::Identity(stateDim,stateDim));
+    return (inf_).ldlt().solve(GIF::MatX::Identity(stateDim,stateDim));
   }
 
   void SetCovariance(MatX cov){
     LOG_IF(ERROR,!is_initialized_) << "Accessing cov before initialization";
     const int stateDim = stateDefinition_->GetDim();
-    inf_ = (cov).llt().solve(GIF::MatX::Identity(stateDim,stateDim));
+    inf_ = (cov).ldlt().solve(GIF::MatX::Identity(stateDim,stateDim));
   }
 
   inline MatRefX GetNoiseInfBlock(int i){
@@ -452,7 +485,9 @@ class Filter {
   ElementVector curLinState_;
   MatX inf_;
   bool is_initialized_;
-
+  bool include_max_;
+  int num_iter_;
+  double iter_th_;
 };
 
 }

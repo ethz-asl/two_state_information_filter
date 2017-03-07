@@ -88,6 +88,16 @@ ElementVector& ElementVector::operator=(const ElementVectorBase& other) {
   return *this;
 }
 
+ElementVector& ElementVector::operator=(const ElementVector& other) {
+  dynamic_cast<ElementVectorBase&>(*this) = other;
+  return *this;
+}
+
+ElementVector& ElementVector::operator=(ElementVector& other) {
+  dynamic_cast<ElementVectorBase&>(*this) = other;
+  return *this;
+}
+
 int ElementVector::GetNumElement() const {
   return elements_.size();
 }

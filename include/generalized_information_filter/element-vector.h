@@ -56,6 +56,8 @@ class ElementVector : public ElementVectorBase {
   ElementVector(const ElementVectorDefinition::CPtr& def);
   virtual ~ElementVector();
   ElementVector& operator=(const ElementVectorBase& other);
+  ElementVector& operator=(const ElementVector& other);
+  ElementVector& operator=(ElementVector& other);
   int GetNumElement() const;
   inline ElementBase* GetElement(int i);
   inline const ElementBase* GetElement(int i) const;

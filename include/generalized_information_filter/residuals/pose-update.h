@@ -3,124 +3,221 @@
 
 #include "generalized_information_filter/common.h"
 #include "generalized_information_filter/unary-update.h"
+#include "generalized_information_filter/measurements/pose-meas.h"
 
 namespace GIF {
 
-/*! \brief Pose Measurement
- *         ElementVector that can be used to hold a generic pose measurements (position + attitude).
- */
-class PoseMeas : public ElementVector {
- public:
-  PoseMeas(const Vec3& JrJC = Vec3(0, 0, 0), const Quat& qJC = Quat())
-      : ElementVector(std::shared_ptr<ElementVectorDefinition>(
-            new ElementPack<Vec3, Quat>({ "JrJC", "qJC" }))),
-        JrJC_(ElementVector::GetValue<Vec3>("JrJC")),
-        qJC_(ElementVector::GetValue<Quat>("qJC")) {
-    JrJC_ = JrJC;
-    qJC_ = qJC;
-  }
-  Vec3& JrJC_;
-  Quat& qJC_;
+template<int i, typename ... Ts>
+struct MultiPosePack{
+  typedef typename MultiPosePack<i-1,Vec3,Quat,Ts...>::type type;
+};
+
+template<typename ... Ts>
+struct MultiPosePack<0,Ts...>{
+  typedef ElementPack<Ts...> type;
 };
 
 /*! \brief Pose Update
- *         Builds a residual between current estimate pose and an external measured pose. The state
- *         is parametrized by the position (IrIB) and attitude (qIB). Additionally, the offset
- *         between the inertial frame is coestimate (IrIJ and qIJ). The extrinsics calibration of
- *         the pose measurement are assumed to be known  (BrBC and qBC).
+ *         Builds a residual between current estimated pose and an external measured pose. The state
+ *         is parametrized by the position (IrIB) and attitude (qIB). Optionally, the offset
+ *         between the inertial frames (IrIJ and qIJ) and the extrinsic calibration of the pose
+ *         measurement (BrBC and qBC) are also co-estimated.
  *
  *         Coordinate frames:
  *           B: Body
- *           C: Camera
+ *           C: Pose measurement sensor
  *           J: Pose measurement reference inertial frame
  *           I: Estimation reference inertial frame
  */
+template<bool doInertialAlignment, bool doBodyAlignment>
 class PoseUpdate : public UnaryUpdate<ElementPack<Vec3, Quat>,
-    ElementPack<Vec3, Quat, Vec3, Quat>, ElementPack<Vec3, Vec3>, PoseMeas> {
+    typename MultiPosePack<1+doInertialAlignment+doBodyAlignment>::type,
+    ElementPack<Vec3, Vec3>, PoseMeas> {
  public:
+  static constexpr int numPose = 1+doInertialAlignment+doBodyAlignment;
+  static constexpr int POS_INN = 0;
+  static constexpr int ATT_INN = 1;
+  static constexpr int POS_CUR = 0;
+  static constexpr int ATT_CUR = 1;
+  static constexpr int IJP_CUR = POS_CUR+2*doInertialAlignment;
+  static constexpr int IJA_CUR = ATT_CUR+2*doInertialAlignment;
+  static constexpr int BCP_CUR = IJP_CUR+2*doBodyAlignment;
+  static constexpr int BCA_CUR = IJA_CUR+2*doBodyAlignment;
+  static constexpr int POS_NOI = 0;
+  static constexpr int ATT_NOI = 1;
+  using mtUnaryUpdate = UnaryUpdate<ElementPack<Vec3, Quat>,
+      typename MultiPosePack<1+doInertialAlignment+doBodyAlignment>::type,
+      ElementPack<Vec3, Vec3>, PoseMeas>;
+  using mtUnaryUpdate::meas_;
+
   PoseUpdate(const std::string& name,
-             const std::array<std::string,2>& errorName = {"JrJC", "qJC"},
-             const std::array<std::string,4>& stateName = {"IrIB", "qIB", "IrIJ", "qIJ"},
-             const std::array<std::string,2>& noiseName = {"JrJC", "qJC"})
-       : mtUnaryUpdate(name, errorName, stateName, noiseName),
-         BrBC_(0,0,0),
-         qBC_(1,0,0,0){
+             const std::array<std::string,2>& errorName,
+             const std::array<std::string,2*numPose>& stateName,
+             const std::array<std::string,2>& noiseName)
+       : mtUnaryUpdate(name, errorName, stateName, noiseName){
+    BrBC_.setZero();
+    qBC_.setIdentity();
+    IrIJ_.setZero();
+    qIJ_.setIdentity();
+    useAttitude_ = true;
+    usePosition_ = true;
+    huberTh_ = -1.0;
   }
 
   virtual ~PoseUpdate() {
   }
 
+  // Full version
   void Eval(Vec3& JrJC_inn, Quat& qJC_inn,
             const Vec3& IrIB_cur, const Quat& qIB_cur, const Vec3& IrIJ_cur, const Quat& qIJ_cur,
-            const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
-    JrJC_inn = ComputeExternalPosition(IrIB_cur, qIB_cur, IrIJ_cur, qIJ_cur)
-        - meas_->JrJC_ + JrJC_noi;
+            const Vec3& BrBC_cur, const Quat& qBC_cur, const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
+    if(usePosition_){
+      JrJC_inn = qIJ_cur.inverseRotate(Vec3(IrIB_cur - IrIJ_cur + qIB_cur.rotate(BrBC_cur)))
+          - meas_->JrJC_ + JrJC_noi;
+    } else {
+      JrJC_inn = JrJC_noi;
+    }
     Quat dQ = dQ.exponentialMap(qJC_noi);
-    qJC_inn = dQ * ComputeExternalAttitude(qIB_cur,qIJ_cur) * meas_->qJC_.inverted();
+    if(useAttitude_){
+      qJC_inn = dQ * qIJ_cur.inverted() * qIB_cur * qBC_cur * meas_->qJC_.inverted();
+    } else {
+      qJC_inn = dQ;
+    }
   }
 
+  // State only version
+  void Eval(Vec3& JrJC_inn, Quat& qJC_inn, const Vec3& IrIB_cur, const Quat& qIB_cur,
+            const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
+    Eval(JrJC_inn, qJC_inn, IrIB_cur, qIB_cur, IrIJ_, qIJ_, BrBC_, qBC_, JrJC_noi, qJC_noi);
+  }
+
+  // Single calibration version
+  void Eval(Vec3& JrJC_inn, Quat& qJC_inn, const Vec3& IrIB_cur, const Quat& qIB_cur,
+            const Vec3& r, const Quat& q, const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
+    if(doInertialAlignment){
+      Eval(JrJC_inn, qJC_inn, IrIB_cur, qIB_cur, r, q, BrBC_, qBC_, JrJC_noi, qJC_noi);
+    } else {
+      Eval(JrJC_inn, qJC_inn, IrIB_cur, qIB_cur, IrIJ_, qIJ_, r, q, JrJC_noi, qJC_noi);
+    }
+  }
+
+  // Full version
   void JacCur(MatX& J,
               const Vec3& IrIB_cur, const Quat& qIB_cur, const Vec3& IrIJ_cur, const Quat& qIJ_cur,
-              const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
+              const Vec3& BrBC_cur, const Quat& qBC_cur, const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
     J.setZero();
-    GetJacBlockCur<POS, POS>(J) = RotMat(qIJ_cur).matrix().transpose();
-    GetJacBlockCur<POS, ATT>(J) = -gSM(RotMat(qIJ_cur.inverted() * qIB_cur).rotate(BrBC_))
-                                  *RotMat(qIJ_cur).matrix().transpose();
-    GetJacBlockCur<POS, IJP>(J) = -RotMat(qIJ_cur).matrix().transpose();
-    GetJacBlockCur<POS, IJA>(J) = RotMat(qIJ_cur).matrix().transpose()*gSM(Vec3(IrIB_cur
-                                  - IrIJ_cur + qIB_cur.rotate(BrBC_)));
-    GetJacBlockCur<ATT, ATT>(J) = RotMat(qIJ_cur.inverted()).matrix();
-    GetJacBlockCur<ATT, IJA>(J) = -RotMat(qIJ_cur.inverted()).matrix();
+    if(usePosition_){
+      this->template GetJacBlockCur<POS_INN, POS_CUR>(J) = RotMat(qIJ_cur).matrix().transpose();
+      this->template GetJacBlockCur<POS_INN, ATT_CUR>(J) = -gSM(RotMat(qIJ_cur.inverted()
+        * qIB_cur).rotate(BrBC_cur)) * RotMat(qIJ_cur).matrix().transpose();
+      if(doInertialAlignment){
+        this->template GetJacBlockCur<POS_INN, IJP_CUR>(J) = -RotMat(qIJ_cur).matrix().transpose();
+        this->template GetJacBlockCur<POS_INN, IJA_CUR>(J) = RotMat(qIJ_cur).matrix().transpose()
+          * gSM(Vec3(IrIB_cur - IrIJ_cur + qIB_cur.rotate(BrBC_cur)));
+      }
+      if(doBodyAlignment){
+        this->template GetJacBlockCur<POS_INN, BCP_CUR>(J) = RotMat(qIJ_cur.inverted()*qIB_cur).matrix();
+      }
+    }
+    if(useAttitude_){
+      this->template GetJacBlockCur<ATT_INN, ATT_CUR>(J) = RotMat(qIJ_cur.inverted()).matrix();
+      if(doInertialAlignment){
+        this->template GetJacBlockCur<ATT_INN, IJA_CUR>(J) = -RotMat(qIJ_cur.inverted()).matrix();
+      }
+      if(doBodyAlignment){
+        this->template GetJacBlockCur<ATT_INN, BCA_CUR>(J) = RotMat(qIJ_cur.inverted() * qIB_cur).matrix();
+      }
+    }
   }
 
+  // State only version
+  void JacCur(MatX& J, const Vec3& IrIB_cur, const Quat& qIB_cur,
+            const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
+    JacCur(J, IrIB_cur, qIB_cur, IrIJ_, qIJ_, BrBC_, qBC_, JrJC_noi, qJC_noi);
+  }
+
+  // Single calibration version
+  void JacCur(MatX& J, const Vec3& IrIB_cur, const Quat& qIB_cur,
+            const Vec3& r, const Quat& q, const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
+    if(doInertialAlignment){
+      JacCur(J, IrIB_cur, qIB_cur, r, q, BrBC_, qBC_, JrJC_noi, qJC_noi);
+    } else {
+      JacCur(J, IrIB_cur, qIB_cur, IrIJ_, qIJ_, r, q, JrJC_noi, qJC_noi);
+    }
+  }
+
+  // Full version
   void JacNoi(MatX& J,
               const Vec3& IrIB_cur, const Quat& qIB_cur, const Vec3& IrIJ_cur, const Quat& qIJ_cur,
-              const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
+              const Vec3& BrBC_cur, const Quat& qBC_cur, const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
     J.setZero();
-    GetJacBlockNoi<POS, POS>(J) = Mat3::Identity();
-    GetJacBlockNoi<ATT, ATT>(J) = Mat3::Identity();
+    this->template GetJacBlockNoi<POS_INN, POS_NOI>(J) = Mat3::Identity();
+    this->template GetJacBlockNoi<ATT_INN, ATT_NOI>(J) = Mat3::Identity();
   }
 
-  void SetExtrinsics(Vec3 BrBC, Quat qBC){
+  // State only version
+  void JacNoi(MatX& J, const Vec3& IrIB_cur, const Quat& qIB_cur,
+            const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
+    JacNoi(J, IrIB_cur, qIB_cur, IrIJ_, qIJ_, BrBC_, qBC_, JrJC_noi, qJC_noi);
+  }
+
+  // Single calibration version
+  void JacNoi(MatX& J, const Vec3& IrIB_cur, const Quat& qIB_cur,
+            const Vec3& r, const Quat& q, const Vec3& JrJC_noi, const Vec3& qJC_noi) const {
+    if(doInertialAlignment){
+      JacNoi(J, IrIB_cur, qIB_cur, r, q, BrBC_, qBC_, JrJC_noi, qJC_noi);
+    } else {
+      JacNoi(J, IrIB_cur, qIB_cur, IrIJ_, qIJ_, r, q, JrJC_noi, qJC_noi);
+    }
+  }
+
+  void SetInertialAlignment(const Vec3& IrIJ, const Quat& qIJ){
+    IrIJ_  = IrIJ;
+    qIJ_ = qIJ;
+  }
+  void SetBodyAlignment(const Vec3& BrBC, const Quat& qBC){
     BrBC_  = BrBC;
     qBC_ = qBC;
   }
-
-  void GetExtrinsics(Vec3* BrBC, Quat* qBC) const{
-    *BrBC  =  BrBC_;
+  void GetInertialAlignment(Vec3* IrIJ, Quat* qIJ){
+    *IrIJ  = IrIJ_;
+    *qIJ = qIJ_;
+  }
+  void GetBodyAlignment(Vec3* BrBC, Quat* qBC){
+    *BrBC  = BrBC_;
     *qBC = qBC_;
   }
-
-  Vec3 ComputeExternalPosition(const Vec3& IrIB, const Quat& qIB,
-                               const Vec3& IrIJ, const Quat& qIJ) const{
-    return qIJ.inverseRotate(Vec3(IrIB - IrIJ + qIB.rotate(BrBC_)));
+  void SetPositionFlag(bool mb){
+    usePosition_ = mb;
   }
-
-  Vec3 ComputeExternalPosition(const ElementVectorBase& state) const{
-    return ComputeExternalPosition(state.template GetValue<Vec3>(this->CurDefinition()->GetName(0)),
-                                   state.template GetValue<Quat>(this->CurDefinition()->GetName(1)),
-                                   state.template GetValue<Vec3>(this->CurDefinition()->GetName(2)),
-                                   state.template GetValue<Quat>(this->CurDefinition()->GetName(3)));
+  void SetAttitudeFlag(bool mb){
+    useAttitude_ = mb;
   }
-
-  Quat ComputeExternalAttitude(const Quat& qIB, const Quat& qIJ) const{
-    return qIJ.inverted() * qIB * qBC_;
-  };
-
-  Quat ComputeExternalAttitude(const ElementVectorBase& state) const{
-    return ComputeExternalAttitude(state.template GetValue<Quat>(this->CurDefinition()->GetName(1)),
-                                   state.template GetValue<Quat>(this->CurDefinition()->GetName(3)));
+  void SetHuberTh(double th){
+    huberTh_ = th;
+  }
+  double GetNoiseWeighting(const ElementVector& inn, int i){
+    if(huberTh_ >= 0){
+      double norm = inn.GetValue<Vec3>(POS_INN).norm(); // TODO: position only so far
+      if(norm > huberTh_){
+        LOG(WARNING) << "Outlier on position update: " << norm << std::endl;
+        return sqrt(huberTh_ * (norm - 0.5 * huberTh_)/(norm*norm));
+      } else {
+        return 1.0;
+      }
+    } else {
+      return 1.0;
+    }
   }
 
  protected:
-  enum Elements {
-    POS,
-    ATT,
-    IJP,
-    IJA
-  };
   Vec3 BrBC_;
   Quat qBC_;
+  Vec3 IrIJ_;
+  Quat qIJ_;
+  bool useAttitude_;
+  bool usePosition_;
+  double huberTh_;
 };
 
 }
