@@ -49,8 +49,10 @@ using VioFilterBase = Filter<PositionFindif<0,0,2,1>,
                              RandomWalk<Element<Vec3,4>>,
                              RandomWalk<Element<Vec3,5>>,
                              ImageUpdate<0,6,N,MeasImg<N>>,
-                             BearingFindif<0,6,7,2,3,N>,
-                             DistanceFindif<0,6,7,2,N>>;
+                             BearingFindif<0,6,7,2,3,8,9,N>,
+                             DistanceFindif<0,6,7,2,3,8,9,N>,
+                             RandomWalk<Element<Vec3,8>>,
+                             RandomWalk<Element<Quat,9>>>;
 
 template<int N>
 class VioFilter: public VioFilterBase<N> {
@@ -82,6 +84,8 @@ class VioFilter: public VioFilterBase<N> {
     std::get<6>(residuals_).w_ = 1e2; // Image Update
     std::get<7>(residuals_).w_ = 1e2; // BearingPrediction
     std::get<8>(residuals_).w_ = 1e2; // DistancePrediction
+    std::get<9>(residuals_).w_ = 1e4; // Visual extrinsics linear
+    std::get<10>(residuals_).w_ = 1e4; // Visual extrinsics angular
     for(auto& i : desc_){
       i = -1;
     }
@@ -100,6 +104,8 @@ class VioFilter: public VioFilterBase<N> {
       I_.template block<3,3>(State::Start(3),State::Start(3)) = Mat3::Identity()*1e2;
       I_.template block<3,3>(State::Start(4),State::Start(4)) = Mat3::Identity()*1e0;
       I_.template block<3,3>(State::Start(5),State::Start(5)) = Mat3::Identity()*1e0;
+      I_.template block<3,3>(State::Start(8),State::Start(8)) = Mat3::Identity()*1e1;
+      I_.template block<3,3>(State::Start(9),State::Start(9)) = Mat3::Identity()*1e1;
       is_initialized_ = true;
     }
   }

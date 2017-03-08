@@ -7,8 +7,8 @@ Simulator::Simulator(){
   Ig_ = tsif::Vec3(0,0,-9.81);
   sim_IrIJ_ = tsif::Vec3(0,0,0);
   sim_qIJ_ = tsif::Quat(1,0,0,0);
-  sim_MrMC_ = tsif::Vec3(0,0,0);
-  sim_qMC_ = tsif::Quat(1,0,0,0);
+  sim_MrMC_ = tsif::Vec3(0.0,0.0,0.0);
+  sim_qMC_ = tsif::Quat(sqrt(1-0.0*0.0),0.0,0.0,0.0);
   sim_qIM_des_ = tsif::Quat(1,0,0,0);
 
   // Simulation parameters

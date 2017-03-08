@@ -2,7 +2,7 @@
 
 int main(int argc, char** argv){
 
-  tsif::BearingFindif<0,0,1,2,3,2> test;
+  tsif::BearingFindif<0,0,1,2,3,4,5,2> test;
   test.JacPreTest(1e-6,1e-8);
   test.JacCurTest(1e-6,1e-8);
 
