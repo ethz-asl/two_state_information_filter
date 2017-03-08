@@ -201,8 +201,8 @@ class Filter{
       TSIF_LOG("D condition number:\n" << condD);
       MatX S = JacCur_.transpose() * (J - JacPre_ * D.inverse() * JacPre_.transpose());
       newInf = S * JacCur_;
+      newInf = 0.5*(newInf + newInf.transpose().eval());
       Eigen::LDLT<MatX> I_LDLT(newInf);
-  //    TSIF_LOG("Condition number:\n" << I_LDLT.rcond()); //Requires Eigen 3.3
       Eigen::JacobiSVD<MatX> svdI(newInf);
       const double condI = svdI.singularValues()(0) / svdI.singularValues()(svdI.singularValues().size()-1);
       TSIF_LOG("I condition number:\n" << condI);
@@ -213,8 +213,8 @@ class Filter{
       State newState = curLinState_;
       curLinState_.Boxplus(dx, newState);
       curLinState_ = newState;
-      weightedDelta_ = sqrt((dx.transpose()*newInf*dx)(0)/dx.size());
-      TSIF_LOG("iter: " << iter_ << "\tw: " << sqrt((dx.transpose()*dx)(0)/dx.size()) << "\twd: " << weightedDelta_);
+      weightedDelta_ = sqrt((dx.dot(newInf*dx))/dx.size());
+      TSIF_LOG("iter: " << iter_ << "\tw: " << sqrt((dx.dot(dx))/dx.size()) << "\twd: " << weightedDelta_);
     }
     TSIF_LOGWIF(weightedDelta_ >= th_iter_, "Reached maximal iterations:" << iter_);
 

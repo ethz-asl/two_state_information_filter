@@ -22,7 +22,7 @@ class ImageUpdate: public ImageUpdateBase<OUT_RES,STA_BEA,N,MEAS>{
   typedef typename Base::Current Current;
   ImageUpdate(): Base(false,false,false){
     for(int i=0;i<N;i++){
-      active_[i] = false;
+      active_[i] = true;
     }
   }
   int EvalRes(typename Output::Ref out, const typename Previous::CRef pre, const typename Current::CRef cur){

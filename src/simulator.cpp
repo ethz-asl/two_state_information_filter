@@ -55,10 +55,10 @@ void Simulator::step(){
   sim_IvM_ = sim_IvM_ + sim_dt_ * sim_IaM_;
   sim_IrIM_ = sim_IrIM_ + sim_dt_ * sim_IvM_;
 
-  sim_IwM_ = (1-sim_ww_*sim_dt_) * sim_IwM_
+  sim_IwIM_ = (1-sim_ww_*sim_dt_) * sim_IwIM_
              + sim_wq_*sim_dt_ * tsif::Boxminus(sim_qIM_des_,sim_qIM_)
              + sim_wn_*std::sqrt(sim_dt_)*gen.GetVec<3>();
-  tsif::Quat sim_qIM_next = tsif::Boxplus(sim_qIM_,sim_IwM_*sim_dt_);
+  tsif::Quat sim_qIM_next = tsif::Boxplus(sim_qIM_,sim_IwIM_*sim_dt_);
   sim_qIM_ = sim_qIM_next;
 
   genMeas();
@@ -71,7 +71,7 @@ void Simulator::init(){
   sim_IrIM_ = tsif::Vec3(0,0,0);
   sim_qIM_ = tsif::Quat(1,0,0,0);
   sim_IvM_ = tsif::Vec3(0,0,0);
-  sim_IwM_ = tsif::Vec3(0,0,0);
+  sim_IwIM_ = tsif::Vec3(0,0,0);
   sim_IaM_ = tsif::Vec3(0,0,0);
 
   // Generate measurements
@@ -83,14 +83,14 @@ void Simulator::genMeas(){
   // IMU measurement
   std::bernoulli_distribution distribution_gyr(1/sim_outlier_rate_gyr_);
   double noise_gyr = allowOutlier_ && distribution_gyr(gen.GetGenerator()) ? sim_outlier_noise_gyr_ : sim_noise_gyr_;
-  meas_MwM_ = sim_qIM_.toRotationMatrix().transpose()*(sim_IwM_) + sim_bw_ + noise_gyr/std::sqrt(sim_dt_)*gen.GetVec<3>();
+  meas_MwM_ = sim_qIM_.toRotationMatrix().transpose()*(sim_IwIM_) + sim_bw_ + noise_gyr/std::sqrt(sim_dt_)*gen.GetVec<3>();
   std::bernoulli_distribution distribution_acc(1/sim_outlier_rate_acc_);
   double noise_acc = allowOutlier_ && distribution_acc(gen.GetGenerator()) ? sim_outlier_noise_acc_ : sim_noise_acc_;
   meas_MfM_ = sim_qIM_.toRotationMatrix().transpose()*(tsif::Vec3(sim_IaM_ - Ig_)) + sim_bf_ + noise_acc/std::sqrt(sim_dt_)*gen.GetVec<3>();
 
   // IMU measurement
   noise_gyr = allowOutlier_ && distribution_gyr(gen.GetGenerator()) ? sim_outlier_noise_gyr_ : sim_noise_gyr_;
-  meas_MwM2_ = sim_qIM_.toRotationMatrix().transpose()*(sim_IwM_) + sim_bw_ + noise_gyr/std::sqrt(sim_dt_)*gen.GetVec<3>();
+  meas_MwM2_ = sim_qIM_.toRotationMatrix().transpose()*(sim_IwIM_) + sim_bw_ + noise_gyr/std::sqrt(sim_dt_)*gen.GetVec<3>();
   noise_acc = allowOutlier_ && distribution_acc(gen.GetGenerator()) ? sim_outlier_noise_acc_ : sim_noise_acc_;
   meas_MfM2_ = sim_qIM_.toRotationMatrix().transpose()*(tsif::Vec3(sim_IaM_ - Ig_)) + sim_bf_ + noise_acc/std::sqrt(sim_dt_)*gen.GetVec<3>();
 
@@ -105,5 +105,6 @@ void Simulator::genMeas(){
   for(int i=0;i<kL;i++){
     const tsif::Vec3 CrCL = (sim_qMC_.inverse()*sim_qIM_.inverse()*sim_qIJ_).toRotationMatrix()*(JrJL_[i]-JrJC);
     meas_CcCL_isVisible_[i] = cam_.BearingToPixel(CrCL,meas_CcCL_[i]);
+    meas_CdCL_[i] = CrCL.norm();
   }
 }

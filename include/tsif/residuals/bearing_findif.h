@@ -31,7 +31,7 @@ class BearingFindif: public BearingFindifBase<OUT_BEA,STA_BEA,STA_DIS,STA_VEL,ST
       const Vec3 beaVec = bea.GetVec();
       const Mat<3,2> beaN = bea.GetN();
       const double& invDis = pre.template Get<STA_DIS>()[i];
-      const Vec<2> dn = beaN.transpose()*(ror + invDis * beaVec.cross(vel));
+      const Vec<2> dn = -beaN.transpose()*(ror + invDis * beaVec.cross(vel));
       bea.Boxplus(dn*dt_,n_predicted);
       n_predicted.Boxminus(cur.template Get<STA_BEA>()[i],out.template Get<OUT_BEA>()[i]); // CAREFUL: DO NOT INVERSE BOXMINUS ORDER (CHAIN-RULE NOT VALID)
     }
@@ -47,16 +47,16 @@ class BearingFindif: public BearingFindifBase<OUT_BEA,STA_BEA,STA_DIS,STA_VEL,ST
       const Mat<3,2> beaN = bea.GetN();
       const Mat<3,2> beaM = bea.GetM();
       const double& invDis = pre.template Get<STA_DIS>()[i];
-      const Vec<2> dn = beaN.transpose()*(ror + invDis * beaVec.cross(vel));
+      const Vec<2> dn = -beaN.transpose()*(ror + invDis * beaVec.cross(vel));
       bea.Boxplus(dn*dt_,n_predicted);
       Mat<2> Jsub_1,Jsub_2a, Jsub_2b;
       bea.BoxplusJacInp(dn*dt_,Jsub_2a);
       bea.BoxplusJacVec(dn*dt_,Jsub_2b);
       n_predicted.BoxminusJacInp(cur.template Get<STA_BEA>()[i],Jsub_1);
-      J.block<2,3>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_ROR)) = dt_*Jsub_1*Jsub_2b*beaN.transpose();
-      J.block<2,3>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_VEL)) = dt_*invDis*Jsub_1*Jsub_2b*beaN.transpose()*SSM(beaVec);
-      J.block<2,1>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_DIS)+i) = dt_*Jsub_1*Jsub_2b*beaN.transpose()*beaVec.cross(vel);
-      J.block<2,2>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_BEA)+2*i) = dt_*Jsub_1*Jsub_2b*(-invDis*beaN.transpose()*SSM(vel)*beaM
+      J.block<2,3>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_ROR)) = -dt_*Jsub_1*Jsub_2b*beaN.transpose();
+      J.block<2,3>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_VEL)) = -dt_*invDis*Jsub_1*Jsub_2b*beaN.transpose()*SSM(beaVec);
+      J.block<2,1>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_DIS)+i) = -dt_*Jsub_1*Jsub_2b*beaN.transpose()*beaVec.cross(vel);
+      J.block<2,2>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_BEA)+2*i) = -dt_*Jsub_1*Jsub_2b*(-invDis*beaN.transpose()*SSM(vel)*beaM
           +beaN.transpose()*SSM(ror + invDis * beaVec.cross(vel))*beaN) + Jsub_1*Jsub_2a;
     }
     return 0;
@@ -70,7 +70,7 @@ class BearingFindif: public BearingFindifBase<OUT_BEA,STA_BEA,STA_DIS,STA_VEL,ST
       const Vec3 beaVec = bea.GetVec();
       const Mat<3,2> beaN = bea.GetN();
       const double& invDis = pre.template Get<STA_DIS>()[i];
-      const Vec<2> dn = beaN.transpose()*(ror + invDis * beaVec.cross(vel));
+      const Vec<2> dn = -beaN.transpose()*(ror + invDis * beaVec.cross(vel));
       bea.Boxplus(dn*dt_,n_predicted);
       Mat<2> Jsub_1;
       n_predicted.BoxminusJacRef(cur.template Get<STA_BEA>()[i],Jsub_1);

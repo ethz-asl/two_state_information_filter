@@ -21,7 +21,7 @@ int main(int argc, char** argv){
   std::cout << sim.meas_JrJC_.transpose() << std::endl;
   std::cout << sim.meas_qJC_.coeffs().transpose() << std::endl;
   std::cout << (sim.sim_qIM_.toRotationMatrix().transpose()*sim.sim_IvM_).transpose() << std::endl;
-  std::cout << (sim.sim_qIM_.toRotationMatrix().transpose()*sim.sim_IwM_).transpose() << std::endl;
+  std::cout << (sim.sim_qIM_.toRotationMatrix().transpose()*sim.sim_IwIM_).transpose() << std::endl;
   std::cout << filter.PrintConnectivity();
   filter.JacTestAll(1e-6,1e-8);
 

@@ -21,7 +21,7 @@ public:
   tsif::Vec3 sim_IrIM_;
   tsif::Quat sim_qIM_;
   tsif::Vec3 sim_IvM_;
-  tsif::Vec3 sim_IwM_;
+  tsif::Vec3 sim_IwIM_;
   tsif::Vec3 sim_IaM_;
 
   // IMU measurement
@@ -36,9 +36,10 @@ public:
 
   // Landmarks
   tsif::Camera cam_;
-  static const int kL = 100;
+  static const int kL = 1000;
   std::array<tsif::Vec3,kL> JrJL_;
   std::array<tsif::Vec<2>,kL> meas_CcCL_;
+  std::array<double,kL> meas_CdCL_;
   std::array<bool,kL> meas_CcCL_isVisible_;
 
   Simulator();
