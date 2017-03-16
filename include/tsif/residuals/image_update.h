@@ -17,6 +17,8 @@ class ImageUpdate: public ImageUpdateBase<OUT_RES,STA_BEA,N,MEAS>{
  public:
   typedef ImageUpdateBase<OUT_RES,STA_BEA,N,MEAS> Base;
   using Base::meas_;
+  using Base::w_;
+  using Base::GetWeight;
   typedef typename Base::Output Output;
   typedef typename Base::Previous Previous;
   typedef typename Base::Current Current;
@@ -24,7 +26,9 @@ class ImageUpdate: public ImageUpdateBase<OUT_RES,STA_BEA,N,MEAS>{
     for(int i=0;i<N;i++){
       active_[i] = true;
     }
+    huberTh_ = 0.01; // TODO: param
   }
+  virtual ~ImageUpdate(){};
   int EvalRes(typename Output::Ref out, const typename Previous::CRef pre, const typename Current::CRef cur){
     for(int i=0;i<N;i++){
       if(active_[i]){
@@ -46,7 +50,19 @@ class ImageUpdate: public ImageUpdateBase<OUT_RES,STA_BEA,N,MEAS>{
     }
     return 0;
   }
+  virtual void AddNoise(typename Output::Ref out, MatRefX J_pre, MatRefX J_cur){
+    for(int i=0;i<N;i++){
+      double w = GetWeight();
+      const double norm = out.template Get<OUT_RES>()[i].norm();
+      if(norm > huberTh_){
+        w *= sqrt(2 * huberTh_ * (norm - 0.5 * huberTh_)/(norm*norm));
+      }
+      out.template Get<OUT_RES>()[i] *= w;
+      J_cur.block(Output::Start(OUT_RES)+i*2,0,2,J_cur.cols()) *= w;
+    }
+  }
   std::array<bool,N> active_;
+  double huberTh_;
 };
 
 } // namespace tsif
