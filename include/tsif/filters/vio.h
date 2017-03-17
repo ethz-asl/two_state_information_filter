@@ -148,6 +148,7 @@ class VioFilter: public VioFilterBase<N> {
     drawAdding_ = tsif::OptionLoader::Instance().Get<int>(optionFile_,"draw_adding");
     drawTracking_ = tsif::OptionLoader::Instance().Get<int>(optionFile_,"draw_tracking");
     doDraw_ = tsif::OptionLoader::Instance().Get<int>(optionFile_,"do_draw");
+    singleMatchOnly_ = tsif::OptionLoader::Instance().Get<int>(optionFile_,"single_match_only");
   }
   virtual ~VioFilter(){}
   virtual void Init(TimePoint t){
@@ -238,19 +239,22 @@ class VioFilter: public VioFilterBase<N> {
           cv::BFMatcher matcher(cv::NORM_HAMMING);
           l_.at(i).matches_.clear();
           matcher.radiusMatch(l_.at(i).desc_,m->desc_,l_.at(i).matches_,tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_desc_distance"));
-          float min_distance = std::numeric_limits<float>::max();
           int best_match = -1;
+          double best_score = 0;
           int count = 0;
           for(int j=0;j<l_.at(i).matches_[0].size();j++){
-            if(cv::norm(cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1))- m->keyPoints_[l_.at(i).matches_[0][j].trainIdx].pt) < tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_geom_distance")){
+            const Vec<2> pt_meas(m->keyPoints_[l_.at(i).matches_[0][j].trainIdx].pt.x,m->keyPoints_[l_.at(i).matches_[0][j].trainIdx].pt.y);
+            const double geomScore = std::sqrt(((l_.at(i).prePoint_-pt_meas).transpose()*l_.at(i).preCov_.inverse()*(l_.at(i).prePoint_-pt_meas))(0))/tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_geom_distance");
+            const double descScore = l_.at(i).matches_[0][j].distance/tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_desc_distance");
+            if(geomScore + descScore < 1){
               count ++;
-              if(l_.at(i).matches_[0][j].distance < min_distance){
-                min_distance = l_.at(i).matches_[0][j].distance;
+              if(best_match == -1 || geomScore + descScore < best_score){
                 best_match = j;
+                best_score = geomScore + descScore;
               }
             }
           }
-          if(best_match != -1 && count == 1){
+          if(best_match != -1 && (!singleMatchOnly_ || count == 1)){
             TSIF_LOGW("Found measurement for landmark " << i);
             Vec<2> pt_meas(m->keyPoints_[l_.at(i).matches_[0][best_match].trainIdx].pt.x,m->keyPoints_[l_.at(i).matches_[0][best_match].trainIdx].pt.y);
             Vec3 vec;
@@ -263,7 +267,11 @@ class VioFilter: public VioFilterBase<N> {
             }
           } else {
             if(doDraw_ && drawTracking_){
-              cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_,l_.at(i).sigma1_), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,0,255));
+              if(count == 0){
+                cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_,l_.at(i).sigma1_), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,0,255));
+              } else {
+                cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_,l_.at(i).sigma1_), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(255,0,255));
+              }
             }
           }
         }
@@ -449,6 +457,7 @@ class VioFilter: public VioFilterBase<N> {
   bool drawAdding_;
   bool drawTracking_;
   bool doDraw_;
+  bool singleMatchOnly_;
 };
 
 } // namespace tsif
