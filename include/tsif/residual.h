@@ -74,26 +74,25 @@ class Residual: public Model<Residual<Out,Pre,Cur,Meas>,Out,Pre,Cur>{
     return JacCurTest(th,d,pre,cur);
   }
   virtual void SplitMeasurements(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
-                         std::shared_ptr<const Meas> in,
-                         std::shared_ptr<const Meas> out1,
-                         std::shared_ptr<const Meas> out2) const{
+                                 std::shared_ptr<const Meas>& m0,
+                                 std::shared_ptr<const Meas>& m1,
+                                 std::shared_ptr<const Meas>& m2) const{
     if (isSplitable_){
-      out1 = in;
-      out2 = in;
+      m1 = m2;
     } else{
       assert(false);
     }
   }
   virtual void MergeMeasurements(const TimePoint& t0, const TimePoint& t1, const TimePoint& t2,
-                         std::shared_ptr<const Meas> in1,
-                         std::shared_ptr<const Meas> in2,
-                         std::shared_ptr<const Meas> out) const{
+                                 std::shared_ptr<const Meas>& m0,
+                                 std::shared_ptr<const Meas>& m1,
+                                 std::shared_ptr<const Meas>& m2) const{
     if (isMergeable_){
       std::shared_ptr<Meas> newMeas(new Meas());
       Vec<Meas::Dim()> dif;
-      in1->Boxminus(*in2,dif);
-      in2->Boxplus(toSec(t1 - t0) / toSec(t2 - t0) * dif, *newMeas);
-      out = newMeas;
+      m1->Boxminus(*m2,dif);
+      m2->Boxplus(toSec(t1 - t0) / toSec(t2 - t0) * dif, *newMeas);
+      m2 = newMeas;
     } else{
       assert(false);
     }

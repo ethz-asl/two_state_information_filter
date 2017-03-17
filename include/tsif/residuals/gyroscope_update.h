@@ -48,7 +48,7 @@ class GyroscopeUpdate: public GyroscopeUpdateBase<OUT_ROR,STA_ROR,STA_GYB>{
     return 0;
   }
   double GetWeight(){
-    return w_/sqrt(dt_);
+    return w_*sqrt(dt_);
   }
 };
 

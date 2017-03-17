@@ -23,24 +23,21 @@ class MeasImg: public ElementVector<>{
     for(int i=0;i<N;i++){
       n_.at(i).SetRandom();
     }
+    isSim_ = false;
   }
   MeasImg(const std::string& filename){
     img_ = cv::imread(filename, 0);
     for(int i=0;i<N;i++){
       n_.at(i).SetRandom();
     }
+    isSim_ = false;
   }
-  cv::Mat img_;
-  mutable std::array<UnitVector,N> n_;
   const UnitVector& GetBea(int i) const{
     return n_.at(i);
   }
   void SetBea(int i, const UnitVector& n) const{
     n_.at(i) = n;
   }
-  mutable std::vector<cv::KeyPoint> keyPoints_;
-  mutable cv::Mat desc_;
-
   void PreProcess(int numCandidates) const{
     cv::ORB orb(numCandidates,2,1);
     std::vector<cv::KeyPoint> orig;
@@ -53,10 +50,18 @@ class MeasImg: public ElementVector<>{
     }
     orb.compute(img_, keyPoints_, desc_);
   }
+  cv::Mat img_;
+  mutable std::array<UnitVector,N> n_;
+  mutable std::vector<cv::KeyPoint> keyPoints_;
+  mutable cv::Mat desc_;
+  bool isSim_;
 };
 
 class LandmarkData{
  public:
+  LandmarkData(){
+    id_ = -1;
+  }
   Vec<2> prePoint_;
   Mat<2> preCov_;
   cv::Mat desc_;
@@ -66,6 +71,7 @@ class LandmarkData{
   double sigmaAngle_;
   double sigma0_;
   double sigma1_;
+  int id_;
 
   void SetPrediction(const Camera& cam, const UnitVector& vec, MatCRef<2> P){
     UnitVector vec0, vec1;
@@ -182,9 +188,17 @@ class VioFilter: public VioFilterBase<N> {
   }
   virtual void PreProcess(){
     const auto& m = std::get<6>(residuals_).meas_;
-    m->PreProcess(tsif::OptionLoader::Instance().Get<int>(optionFile_,"num_candidates"));
+    if(!m->isSim_){
+      m->PreProcess(tsif::OptionLoader::Instance().Get<int>(optionFile_,"num_candidates"));
+    }
     cv::Mat img;
-    cv::cvtColor(m->img_,img,CV_GRAY2BGR);
+
+    if(!m->isSim_){
+      cv::cvtColor(m->img_,img,CV_GRAY2BGR);
+    } else {
+      img = cv::Mat::zeros(480, 752, CV_8U);
+      cv::drawKeypoints(img,m->keyPoints_,img,cv::Scalar(255,50,50));
+    }
 
     for(int i=0;i<N;i++){
       std::get<6>(residuals_).active_[i] = false;
@@ -198,37 +212,56 @@ class VioFilter: public VioFilterBase<N> {
     MatX Pbearing = JBearingPrediction*P*JBearingPrediction.transpose();
 
     for(int i=0;i<N;i++){
-      if(!l_.at(i).desc_.empty()){
-        // Extract pixel coordinates and corresponding uncertainty
-        l_.at(i).SetPrediction(cam_,state_.template Get<6>()[i],Pbearing.block<2,2>(2*i,2*i)); // TODO: change to curLinState_
+      if(!m->isSim_){
+        if(!l_.at(i).desc_.empty()){
+          // Extract pixel coordinates and corresponding uncertainty
+          l_.at(i).SetPrediction(cam_,curLinState_.template Get<6>()[i],Pbearing.block<2,2>(2*i,2*i)); // TODO: change to curLinState_
 
-        // Match landmarks
-        cv::BFMatcher matcher(cv::NORM_HAMMING);
-        l_.at(i).matches_.clear();
-        matcher.radiusMatch(l_.at(i).desc_,m->desc_,l_.at(i).matches_,tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_desc_distance"));
-        float min_distance = std::numeric_limits<float>::max();
-        int best_match = -1;
-        int count = 0;
-        for(int j=0;j<l_.at(i).matches_[0].size();j++){
-          if(cv::norm(cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1))- m->keyPoints_[l_.at(i).matches_[0][j].trainIdx].pt) < tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_geom_distance")){
-            count ++;
-            if(l_.at(i).matches_[0][j].distance < min_distance){
-              min_distance = l_.at(i).matches_[0][j].distance;
-              best_match = j;
+          // Match landmarks
+          cv::BFMatcher matcher(cv::NORM_HAMMING);
+          l_.at(i).matches_.clear();
+          matcher.radiusMatch(l_.at(i).desc_,m->desc_,l_.at(i).matches_,tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_desc_distance"));
+          float min_distance = std::numeric_limits<float>::max();
+          int best_match = -1;
+          int count = 0;
+          for(int j=0;j<l_.at(i).matches_[0].size();j++){
+            if(cv::norm(cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1))- m->keyPoints_[l_.at(i).matches_[0][j].trainIdx].pt) < tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_geom_distance")){
+              count ++;
+              if(l_.at(i).matches_[0][j].distance < min_distance){
+                min_distance = l_.at(i).matches_[0][j].distance;
+                best_match = j;
+              }
             }
           }
+          if(best_match != -1 && count == 1){
+            TSIF_LOGW("Found measurement for landmark " << i);
+            Vec<2> pt_meas(m->keyPoints_[l_.at(i).matches_[0][best_match].trainIdx].pt.x,m->keyPoints_[l_.at(i).matches_[0][best_match].trainIdx].pt.y);
+            Vec3 vec;
+            cam_.PixelToBearing(pt_meas,vec);
+            m->SetBea(i,UnitVector(vec));
+            std::get<6>(residuals_).active_[i] = true;
+            cv::ellipse(img, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_,l_.at(i).sigma1_), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,255,0));
+            cv::line(img, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Point2f(pt_meas(0),pt_meas(1)), cv::Scalar(0,255,0));
+          } else {
+            cv::ellipse(img, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_,l_.at(i).sigma1_), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,0,255));
+          }
         }
-        if(best_match != -1 && count == 1){
-          TSIF_LOGW("Found measurement for landmark " << i);
-          Vec<2> pt_meas(m->keyPoints_[l_.at(i).matches_[0][best_match].trainIdx].pt.x,m->keyPoints_[l_.at(i).matches_[0][best_match].trainIdx].pt.y);
-          Vec3 vec;
-          cam_.PixelToBearing(pt_meas,vec);
-          m->SetBea(i,UnitVector(vec));
-          std::get<6>(residuals_).active_[i] = true;
-          cv::ellipse(img, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_,l_.at(i).sigma1_), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,255,0));
-          cv::line(img, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Point2f(pt_meas(0),pt_meas(1)), cv::Scalar(0,255,0));
-        } else {
-          cv::ellipse(img, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_,l_.at(i).sigma1_), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,0,255));
+      } else {
+        std::vector<cv::KeyPoint> matches;
+        for(const auto& kp : std::get<6>(residuals_).meas_->keyPoints_){
+          for(int i=0;i<N;i++){
+            if(kp.class_id == l_.at(i).id_){
+              TSIF_LOGW("Found measurement for landmark " << i);
+              l_.at(i).SetPrediction(cam_,curLinState_.template Get<6>()[i],Pbearing.block<2,2>(2*i,2*i)); // TODO: change to curLinState_
+              matches.emplace_back(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1),0,0,0,0,l_.at(i).id_);
+              Vec3 vec;
+              cam_.PixelToBearing(Vec<2>(kp.pt.x,kp.pt.y),vec);
+              m->SetBea(i,UnitVector(vec));
+              std::get<6>(residuals_).active_[i] = true;
+              cv::ellipse(img, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_,l_.at(i).sigma1_), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,255,0));
+              cv::line(img, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), kp.pt, cv::Scalar(0,255,0));
+            }
+          }
         }
       }
     }
@@ -270,7 +303,7 @@ class VioFilter: public VioFilterBase<N> {
     const auto& m = std::get<6>(residuals_).meas_;
     // Remove if not tracked for more then prune_count frames
     for(int i=0;i<N;i++){
-      if(std::get<6>(residuals_).active_[i] || l_.at(i).desc_.empty()){
+      if(std::get<6>(residuals_).active_[i] || (!m->isSim_ && l_.at(i).desc_.empty()) || (m->isSim_ && l_.at(i).id_ == -1)){
         l_.at(i).count_ = 0;
       } else {
         l_.at(i).count_++;
@@ -278,12 +311,18 @@ class VioFilter: public VioFilterBase<N> {
       if(l_.at(i).count_ > tsif::OptionLoader::Instance().Get<int>(optionFile_,"prune_count") || state_.template Get<7>()[i] <= 0){
         TSIF_LOGW("Removing landmark " << i);
         l_.at(i).desc_ = cv::Mat();
+        l_.at(i).id_ = -1;
       }
     }
 
     // Add new landmarks
-    cv::Mat drawImgg = cv::Mat::zeros(480, 752, CV_8U);
-    cv::drawKeypoints(m->img_,m->keyPoints_,drawImgg,cv::Scalar(255,50,50));
+    cv::Mat drawImgg;
+    if(!m->isSim_){
+      cv::drawKeypoints(m->img_,m->keyPoints_,drawImgg,cv::Scalar(255,50,50));
+    } else {
+      drawImgg = cv::Mat::zeros(480, 752, CV_8UC3);
+      cv::drawKeypoints(drawImgg,m->keyPoints_,drawImgg,cv::Scalar(255,50,50));
+    }
     const int B = tsif::OptionLoader::Instance().Get<int>(optionFile_,"bucket_count");
     int bucketsCandidates[B*B];
     bool bucketsLandmarks[B*B];
@@ -298,7 +337,7 @@ class VioFilter: public VioFilterBase<N> {
 
     // Create mask
     for(int i=0;i<N;i++){
-      if(!l_.at(i).desc_.empty()){
+      if(!l_.at(i).desc_.empty() || l_.at(i).id_ >= 0){
         Vec<2> pt;
         cam_.BearingToPixel(state_.template Get<6>()[i].GetVec(),pt); // TODO: store
         int x_ind = std::floor(pt(0)/752*B);
@@ -323,14 +362,18 @@ class VioFilter: public VioFilterBase<N> {
 
     std::vector<cv::KeyPoint> newKeyPoints;
     for(int i=0;i<N;i++){
-      if(l_.at(i).desc_.empty()){
+      if((!m->isSim_ && l_.at(i).desc_.empty()) || (m->isSim_ && l_.at(i).id_ == -1)){
         // Look for non-empty bucket with no landmark // TODO: start with best
         for(int j=0;j<B*B;j++){
           if(!bucketsLandmarks[j] && bucketsCandidates[j] >= 0){
             const int newKeyPointInd = bucketsCandidates[j];
             newKeyPoints.push_back(m->keyPoints_[newKeyPointInd]);
             bucketsLandmarks[j] = true;
-            m->desc_.row(newKeyPointInd).copyTo(l_.at(i).desc_);
+            if(!m->isSim_){
+              m->desc_.row(newKeyPointInd).copyTo(l_.at(i).desc_);
+            } else {
+              l_.at(i).id_ = m->keyPoints_[newKeyPointInd].class_id;
+            }
             TSIF_LOGW("Adding landmark " << i);
             Vec3 vec;
             cam_.PixelToBearing(Vec<2>(m->keyPoints_[newKeyPointInd].pt.x,m->keyPoints_[newKeyPointInd].pt.y),vec);
@@ -344,7 +387,7 @@ class VioFilter: public VioFilterBase<N> {
     cv::drawKeypoints(drawImgg,newKeyPoints,drawImgg,cv::Scalar(255,50,255));
     cv::namedWindow("2", cv::WINDOW_AUTOSIZE);
     cv::imshow("2", drawImgg);
-    cv::waitKey(0);
+    cv::waitKey(2);
   };
   void AddNewLandmark(int i,const UnitVector& n, double indDis){
     l_.at(i).count_= 0;

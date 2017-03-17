@@ -7,19 +7,19 @@ Simulator::Simulator(){
   Ig_ = tsif::Vec3(0,0,-9.81);
   sim_IrIJ_ = tsif::Vec3(0,0,0);
   sim_qIJ_ = tsif::Quat(1,0,0,0);
-  sim_MrMC_ = tsif::Vec3(0.0,0.0,0.0);
-  sim_qMC_ = tsif::Quat(sqrt(1-0.0*0.0),0.0,0.0,0.0);
+  sim_MrMC_ = tsif::Vec3(-0.0111674199187,-0.0574640920022,0.0207586947896);
+  sim_qMC_ = tsif::Quat(-0.712115587266,0.00666398307551,-0.0079168224269,-0.701985972528);
   sim_qIM_des_ = tsif::Quat(1,0,0,0);
 
   // Simulation parameters
   sim_seed_ = 0;
   sim_dt_ = 0.01;
   sim_aa_ = 1;
-  sim_ar_ = 1;
-  sim_av_ = 10;
+  sim_ar_ = 0.1;
+  sim_av_ = 1;
   sim_an_ = 5;
-  sim_wq_ = 1;
-  sim_ww_ = 1;
+  sim_wq_ = 0.1;
+  sim_ww_ = 0.1;
   sim_wn_ = 0.5;
 
   sim_noise_gyr_ = 2e-3;

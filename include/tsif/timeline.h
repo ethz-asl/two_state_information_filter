@@ -73,13 +73,13 @@ class Timeline{
     assert(t0 <= t1 && t1 <= t2);
     TSIF_LOG("Split measurement at " << tsif::Print(t1));
     Add(t1,std::make_shared<Measurement>());
-    res.SplitMeasurements(t0, t1, t2, mm_.at(t2), mm_.at(t1), mm_.at(t2));
+    res.SplitMeasurements(t0, t1, t2, mm_.at(t0), mm_.at(t1), mm_.at(t2));
   }
   template<typename Residual>
   void Merge(TimePoint t0, TimePoint t1, TimePoint t2, const Residual& res){
     assert(t0 <= t1 && t1 <= t2);
     TSIF_LOG("Merging measurement at " << tsif::Print(t1));
-    res.MergeMeasurements(t0, t1, t2, mm_.at(t1), mm_.at(t2), mm_.at(t2));
+    res.MergeMeasurements(t0, t1, t2, mm_.at(t0), mm_.at(t1), mm_.at(t2));
     mm_.erase(t1);
   }
   template<typename Residual>
