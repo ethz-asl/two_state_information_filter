@@ -41,14 +41,20 @@ class MeasImg: public ElementVector<>{
   void PreProcess(int numCandidates) const{
     cv::ORB orb(numCandidates,2,1);
     std::vector<cv::KeyPoint> orig;
+    TimePoint t0a = Clock::now();
     orb.detect(img_, orig);
+    TimePoint t1a = Clock::now();
+    std::cout << "=== Detection: " << 1000*toSec(t1a-t0a) << std::endl;
     keyPoints_.clear();
     for(auto kp : orig){
       if(kp.octave == 0){
         keyPoints_.push_back(kp);
       }
     }
+    TimePoint t0b = Clock::now();
     orb.compute(img_, keyPoints_, desc_);
+    TimePoint t1b = Clock::now();
+    std::cout << "=== Compute: " << 1000*toSec(t1b-t0b) << std::endl;
   }
   cv::Mat img_;
   mutable std::array<UnitVector,N> n_;
@@ -139,6 +145,9 @@ class VioFilter: public VioFilterBase<N> {
     std::get<8>(residuals_).w_ = tsif::OptionLoader::Instance().Get<double>(optionFile,"w_dispre");
     std::get<9>(residuals_).w_ = tsif::OptionLoader::Instance().Get<double>(optionFile,"w_veppre");
     std::get<10>(residuals_).w_ = tsif::OptionLoader::Instance().Get<double>(optionFile,"w_veapre");
+    drawAdding_ = tsif::OptionLoader::Instance().Get<int>(optionFile_,"draw_adding");
+    drawTracking_ = tsif::OptionLoader::Instance().Get<int>(optionFile_,"draw_tracking");
+    doDraw_ = tsif::OptionLoader::Instance().Get<int>(optionFile_,"do_draw");
   }
   virtual ~VioFilter(){}
   virtual void Init(TimePoint t){
@@ -191,18 +200,23 @@ class VioFilter: public VioFilterBase<N> {
     if(!m->isSim_){
       m->PreProcess(tsif::OptionLoader::Instance().Get<int>(optionFile_,"num_candidates"));
     }
-    cv::Mat img;
+    TimePoint t0 = Clock::now();
 
-    if(!m->isSim_){
-      cv::cvtColor(m->img_,img,CV_GRAY2BGR);
-    } else {
-      img = cv::Mat::zeros(480, 752, CV_8U);
-      cv::drawKeypoints(img,m->keyPoints_,img,cv::Scalar(255,50,50));
+    if(doDraw_){
+      if(!m->isSim_){
+        cv::cvtColor(m->img_,drawImg_,CV_GRAY2BGR);
+      } else {
+        drawImg_ = cv::Mat::zeros(480, 752, CV_8U);
+        cv::drawKeypoints(drawImg_,m->keyPoints_,drawImg_,cv::Scalar(255,50,50));
+      }
     }
 
     for(int i=0;i<N;i++){
       std::get<6>(residuals_).active_[i] = false;
     }
+
+    TimePoint t1 = Clock::now();
+    std::cout << "img: " << 1000*toSec(t1-t0) << std::endl;
 
     // Compute covariance of landmark predition // TODO: make more efficient
     MatX P = I_.inverse();
@@ -210,6 +224,9 @@ class VioFilter: public VioFilterBase<N> {
     JBearingPrediction.setZero();
     std::get<7>(residuals_).JacPreCustom(JBearingPrediction,state_,curLinState_,true);
     MatX Pbearing = JBearingPrediction*P*JBearingPrediction.transpose();
+
+    TimePoint t2 = Clock::now();
+    std::cout << "JacPre: " << 1000*toSec(t2-t1) << std::endl;
 
     for(int i=0;i<N;i++){
       if(!m->isSim_){
@@ -240,10 +257,14 @@ class VioFilter: public VioFilterBase<N> {
             cam_.PixelToBearing(pt_meas,vec);
             m->SetBea(i,UnitVector(vec));
             std::get<6>(residuals_).active_[i] = true;
-            cv::ellipse(img, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_,l_.at(i).sigma1_), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,255,0));
-            cv::line(img, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Point2f(pt_meas(0),pt_meas(1)), cv::Scalar(0,255,0));
+            if(doDraw_ && drawTracking_){
+              cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_,l_.at(i).sigma1_), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,255,0));
+              cv::line(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Point2f(pt_meas(0),pt_meas(1)), cv::Scalar(0,255,0));
+            }
           } else {
-            cv::ellipse(img, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_,l_.at(i).sigma1_), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,0,255));
+            if(doDraw_ && drawTracking_){
+              cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_,l_.at(i).sigma1_), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,0,255));
+            }
           }
         }
       } else {
@@ -258,18 +279,24 @@ class VioFilter: public VioFilterBase<N> {
               cam_.PixelToBearing(Vec<2>(kp.pt.x,kp.pt.y),vec);
               m->SetBea(i,UnitVector(vec));
               std::get<6>(residuals_).active_[i] = true;
-              cv::ellipse(img, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_,l_.at(i).sigma1_), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,255,0));
-              cv::line(img, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), kp.pt, cv::Scalar(0,255,0));
+              if(doDraw_ && drawTracking_){
+                cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_,l_.at(i).sigma1_), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,255,0));
+                cv::line(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), kp.pt, cv::Scalar(0,255,0));
+              }
             }
           }
         }
       }
     }
+    TimePoint t3 = Clock::now();
+    std::cout << "Matching: " << 1000*toSec(t3-t2) << std::endl;
 
-    DrawVirtualHorizon(img,state_.template Get<9>()*state_.template Get<1>().inverse());
-    cv::namedWindow("3", cv::WINDOW_AUTOSIZE);
-    cv::imshow("3", img);
-    cv::waitKey(1);
+    if(doDraw_){
+      DrawVirtualHorizon(drawImg_,state_.template Get<9>()*state_.template Get<1>().inverse());
+    }
+    TimePoint t4 = Clock::now();
+    std::cout << "Draw Horizon: " << 1000*toSec(t4-t3) << std::endl;
+    std::cout << "=== Preprocess: " << 1000*toSec(t4-t0) << std::endl;
   };
   void DrawVirtualHorizon(cv::Mat& img,Quat att){
     cv::rectangle(img,cv::Point2f(0,0),cv::Point2f(82,92),cv::Scalar(50,50,50),-1,8,0);
@@ -300,6 +327,7 @@ class VioFilter: public VioFilterBase<N> {
     cv::circle(img,rollCenter,2,rollColor1,-1,8,0);
   }
   virtual void PostProcess(){
+    TimePoint t0 = Clock::now();
     const auto& m = std::get<6>(residuals_).meas_;
     // Remove if not tracked for more then prune_count frames
     for(int i=0;i<N;i++){
@@ -314,15 +342,15 @@ class VioFilter: public VioFilterBase<N> {
         l_.at(i).id_ = -1;
       }
     }
+    TimePoint t1 = Clock::now();
+    std::cout << "Removing: " << 1000*toSec(t1-t0) << std::endl;
 
     // Add new landmarks
-    cv::Mat drawImgg;
-    if(!m->isSim_){
-      cv::drawKeypoints(m->img_,m->keyPoints_,drawImgg,cv::Scalar(255,50,50));
-    } else {
-      drawImgg = cv::Mat::zeros(480, 752, CV_8UC3);
-      cv::drawKeypoints(drawImgg,m->keyPoints_,drawImgg,cv::Scalar(255,50,50));
+    if(doDraw_ && drawAdding_){
+      cv::drawKeypoints(drawImg_,m->keyPoints_,drawImg_,cv::Scalar(255,50,50));
     }
+    TimePoint t2 = Clock::now();
+    std::cout << "Drawing Candidates: " << 1000*toSec(t2-t1) << std::endl;
     const int B = tsif::OptionLoader::Instance().Get<int>(optionFile_,"bucket_count");
     int bucketsCandidates[B*B];
     bool bucketsLandmarks[B*B];
@@ -331,8 +359,10 @@ class VioFilter: public VioFilterBase<N> {
         bucketsLandmarks[j*B+i] = false;
         bucketsCandidates[j*B+i] = -1;
       }
-      cv::line(drawImgg, cv::Point(752*i/B,0), cv::Point(752*i/B,480), cv::Scalar(0,0,255));
-      cv::line(drawImgg, cv::Point(0,480*i/B), cv::Point(752,480*i/B), cv::Scalar(0,0,255));
+      if(doDraw_ && drawAdding_){
+        cv::line(drawImg_, cv::Point(752*i/B,0), cv::Point(752*i/B,480), cv::Scalar(0,0,255));
+        cv::line(drawImg_, cv::Point(0,480*i/B), cv::Point(752,480*i/B), cv::Scalar(0,0,255));
+      }
     }
 
     // Create mask
@@ -359,6 +389,8 @@ class VioFilter: public VioFilterBase<N> {
         }
       }
     }
+    TimePoint t3 = Clock::now();
+    std::cout << "Bucketing: " << 1000*toSec(t3-t2) << std::endl;
 
     std::vector<cv::KeyPoint> newKeyPoints;
     for(int i=0;i<N;i++){
@@ -383,11 +415,20 @@ class VioFilter: public VioFilterBase<N> {
         }
       }
     }
+    TimePoint t4 = Clock::now();
+    std::cout << "Adding: " << 1000*toSec(t4-t3) << std::endl;
 
-    cv::drawKeypoints(drawImgg,newKeyPoints,drawImgg,cv::Scalar(255,50,255));
-    cv::namedWindow("2", cv::WINDOW_AUTOSIZE);
-    cv::imshow("2", drawImgg);
-    cv::waitKey(2);
+    if(doDraw_ && drawAdding_){
+      cv::drawKeypoints(drawImg_,newKeyPoints,drawImg_,cv::Scalar(255,50,255));
+    }
+    if(doDraw_){
+      cv::namedWindow("VIO", cv::WINDOW_AUTOSIZE);
+      cv::imshow("VIO", drawImg_);
+      cv::waitKey(2);
+    }
+    TimePoint t5 = Clock::now();
+    std::cout << "Drawing: " << 1000*toSec(t5-t4) << std::endl;
+    std::cout << "=== Postprocess: " << 1000*toSec(t5-t0) << std::endl;
   };
   void AddNewLandmark(int i,const UnitVector& n, double indDis){
     l_.at(i).count_= 0;
@@ -405,6 +446,9 @@ class VioFilter: public VioFilterBase<N> {
   cv::Mat drawImg_;
   std::string optionFile_;
   std::array<LandmarkData,N> l_;
+  bool drawAdding_;
+  bool drawTracking_;
+  bool doDraw_;
 };
 
 } // namespace tsif

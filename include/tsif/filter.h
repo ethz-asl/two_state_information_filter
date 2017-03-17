@@ -196,16 +196,20 @@ class Filter{
       // Compute Kalman Update // TODO use more efficient form
       MatX D = I_ + JacPre_.transpose() * JacPre_;
       MatX J(innDim,innDim); J.setIdentity();
+#if TSIF_VERBOSE > 0
       Eigen::JacobiSVD<MatX> svdD(D);
       const double condD = svdD.singularValues()(0) / svdD.singularValues()(svdD.singularValues().size()-1);
       TSIF_LOG("D condition number:\n" << condD);
+#endif
       MatX S = JacCur_.transpose() * (J - JacPre_ * D.inverse() * JacPre_.transpose());
       newInf = S * JacCur_;
       newInf = 0.5*(newInf + newInf.transpose().eval());
       Eigen::LDLT<MatX> I_LDLT(newInf);
+#if TSIF_VERBOSE > 0
       Eigen::JacobiSVD<MatX> svdI(newInf);
       const double condI = svdI.singularValues()(0) / svdI.singularValues()(svdI.singularValues().size()-1);
       TSIF_LOG("I condition number:\n" << condI);
+#endif
       TSIF_LOGEIF((I_LDLT.info() != Eigen::Success),"Computation of Iinv failed");
       VecX dx = -I_LDLT.solve(S * y_);
 
