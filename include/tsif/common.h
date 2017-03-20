@@ -293,6 +293,26 @@ class OptionLoader{
   }
 };
 
+class Timer{
+ public:
+  Timer(){
+    start_ = Clock::now();
+    last_ = start_;
+  }
+  double GetIncr(){
+    TimePoint now = Clock::now();
+    double incr = toSec(now-last_);
+    last_ = now;
+    return incr;
+  }
+  double GetFull(){
+    last_ = Clock::now();
+    return toSec(last_-start_);
+  }
+  TimePoint start_;
+  TimePoint last_;
+};
+
 } // namespace tsif
 
 #endif /* TSIF_COMMON_HPP_ */
