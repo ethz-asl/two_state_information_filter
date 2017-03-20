@@ -38,6 +38,9 @@ int main(int argc, char** argv){
       filter.AddMeas<6>(tsif::TimePoint(tsif::fromSec(sim.t_+tsif::OptionLoader::Instance().Get<double>(optionFile,"timeOffsetCam"))),meas);
     } else {
       getline (cam0data, cam0string, ',');
+      if(!cam0data.good()){
+        break;
+      }
       cam0time = stod(cam0string)*1e-9;
       getline (cam0data, cam0string);
       if(cam0string.back() == '\r'){
@@ -54,6 +57,9 @@ int main(int argc, char** argv){
 
       while(imu0time < cam0time){
         getline (imu0data, imu0string, ',');
+        if(!imu0data.good()){
+          break;
+        }
         imu0time = stod(imu0string)*1e-9;
         getline (imu0data, imu0string, ',');
         const double wx = stod(imu0string);
