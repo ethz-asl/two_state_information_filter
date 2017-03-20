@@ -344,94 +344,97 @@ class VioFilter: public VioFilterBase<N> {
     std::cout << "Removing: " << 1000*timer.GetIncr() << std::endl;
 
     // Add new landmarks
+    if(N - NumLandmarks() > tsif::OptionLoader::Instance().Get<int>(optionFile_,"start_add")){
 
-    // Create mask
-    std::vector<cv::KeyPoint> keyPoints;
-    cv::Mat desc;
-    mask_ = cv::Mat::ones(m->img_.size(), CV_8U); // TODO: adapt size to sim
-    for(int i=0;i<N;i++){
-      if(!l_.at(i).desc_.empty()){
-        cv::circle(mask_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), tsif::OptionLoader::Instance().Get<int>(optionFile_,"neighbor_suppression"), cv::Scalar(0), -1); // TODO: param
+      // Create mask
+      std::vector<cv::KeyPoint> keyPoints;
+      cv::Mat desc;
+      mask_ = cv::Mat::ones(m->img_.size(), CV_8U); // TODO: adapt size to sim
+      for(int i=0;i<N;i++){
+        if(!l_.at(i).desc_.empty()){
+          cv::circle(mask_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), tsif::OptionLoader::Instance().Get<int>(optionFile_,"neighbor_suppression"), cv::Scalar(0), -1); // TODO: param
+        }
       }
-    }
-    std::cout << "Mask: " << 1000*timer.GetIncr() << std::endl;
+      std::cout << "Mask: " << 1000*timer.GetIncr() << std::endl;
 
-    if(!m->isSim_){
-      cv::ORB orb(tsif::OptionLoader::Instance().Get<int>(optionFile_,"num_candidates_add"),2,1);
-      orb.detect(m->img_,keyPoints,mask_);
-      std::cout << "Detection: " << 1000*timer.GetIncr() << std::endl;
-      orb.compute(m->img_,keyPoints,desc);
-      std::cout << "Compute: " << 1000*timer.GetIncr() << std::endl;
-    } else {
-      keyPoints = m->keyPoints_;
-    }
-
-    if(doDraw_ && drawAdding_){
-      cv::drawKeypoints(drawImg_,keyPoints,drawImg_,cv::Scalar(255,50,50));
-    }
-    std::cout << "Drawing Candidates: " << 1000*timer.GetIncr() << std::endl;
-    const int B = tsif::OptionLoader::Instance().Get<int>(optionFile_,"bucket_count");
-    int bucketsCandidates[B*B];
-    for(int i=0;i<B;i++){
-      for(int j=0;j<B;j++){
-        bucketsCandidates[j*B+i] = -1;
+      if(!m->isSim_){
+        cv::ORB orb(tsif::OptionLoader::Instance().Get<int>(optionFile_,"num_candidates_add"),2,1);
+        orb.detect(m->img_,keyPoints,mask_);
+        std::cout << "Detection: " << 1000*timer.GetIncr() << std::endl;
+        orb.compute(m->img_,keyPoints,desc);
+        std::cout << "Compute: " << 1000*timer.GetIncr() << std::endl;
+      } else {
+        keyPoints = m->keyPoints_;
       }
+
       if(doDraw_ && drawAdding_){
-        cv::line(drawImg_, cv::Point(752*i/B,0), cv::Point(752*i/B,480), cv::Scalar(0,0,255));
-        cv::line(drawImg_, cv::Point(0,480*i/B), cv::Point(752,480*i/B), cv::Scalar(0,0,255));
+        cv::drawKeypoints(drawImg_,keyPoints,drawImg_,cv::Scalar(255,50,50));
       }
-    }
-
-    // Compute buckets
-    for(int i=0;i<keyPoints.size();i++){
-      const auto& kp = keyPoints[i];
-      int x_ind = std::floor(kp.pt.x/752*B);
-      int y_ind = std::floor(kp.pt.y/480*B);
-      if(x_ind >= 0 && x_ind < B && y_ind >= 0 && y_ind < B){
-        if(m->isSim_){
-          bool found = false;
-          for(int j=0;j<N;j++){
-            found = found | l_.at(j).id_ == kp.class_id;
-          }
-          if(found){
-            continue;
-          }
+      std::cout << "Drawing Candidates: " << 1000*timer.GetIncr() << std::endl;
+      const int B = tsif::OptionLoader::Instance().Get<int>(optionFile_,"bucket_count");
+      int bucketsCandidates[B*B];
+      for(int i=0;i<B;i++){
+        for(int j=0;j<B;j++){
+          bucketsCandidates[j*B+i] = -1;
         }
-        if(bucketsCandidates[y_ind*B+x_ind] == -1 || kp.response > keyPoints[bucketsCandidates[y_ind*B+x_ind]].response){
-          bucketsCandidates[y_ind*B+x_ind] = i;
+        if(doDraw_ && drawAdding_){
+          cv::line(drawImg_, cv::Point(752*i/B,0), cv::Point(752*i/B,480), cv::Scalar(0,0,255));
+          cv::line(drawImg_, cv::Point(0,480*i/B), cv::Point(752,480*i/B), cv::Scalar(0,0,255));
         }
       }
-    }
-    std::cout << "Bucketing: " << 1000*timer.GetIncr() << std::endl;
 
-    std::vector<cv::KeyPoint> newKeyPoints;
-    for(int i=0;i<N;i++){
-      if((!m->isSim_ && l_.at(i).desc_.empty()) || (m->isSim_ && l_.at(i).id_ == -1)){
-        // Look for non-empty bucket with no landmark // TODO: start with best
-        for(int j=0;j<B*B;j++){
-          if(bucketsCandidates[j] >= 0){
-            const int newKeyPointInd = bucketsCandidates[j];
-            newKeyPoints.push_back(keyPoints[newKeyPointInd]);
-            bucketsCandidates[j] = -1;
-            if(!m->isSim_){
-              desc.row(newKeyPointInd).copyTo(l_.at(i).desc_);
-            } else {
-              l_.at(i).id_ = keyPoints[newKeyPointInd].class_id;
+      // Compute buckets
+      for(int i=0;i<keyPoints.size();i++){
+        const auto& kp = keyPoints[i];
+        int x_ind = std::floor(kp.pt.x/752*B);
+        int y_ind = std::floor(kp.pt.y/480*B);
+        if(x_ind >= 0 && x_ind < B && y_ind >= 0 && y_ind < B){
+          if(m->isSim_){
+            bool found = false;
+            for(int j=0;j<N;j++){
+              found = found | l_.at(j).id_ == kp.class_id;
             }
-            TSIF_LOGW("Adding landmark " << i);
-            Vec3 vec;
-            cam_.PixelToBearing(Vec<2>(keyPoints[newKeyPointInd].pt.x,keyPoints[newKeyPointInd].pt.y),vec);
-            AddNewLandmark(i,UnitVector(vec),tsif::OptionLoader::Instance().Get<double>(optionFile_,"init_dis"));
-            break;
+            if(found){
+              continue;
+            }
+          }
+          if(bucketsCandidates[y_ind*B+x_ind] == -1 || kp.response > keyPoints[bucketsCandidates[y_ind*B+x_ind]].response){
+            bucketsCandidates[y_ind*B+x_ind] = i;
           }
         }
       }
-    }
-    std::cout << "Adding: " << 1000*timer.GetIncr() << std::endl;
+      std::cout << "Bucketing: " << 1000*timer.GetIncr() << std::endl;
 
-    if(doDraw_ && drawAdding_){
-      cv::drawKeypoints(drawImg_,newKeyPoints,drawImg_,cv::Scalar(255,50,255));
+      std::vector<cv::KeyPoint> newKeyPoints;
+      for(int i=0;i<N;i++){
+        if((!m->isSim_ && l_.at(i).desc_.empty()) || (m->isSim_ && l_.at(i).id_ == -1)){
+          // Look for non-empty bucket with no landmark // TODO: start with best
+          const int start = abs((int)(NormalRandomNumberGenerator::Instance().Get()*1e6));
+          for(int j=0;j<B*B;j++){
+            if(bucketsCandidates[(j+start)%(B*B)] >= 0){
+              const int newKeyPointInd = bucketsCandidates[(j+start)%(B*B)];
+              newKeyPoints.push_back(keyPoints[newKeyPointInd]);
+              bucketsCandidates[(j+start)%(B*B)] = -1;
+              if(!m->isSim_){
+                desc.row(newKeyPointInd).copyTo(l_.at(i).desc_);
+              } else {
+                l_.at(i).id_ = keyPoints[newKeyPointInd].class_id;
+              }
+              TSIF_LOGW("Adding landmark " << i);
+              Vec3 vec;
+              cam_.PixelToBearing(Vec<2>(keyPoints[newKeyPointInd].pt.x,keyPoints[newKeyPointInd].pt.y),vec);
+              AddNewLandmark(i,UnitVector(vec),tsif::OptionLoader::Instance().Get<double>(optionFile_,"init_dis"));
+              break;
+            }
+          }
+        }
+      }
+      std::cout << "Adding: " << 1000*timer.GetIncr() << std::endl;
+      if(doDraw_ && drawAdding_){
+        cv::drawKeypoints(drawImg_,newKeyPoints,drawImg_,cv::Scalar(255,50,255));
+      }
     }
+
     if(doDraw_){
       cv::namedWindow("VIO", cv::WINDOW_AUTOSIZE);
       cv::imshow("VIO", drawImg_);

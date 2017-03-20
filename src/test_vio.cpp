@@ -11,7 +11,7 @@ int main(int argc, char** argv){
   sim.allowOutlier_ = false;
   sim.init();
 
-  std::string folder = "/home/michael/datasets/euroc/V1_01_easy/V1_01_easy";
+  std::string folder = "/home/michael/datasets/euroc/MH_01_easy";
 
   std::ifstream cam0data(folder + "/mav0/cam0/data.csv");
   std::string cam0string;
