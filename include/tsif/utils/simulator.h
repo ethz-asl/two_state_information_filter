@@ -1,7 +1,7 @@
 #ifndef TSIF_SIMULATOR_H_
 #define TSIF_SIMULATOR_H_
 
-#include "tsif/common.h"
+#include "tsif/utils/common.h"
 #include "tsif/utils/camera.h"
 
 class Simulator{

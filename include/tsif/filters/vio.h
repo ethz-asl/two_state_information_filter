@@ -11,7 +11,7 @@
 #include "tsif/residuals/image_update.h"
 #include "tsif/residuals/position_findif.h"
 #include "tsif/residuals/random_walk.h"
-#include "tsif/common.h"
+#include "tsif/utils/common.h"
 #include "tsif/filter.h"
 
 namespace tsif{

@@ -1,7 +1,7 @@
 #ifndef TSIF_CAMERA_H_
 #define TSIF_CAMERA_H_
 
-#include "tsif/common.h"
+#include "tsif/utils/common.h"
 
 namespace tsif{
 

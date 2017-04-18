@@ -1,7 +1,7 @@
 #ifndef TSIF_ELEMENT_H_
 #define TSIF_ELEMENT_H_
 
-#include "tsif/common.h"
+#include "tsif/utils/common.h"
 #include "unit_vector.h"
 
 namespace tsif{

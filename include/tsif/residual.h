@@ -1,7 +1,7 @@
 #ifndef TSIF_RESIDUAL_H_
 #define TSIF_RESIDUAL_H_
 
-#include "tsif/common.h"
+#include "tsif/utils/common.h"
 #include "tsif/model.h"
 
 namespace tsif{

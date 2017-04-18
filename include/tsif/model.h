@@ -1,8 +1,8 @@
 #ifndef TSIF_MODEL_H_
 #define TSIF_MODEL_H_
 
+#include "tsif/utils/common.h"
 #include "element_vector.h"
-#include "tsif/common.h"
 
 namespace tsif{
 

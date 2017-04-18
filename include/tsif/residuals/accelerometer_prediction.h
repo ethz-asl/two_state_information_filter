@@ -1,7 +1,7 @@
 #ifndef TSIF_ACCELEROMETER_PREDICTION_H_
 #define TSIF_ACCELEROMETER_PREDICTION_H_
 
-#include "tsif/common.h"
+#include "tsif/utils/common.h"
 #include "tsif/residual.h"
 
 namespace tsif{

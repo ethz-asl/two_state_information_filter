@@ -3,7 +3,7 @@
 
 #include "attitude_update.h"
 #include "position_update.h"
-#include "tsif/common.h"
+#include "tsif/utils/common.h"
 #include "tsif/residual.h"
 
 namespace tsif{

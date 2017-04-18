@@ -1,7 +1,7 @@
 #ifndef TSIF_DISTANCE_FINDIF_H_
 #define TSIF_DISTANCE_FINDIF_H_
 
-#include "tsif/common.h"
+#include "tsif/utils/common.h"
 #include "tsif/residual.h"
 
 namespace tsif{

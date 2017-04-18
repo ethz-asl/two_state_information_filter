@@ -1,7 +1,7 @@
 #ifndef TSIF_FILTER_H_
 #define TSIF_FILTER_H_
 
-#include "tsif/common.h"
+#include "tsif/utils/common.h"
 #include "tsif/residual.h"
 #include "tsif/timeline.h"
 

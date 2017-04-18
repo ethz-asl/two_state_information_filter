@@ -2,7 +2,7 @@
 #define TSIF_TIMELINE_H_
 
 #include "element_vector.h"
-#include "tsif/common.h"
+#include "tsif/utils/common.h"
 
 namespace tsif{
 

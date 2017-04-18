@@ -1,7 +1,7 @@
 #ifndef TSIF_POSITION_FINDIF_H_
 #define TSIF_POSITION_FINDIF_H_
 
-#include "tsif/common.h"
+#include "tsif/utils/common.h"
 #include "tsif/residual.h"
 
 namespace tsif{
