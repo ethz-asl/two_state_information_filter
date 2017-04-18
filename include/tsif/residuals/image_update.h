@@ -13,7 +13,7 @@ using ImageUpdateBase = Residual<ElementVector<Element<std::array<Vec<2>,N>,OUT_
                                  MEAS>;
 
 template<int OUT_RES, int STA_BEA, int N, typename MEAS>
-class ImageUpdate: public ImageUpdateBase<OUT_RES,STA_BEA,N,MEAS>{
+class ImageUpdate: public ImageUpdateBase<OUT_RES,STA_BEA,N,MEAS>{ // TODO: rename to bearing update
  public:
   typedef ImageUpdateBase<OUT_RES,STA_BEA,N,MEAS> Base;
   using Base::meas_;

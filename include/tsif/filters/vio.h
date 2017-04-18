@@ -111,25 +111,25 @@ class VioFilter: public VioFilterBase<N> {
   using typename Base::State;
  public:
   VioFilter(const std::string& optionFile){
-    optionFile_ = optionFile;
-    max_iter_ = tsif::OptionLoader::Instance().Get<int>(optionFile,"max_iter");
-    th_iter_ = tsif::OptionLoader::Instance().Get<double>(optionFile,"th_iter");
+    FD_ = tsif::OptionLoader::Instance().LoadFile(optionFile);
+    max_iter_ = FD_->Get<int>("max_iter");
+    th_iter_ = FD_->Get<double>("th_iter");
     include_max_ = false;
-    std::get<0>(residuals_).w_ = tsif::OptionLoader::Instance().Get<double>(optionFile,"w_posfd");
-    std::get<1>(residuals_).w_ = tsif::OptionLoader::Instance().Get<double>(optionFile,"w_attfd");
-    std::get<2>(residuals_).w_ = tsif::OptionLoader::Instance().Get<double>(optionFile,"w_accpre");
-    std::get<3>(residuals_).w_ = tsif::OptionLoader::Instance().Get<double>(optionFile,"w_gyrupd");
-    std::get<4>(residuals_).w_ = tsif::OptionLoader::Instance().Get<double>(optionFile,"w_accbias");
-    std::get<5>(residuals_).w_ = tsif::OptionLoader::Instance().Get<double>(optionFile,"w_gyrbias");
-    std::get<6>(residuals_).w_ = tsif::OptionLoader::Instance().Get<double>(optionFile,"w_imgupd");
-    std::get<7>(residuals_).w_ = tsif::OptionLoader::Instance().Get<double>(optionFile,"w_beapre");
-    std::get<8>(residuals_).w_ = tsif::OptionLoader::Instance().Get<double>(optionFile,"w_dispre");
-    std::get<9>(residuals_).w_ = tsif::OptionLoader::Instance().Get<double>(optionFile,"w_veppre");
-    std::get<10>(residuals_).w_ = tsif::OptionLoader::Instance().Get<double>(optionFile,"w_veapre");
-    drawAdding_ = tsif::OptionLoader::Instance().Get<int>(optionFile_,"draw_adding");
-    drawTracking_ = tsif::OptionLoader::Instance().Get<int>(optionFile_,"draw_tracking");
-    doDraw_ = tsif::OptionLoader::Instance().Get<int>(optionFile_,"do_draw");
-    singleMatchOnly_ = tsif::OptionLoader::Instance().Get<int>(optionFile_,"single_match_only");
+    std::get<0>(residuals_).w_ = FD_->Get<double>("w_posfd");
+    std::get<1>(residuals_).w_ = FD_->Get<double>("w_attfd");
+    std::get<2>(residuals_).w_ = FD_->Get<double>("w_accpre");
+    std::get<3>(residuals_).w_ = FD_->Get<double>("w_gyrupd");
+    std::get<4>(residuals_).w_ = FD_->Get<double>("w_accbias");
+    std::get<5>(residuals_).w_ = FD_->Get<double>("w_gyrbias");
+    std::get<6>(residuals_).w_ = FD_->Get<double>("w_imgupd");
+    std::get<7>(residuals_).w_ = FD_->Get<double>("w_beapre");
+    std::get<8>(residuals_).w_ = FD_->Get<double>("w_dispre");
+    std::get<9>(residuals_).w_ = FD_->Get<double>("w_veppre");
+    std::get<10>(residuals_).w_ = FD_->Get<double>("w_veapre");
+    drawAdding_ = FD_->Get<int>("draw_adding");
+    drawTracking_ = FD_->Get<int>("draw_tracking");
+    doDraw_ = FD_->Get<int>("do_draw");
+    singleMatchOnly_ = FD_->Get<int>("single_match_only");
   }
   virtual ~VioFilter(){}
   virtual void Init(TimePoint t){
@@ -139,17 +139,17 @@ class VioFilter: public VioFilterBase<N> {
       time_ = t;
       state_.SetIdentity();
       state_.template Get<1>() = Quat::FromTwoVectors(std::get<2>(timelines_).Get(std::get<2>(timelines_).GetFirstTime())->GetAcc(),Vec3(0,0,1));
-      state_.template Get<8>() = tsif::OptionLoader::Instance().Get<Vec3>(optionFile_,"init_vep");
-      state_.template Get<9>() = tsif::OptionLoader::Instance().Get<Quat>(optionFile_,"init_vea");
+      state_.template Get<8>() = FD_->Get<Vec3>("init_vep");
+      state_.template Get<9>() = FD_->Get<Quat>("init_vea");
       I_.setIdentity();
-      I_.template block<3,3>(State::Start(0),State::Start(0)) = Mat3::Identity()*pow(tsif::OptionLoader::Instance().Get<double>(optionFile_,"initstd_pos"),2);
-      I_.template block<3,3>(State::Start(1),State::Start(1)) = Mat3::Identity()*pow(tsif::OptionLoader::Instance().Get<double>(optionFile_,"initstd_att"),2);
-      I_.template block<3,3>(State::Start(2),State::Start(2)) = Mat3::Identity()*pow(tsif::OptionLoader::Instance().Get<double>(optionFile_,"initstd_vel"),2);
-      I_.template block<3,3>(State::Start(3),State::Start(3)) = Mat3::Identity()*pow(tsif::OptionLoader::Instance().Get<double>(optionFile_,"initstd_ror"),2);
-      I_.template block<3,3>(State::Start(4),State::Start(4)) = Mat3::Identity()*pow(tsif::OptionLoader::Instance().Get<double>(optionFile_,"initstd_acb"),2);
-      I_.template block<3,3>(State::Start(5),State::Start(5)) = Mat3::Identity()*pow(tsif::OptionLoader::Instance().Get<double>(optionFile_,"initstd_gyb"),2);
-      I_.template block<3,3>(State::Start(8),State::Start(8)) = Mat3::Identity()*pow(tsif::OptionLoader::Instance().Get<double>(optionFile_,"initstd_vep"),2);
-      I_.template block<3,3>(State::Start(9),State::Start(9)) = Mat3::Identity()*pow(tsif::OptionLoader::Instance().Get<double>(optionFile_,"initstd_vea"),2);
+      I_.template block<3,3>(State::Start(0),State::Start(0)) = Mat3::Identity()*pow(FD_->Get<double>("initstd_pos"),2);
+      I_.template block<3,3>(State::Start(1),State::Start(1)) = Mat3::Identity()*pow(FD_->Get<double>("initstd_att"),2);
+      I_.template block<3,3>(State::Start(2),State::Start(2)) = Mat3::Identity()*pow(FD_->Get<double>("initstd_vel"),2);
+      I_.template block<3,3>(State::Start(3),State::Start(3)) = Mat3::Identity()*pow(FD_->Get<double>("initstd_ror"),2);
+      I_.template block<3,3>(State::Start(4),State::Start(4)) = Mat3::Identity()*pow(FD_->Get<double>("initstd_acb"),2);
+      I_.template block<3,3>(State::Start(5),State::Start(5)) = Mat3::Identity()*pow(FD_->Get<double>("initstd_gyb"),2);
+      I_.template block<3,3>(State::Start(8),State::Start(8)) = Mat3::Identity()*pow(FD_->Get<double>("initstd_vep"),2);
+      I_.template block<3,3>(State::Start(9),State::Start(9)) = Mat3::Identity()*pow(FD_->Get<double>("initstd_vea"),2);
       is_initialized_ = true;
     }
   }
@@ -199,7 +199,7 @@ class VioFilter: public VioFilterBase<N> {
     MatX JBearingPrediction(2*N,State::Dim());
     JBearingPrediction.setZero();
     std::get<7>(residuals_).JacPreCustom(JBearingPrediction,state_,curLinState_,true);
-    MatX Pbearing = (JBearingPrediction*P*JBearingPrediction.transpose()) + MatX(Vec<2*N>::Ones().asDiagonal()*pow(tsif::OptionLoader::Instance().Get<double>(optionFile_,"w_imgupd"),-2));
+    MatX Pbearing = (JBearingPrediction*P*JBearingPrediction.transpose()) + MatX(Vec<2*N>::Ones().asDiagonal()*pow(FD_->Get<double>("w_imgupd"),-2));
     TSIF_LOG("Cov: " << 1000*timer.GetIncr());
 
     // Detect and compute
@@ -211,11 +211,11 @@ class VioFilter: public VioFilterBase<N> {
         if(!l_.at(i).desc_.empty()){
           // Extract pixel coordinates and corresponding uncertainty
           l_.at(i).SetPrediction(cam_,curLinState_.template Get<6>()[i],Pbearing.block<2,2>(2*i,2*i));
-          cv::ellipse(mask_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_*tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_geom_distance"),l_.at(i).sigma1_*tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_geom_distance")), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(255), -1);
+          cv::ellipse(mask_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_*FD_->Get<float>("match_geom_distance"),l_.at(i).sigma1_*FD_->Get<float>("match_geom_distance")), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(255), -1);
         }
       }
       TSIF_LOG("Mask: " << 1000*timer.GetIncr());
-      cv::ORB orb(tsif::OptionLoader::Instance().Get<int>(optionFile_,"num_candidates_matching")*NumLandmarks(),2,1);
+      cv::ORB orb(FD_->Get<int>("num_candidates_matching")*NumLandmarks(),2,1);
       orb.detect(m->img_,keyPoints,mask_);
       TSIF_LOG("Detection: " << 1000*timer.GetIncr());
       orb.compute(m->img_,keyPoints,desc);
@@ -229,14 +229,14 @@ class VioFilter: public VioFilterBase<N> {
           // Match landmarks
           cv::BFMatcher matcher(cv::NORM_HAMMING);
           l_.at(i).matches_.clear();
-          matcher.radiusMatch(l_.at(i).desc_,desc,l_.at(i).matches_,tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_desc_distance"));
+          matcher.radiusMatch(l_.at(i).desc_,desc,l_.at(i).matches_,FD_->Get<float>("match_desc_distance"));
           int best_match = -1;
           double best_score = 0;
           int count = 0;
           for(int j=0;j<l_.at(i).matches_[0].size();j++){
             const Vec<2> pt_meas(keyPoints[l_.at(i).matches_[0][j].trainIdx].pt.x,keyPoints[l_.at(i).matches_[0][j].trainIdx].pt.y);
-            const double geomScore = std::sqrt(((l_.at(i).prePoint_-pt_meas).transpose()*l_.at(i).preCov_.inverse()*(l_.at(i).prePoint_-pt_meas))(0))/tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_geom_distance");
-            const double descScore = l_.at(i).matches_[0][j].distance/tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_desc_distance");
+            const double geomScore = std::sqrt(((l_.at(i).prePoint_-pt_meas).transpose()*l_.at(i).preCov_.inverse()*(l_.at(i).prePoint_-pt_meas))(0))/FD_->Get<float>("match_geom_distance");
+            const double descScore = l_.at(i).matches_[0][j].distance/FD_->Get<float>("match_desc_distance");
             if(geomScore + descScore < 1){
               count ++;
               if(best_match == -1 || geomScore + descScore < best_score){
@@ -253,15 +253,15 @@ class VioFilter: public VioFilterBase<N> {
             m->SetBea(i,UnitVector(vec));
             std::get<6>(residuals_).active_[i] = true;
             if(doDraw_ && drawTracking_){
-              cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_*tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_geom_distance"),l_.at(i).sigma1_*tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_geom_distance")), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,255,0));
+              cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_*FD_->Get<float>("match_geom_distance"),l_.at(i).sigma1_*FD_->Get<float>("match_geom_distance")), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,255,0));
               cv::line(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Point2f(pt_meas(0),pt_meas(1)), cv::Scalar(0,255,0));
             }
           } else {
             if(doDraw_ && drawTracking_){
               if(count == 0){
-                cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_*tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_geom_distance"),l_.at(i).sigma1_*tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_geom_distance")), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,0,255));
+                cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_*FD_->Get<float>("match_geom_distance"),l_.at(i).sigma1_*FD_->Get<float>("match_geom_distance")), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,0,255));
               } else {
-                cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_*tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_geom_distance"),l_.at(i).sigma1_*tsif::OptionLoader::Instance().Get<float>(optionFile_,"match_geom_distance")), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(255,0,255));
+                cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_*FD_->Get<float>("match_geom_distance"),l_.at(i).sigma1_*FD_->Get<float>("match_geom_distance")), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(255,0,255));
               }
             }
           }
@@ -335,7 +335,7 @@ class VioFilter: public VioFilterBase<N> {
       } else {
         l_.at(i).count_++;
       }
-      if(l_.at(i).count_ > tsif::OptionLoader::Instance().Get<int>(optionFile_,"prune_count") || state_.template Get<7>()[i] <= 0){
+      if(l_.at(i).count_ > FD_->Get<int>("prune_count") || state_.template Get<7>()[i] <= 0){
         TSIF_LOGW("Removing landmark " << i);
         l_.at(i).desc_ = cv::Mat();
         l_.at(i).id_ = -1;
@@ -344,7 +344,7 @@ class VioFilter: public VioFilterBase<N> {
     TSIF_LOG("Removing: " << 1000*timer.GetIncr());
 
     // Add new landmarks
-    if(N - NumLandmarks() > tsif::OptionLoader::Instance().Get<int>(optionFile_,"start_add")){
+    if(N - NumLandmarks() > FD_->Get<int>("start_add")){
 
       // Create mask
       std::vector<cv::KeyPoint> keyPoints;
@@ -352,13 +352,13 @@ class VioFilter: public VioFilterBase<N> {
       mask_ = cv::Mat::ones(m->img_.size(), CV_8U); // TODO: adapt size to sim
       for(int i=0;i<N;i++){
         if(!l_.at(i).desc_.empty()){
-          cv::circle(mask_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), tsif::OptionLoader::Instance().Get<int>(optionFile_,"neighbor_suppression"), cv::Scalar(0), -1); // TODO: param
+          cv::circle(mask_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), FD_->Get<int>("neighbor_suppression"), cv::Scalar(0), -1); // TODO: param
         }
       }
       TSIF_LOG("Mask: " << 1000*timer.GetIncr());
 
       if(!m->isSim_){
-        cv::ORB orb(tsif::OptionLoader::Instance().Get<int>(optionFile_,"num_candidates_add"),2,1);
+        cv::ORB orb(FD_->Get<int>("num_candidates_add"),2,1);
         orb.detect(m->img_,keyPoints,mask_);
         TSIF_LOG("Detection: " << 1000*timer.GetIncr());
         orb.compute(m->img_,keyPoints,desc);
@@ -371,7 +371,7 @@ class VioFilter: public VioFilterBase<N> {
         cv::drawKeypoints(drawImg_,keyPoints,drawImg_,cv::Scalar(255,50,50));
       }
       TSIF_LOG("Drawing Candidates: " << 1000*timer.GetIncr());
-      const int B = tsif::OptionLoader::Instance().Get<int>(optionFile_,"bucket_count");
+      const int B = FD_->Get<int>("bucket_count");
       int bucketsCandidates[B*B];
       for(int i=0;i<B;i++){
         for(int j=0;j<B;j++){
@@ -423,7 +423,7 @@ class VioFilter: public VioFilterBase<N> {
               TSIF_LOGW("Adding landmark " << i);
               Vec3 vec;
               cam_.PixelToBearing(Vec<2>(keyPoints[newKeyPointInd].pt.x,keyPoints[newKeyPointInd].pt.y),vec);
-              AddNewLandmark(i,UnitVector(vec),tsif::OptionLoader::Instance().Get<double>(optionFile_,"init_dis"));
+              AddNewLandmark(i,UnitVector(vec),FD_->Get<double>("init_dis"));
               break;
             }
           }
@@ -451,8 +451,8 @@ class VioFilter: public VioFilterBase<N> {
     I_.template block<1,State::Dim()>(State::Start(7)+1*i,0).setZero();
     I_.template block<State::Dim(),2>(0,State::Start(6)+2*i).setZero();
     I_.template block<State::Dim(),1>(0,State::Start(7)+1*i).setZero();
-    I_.template block<2,2>(State::Start(6)+2*i,State::Start(6)+2*i) = Mat<2>::Identity()*pow(tsif::OptionLoader::Instance().Get<double>(optionFile_,"initstd_bea"),2);
-    I_.template block<1,1>(State::Start(7)+1*i,State::Start(7)+1*i) = Mat<1>::Identity()*pow(tsif::OptionLoader::Instance().Get<double>(optionFile_,"initstd_dis"),2);
+    I_.template block<2,2>(State::Start(6)+2*i,State::Start(6)+2*i) = Mat<2>::Identity()*pow(FD_->Get<double>("initstd_bea"),2);
+    I_.template block<1,1>(State::Start(7)+1*i,State::Start(7)+1*i) = Mat<1>::Identity()*pow(FD_->Get<double>("initstd_dis"),2);
   }
   int NumLandmarks(){
     int count = 0;
@@ -464,13 +464,13 @@ class VioFilter: public VioFilterBase<N> {
  private:
   Camera cam_;
   cv::Mat drawImg_;
-  std::string optionFile_;
   std::array<LandmarkData,N> l_;
   bool drawAdding_;
   bool drawTracking_;
   bool doDraw_;
   bool singleMatchOnly_;
   cv::Mat mask_;
+  const FileData* FD_;
 };
 
 } // namespace tsif

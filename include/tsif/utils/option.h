@@ -61,15 +61,43 @@ struct OptionLoaderTraits<Quat>{
   }
 };
 
+typedef std::vector<std::string> optionData;
+class FileData{
+ public:
+  template<typename T>
+  bool Get(const std::string& name, T& x) const{
+    return OptionLoaderTraits<T>::Get(x,data_.at(name));
+  }
+  template<typename T>
+  T Get(const std::string& name) const{
+    T x;
+    Get(name,x);
+    return x;
+  }
+  void Add(std::string name, optionData x){
+    data_[name] = x;
+  }
+  void Print() const{
+    for(const auto& entry : data_){
+      std::cout << entry.first << std::endl;
+      for(const auto& value : entry.second){
+        std::cout << value << "|";
+      }
+      std::cout << std::endl;
+    }
+  }
+
+ private:
+  std::map<std::string,optionData> data_;
+};
+
 /*! \brief Option Loader
  *         Singleton class for interfacing option files.
  */
 class OptionLoader{
  public:
-  typedef std::vector<std::string> optionData;
-  typedef std::map<std::string,optionData> FileData;
   std::map<std::string,FileData> data_;
-  void LoadFile(const std::string& filename){
+  const FileData* LoadFile(const std::string& filename){
     if(data_.count(filename) == 0){
       FileData fileData;
       std::ifstream data(filename);
@@ -95,31 +123,22 @@ class OptionLoader{
           prev = next != std::string::npos ? next + 1 : next;
         }
         if(!isFirst){
-          fileData[name] = dataVector;
+          fileData.Add(name,dataVector);
         }
       }
       data_[filename] = fileData;
     }
-  }
-  void PrintData(const FileData& d){
-    for(const auto& entry : d){
-      std::cout << entry.first << std::endl;
-      for(const auto& value : entry.second){
-        std::cout << value << "|";
-      }
-      std::cout << std::endl;
-    }
+    return &data_[filename];
   }
   template<typename T>
   bool Get(const std::string& filename, const std::string& name, T& x){
     LoadFile(filename);
-    return OptionLoaderTraits<T>::Get(x,data_.at(filename).at(name));
+    return data_.at(filename).Get<T>(name,x);
   }
   template<typename T>
   T Get(const std::string& filename, const std::string& name){
-    T x;
-    Get(filename,name,x);
-    return x;
+    LoadFile(filename);
+    return data_.at(filename).Get<T>(name);
   }
   static OptionLoader& Instance(){
     static OptionLoader instance;
