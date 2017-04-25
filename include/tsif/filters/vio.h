@@ -122,6 +122,7 @@ class VioFilter: public VioFilterBase<N> {
     std::get<4>(residuals_).w_ = FD_->Get<double>("w_accbias");
     std::get<5>(residuals_).w_ = FD_->Get<double>("w_gyrbias");
     std::get<6>(residuals_).w_ = FD_->Get<double>("w_imgupd");
+    std::get<6>(residuals_).huberTh_ = FD_->Get<double>("img_huber_th");
     std::get<7>(residuals_).w_ = FD_->Get<double>("w_beapre");
     std::get<8>(residuals_).w_ = FD_->Get<double>("w_dispre");
     std::get<9>(residuals_).w_ = FD_->Get<double>("w_veppre");
@@ -215,7 +216,7 @@ class VioFilter: public VioFilterBase<N> {
         }
       }
       TSIF_LOG("Mask: " << 1000*timer.GetIncr());
-      cv::ORB orb(FD_->Get<int>("num_candidates_matching")*NumLandmarks(),2,1);
+      cv::ORB orb(FD_->Get<int>("num_candidates_matching")*NumLandmarks(),FD_->Get<float>("scale_factor"),FD_->Get<float>("n_levels"));
       orb.detect(m->img_,keyPoints,mask_);
       TSIF_LOG("Detection: " << 1000*timer.GetIncr());
       orb.compute(m->img_,keyPoints,desc);
@@ -352,13 +353,13 @@ class VioFilter: public VioFilterBase<N> {
       mask_ = cv::Mat::ones(m->img_.size(), CV_8U); // TODO: adapt size to sim
       for(int i=0;i<N;i++){
         if(!l_.at(i).desc_.empty()){
-          cv::circle(mask_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), FD_->Get<int>("neighbor_suppression"), cv::Scalar(0), -1); // TODO: param
+          cv::circle(mask_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), FD_->Get<int>("neighbor_suppression"), cv::Scalar(0), -1);
         }
       }
       TSIF_LOG("Mask: " << 1000*timer.GetIncr());
 
       if(!m->isSim_){
-        cv::ORB orb(FD_->Get<int>("num_candidates_add"),2,1);
+        cv::ORB orb(FD_->Get<int>("num_candidates_add"),FD_->Get<float>("scale_factor"),FD_->Get<float>("n_levels"));
         orb.detect(m->img_,keyPoints,mask_);
         TSIF_LOG("Detection: " << 1000*timer.GetIncr());
         orb.compute(m->img_,keyPoints,desc);
@@ -406,9 +407,8 @@ class VioFilter: public VioFilterBase<N> {
       TSIF_LOG("Bucketing: " << 1000*timer.GetIncr());
 
       std::vector<cv::KeyPoint> newKeyPoints;
-      for(int i=0;i<N;i++){
+      for(int i=0;i<N;i++){ // TODO: make more efficient
         if((!m->isSim_ && l_.at(i).desc_.empty()) || (m->isSim_ && l_.at(i).id_ == -1)){
-          // Look for non-empty bucket with no landmark // TODO: start with best
           const int start = abs((int)(NormalRandomNumberGenerator::Instance().Get()*1e6));
           for(int j=0;j<B*B;j++){
             if(bucketsCandidates[(j+start)%(B*B)] >= 0){
