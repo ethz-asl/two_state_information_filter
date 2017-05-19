@@ -60,6 +60,13 @@ struct OptionLoaderTraits<Quat>{
     return true;
   }
 };
+template<>
+struct OptionLoaderTraits<std::string>{
+  static bool Get(std::string& x, const std::vector<std::string>& data){\
+  	x = data[0];
+    return true;
+  }
+};
 
 typedef std::vector<std::string> optionData;
 class FileData{

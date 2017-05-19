@@ -3,6 +3,7 @@
 
 int main(int argc, char** argv){
   std::string optionFile = "/home/michael/workspace/generalized_information_filter/cfg/vio.cfg";
+  std::string taskFile = "/home/michael/workspace/generalized_information_filter/cfg/vio_task.cfg";
   bool useSim = tsif::OptionLoader::Instance().Get<int>(optionFile,"use_sim");
   const int L = 25;
   tsif::VioFilter<L> filter(optionFile);
@@ -11,7 +12,7 @@ int main(int argc, char** argv){
   sim.allowOutlier_ = false;
   sim.init();
 
-  std::string folder = "/home/michael/datasets/euroc/MH_01_easy";
+  std::string folder = tsif::OptionLoader::Instance().Get<std::string>(taskFile,"data_folder");
 
   std::ifstream cam0data(folder + "/mav0/cam0/data.csv");
   std::string cam0string;
@@ -81,7 +82,7 @@ int main(int argc, char** argv){
     }
 
     filter.Update();
-    std::cout << "====================\n" << filter.GetState().Print();
+//    std::cout << "====================\n" << filter.GetState().Print();
 
     //    const tsif::Vec3 IrIM = sim.sim_IrIM_;
     //    const tsif::Quat qIM = sim.sim_qIM_;
