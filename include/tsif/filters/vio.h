@@ -19,6 +19,7 @@ namespace tsif{
 template<int N>
 class MeasImg: public ElementVector<>{
  public:
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   MeasImg(){
     for(int i=0;i<N;i++){
       n_.at(i).SetRandom();
@@ -39,13 +40,14 @@ class MeasImg: public ElementVector<>{
     n_.at(i) = n;
   }
   cv::Mat img_;
-  mutable std::array<UnitVector,N> n_;
+  alignas(16) mutable std::array<UnitVector,N> n_;
   mutable std::vector<cv::KeyPoint> keyPoints_;
   bool isSim_;
 };
 
 class LandmarkData{
  public:
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   LandmarkData(){
     id_ = -1;
   }
@@ -65,18 +67,19 @@ class LandmarkData{
     Vec<2> pt_pred0, pt_pred1;
     cam.BearingToPixel(vec.GetVec(),prePoint_);
     Eigen::EigenSolver<Mat<2>> ES(P);
-    vec.Boxplus(ES.eigenvectors().col(0).real()*sqrt(ES.eigenvalues()(0).real()),vec0);
-    vec.Boxplus(ES.eigenvectors().col(1).real()*sqrt(ES.eigenvalues()(1).real()),vec1);
+    const double delta = 0.01;
+    vec.Boxplus(ES.eigenvectors().col(0).real()*delta,vec0);
+    vec.Boxplus(ES.eigenvectors().col(1).real()*delta,vec1);
     cam.BearingToPixel(vec0.GetVec(),pt_pred0);
     cam.BearingToPixel(vec1.GetVec(),pt_pred1);
     Mat<2> U;
-    U.col(0) = pt_pred0-prePoint_;
-    U.col(1) = pt_pred1-prePoint_;
+    U.col(0) = (pt_pred0-prePoint_)/delta*sqrt(ES.eigenvalues()(0).real());
+    U.col(1) = (pt_pred1-prePoint_)/delta*sqrt(ES.eigenvalues()(1).real());
     preCov_ = (U*U.transpose());
     ES.compute(preCov_);
     sigmaAngle_ = std::atan2(ES.eigenvectors()(1,0).real(),ES.eigenvectors()(0,0).real());
-    sigma0_ = sqrt(ES.eigenvalues()(0).real());
-    sigma1_ = sqrt(ES.eigenvalues()(1).real());
+    sigma0_ = std::min(1000.0,sqrt(ES.eigenvalues()(0).real()));
+    sigma1_ = std::min(1000.0,sqrt(ES.eigenvalues()(1).real()));
   }
 };
 
@@ -216,10 +219,11 @@ class VioFilter: public VioFilterBase<N> {
         }
       }
       TSIF_LOG("Mask: " << 1000*timer.GetIncr());
-      cv::ORB orb(FD_->Get<int>("num_candidates_matching")*NumLandmarks(),FD_->Get<float>("scale_factor"),FD_->Get<float>("n_levels"));
-      orb.detect(m->img_,keyPoints,mask_);
+      cv::Ptr<cv::ORB> orb = cv::ORB::create(FD_->Get<int>("num_candidates_matching")*NumLandmarks(),FD_->Get<float>("scale_factor"),FD_->Get<int>("n_levels"));
+//      cv::ORB orb(FD_->Get<int>("num_candidates_matching")*NumLandmarks(),FD_->Get<float>("scale_factor"),FD_->Get<int>("n_levels"));
+      orb->detect(m->img_,keyPoints,mask_);
       TSIF_LOG("Detection: " << 1000*timer.GetIncr());
-      orb.compute(m->img_,keyPoints,desc);
+      orb->compute(m->img_,keyPoints,desc);
       TSIF_LOG("Compute: " << 1000*timer.GetIncr());
       if(doDraw_ && drawTracking_){
         cv::drawKeypoints(drawImg_,keyPoints,drawImg_,cv::Scalar(255,0,0));
@@ -230,21 +234,23 @@ class VioFilter: public VioFilterBase<N> {
           // Match landmarks
           cv::BFMatcher matcher(cv::NORM_HAMMING);
           l_.at(i).matches_.clear();
-          matcher.radiusMatch(l_.at(i).desc_,desc,l_.at(i).matches_,FD_->Get<float>("match_desc_distance"));
           int best_match = -1;
-          double best_score = 0;
           int count = 0;
-          for(int j=0;j<l_.at(i).matches_[0].size();j++){
-            const Vec<2> pt_meas(keyPoints[l_.at(i).matches_[0][j].trainIdx].pt.x,keyPoints[l_.at(i).matches_[0][j].trainIdx].pt.y);
-            const double geomScore = std::sqrt(((l_.at(i).prePoint_-pt_meas).transpose()*l_.at(i).preCov_.inverse()*(l_.at(i).prePoint_-pt_meas))(0))/FD_->Get<float>("match_geom_distance");
-            const double descScore = l_.at(i).matches_[0][j].distance/FD_->Get<float>("match_desc_distance");
-            if(geomScore + descScore < 1){
-              count ++;
-              if(best_match == -1 || geomScore + descScore < best_score){
-                best_match = j;
-                best_score = geomScore + descScore;
-              }
-            }
+          if(!desc.empty()){
+						matcher.radiusMatch(l_.at(i).desc_,desc,l_.at(i).matches_,FD_->Get<float>("match_desc_distance"));
+						double best_score = 0;
+						for(int j=0;j<l_.at(i).matches_[0].size();j++){
+							const Vec<2> pt_meas(keyPoints[l_.at(i).matches_[0][j].trainIdx].pt.x,keyPoints[l_.at(i).matches_[0][j].trainIdx].pt.y);
+							const double geomScore = std::sqrt(((l_.at(i).prePoint_-pt_meas).transpose()*l_.at(i).preCov_.inverse()*(l_.at(i).prePoint_-pt_meas))(0))/FD_->Get<float>("match_geom_distance");
+							const double descScore = l_.at(i).matches_[0][j].distance/FD_->Get<float>("match_desc_distance");
+							if(geomScore + descScore < 1){
+								count ++;
+								if(best_match == -1 || geomScore + descScore < best_score){
+									best_match = j;
+									best_score = geomScore + descScore;
+								}
+							}
+						}
           }
           if(best_match != -1 && (!singleMatchOnly_ || count == 1)){
             TSIF_LOGW("Found measurement for landmark " << i);
@@ -294,11 +300,12 @@ class VioFilter: public VioFilterBase<N> {
 
     if(doDraw_){
       DrawVirtualHorizon(drawImg_,state_.template Get<9>()*state_.template Get<1>().inverse());
+      DrawVelocity(drawImg_,state_.template Get<9>().toRotationMatrix()*state_.template Get<2>());
     }
     TSIF_LOG("Draw Horizon: " << 1000*timer.GetIncr());
     TSIF_LOG("=== Preprocess: " << 1000*timer.GetFull());
   };
-  void DrawVirtualHorizon(cv::Mat& img,Quat att){
+  void DrawVirtualHorizon(cv::Mat& img,const Quat& att){
     cv::rectangle(img,cv::Point2f(0,0),cv::Point2f(82,92),cv::Scalar(50,50,50),-1,8,0);
     cv::rectangle(img,cv::Point2f(0,0),cv::Point2f(80,90),cv::Scalar(100,100,100),-1,8,0);
     cv::Point2f rollCenter = cv::Point2f(40,40);
@@ -326,6 +333,28 @@ class VioFilter: public VioFilterBase<N> {
     cv::ellipse(img,rollCenter,cv::Size(10,10),0,0,180,rollColor1,2,8,0);
     cv::circle(img,rollCenter,2,rollColor1,-1,8,0);
   }
+  void DrawVelocity(cv::Mat& img,const Vec3& vel){
+    cv::Scalar color(0,0,150);
+  	const double arrowSize = 0.05;
+  	const double scale = 0.2;
+  	const Vec3 p0_3d = Vec3(0,0.3,1);
+
+  	const Vec3 p1_3d = p0_3d+scale*vel;
+  	const double yaw = atan2(vel(2),vel(0));
+  	const double norm = vel.norm();
+  	const Vec3 p2_3d = norm > 1e-3 ? p1_3d-scale*arrowSize*(vel/norm + Vec3(cos(yaw),0,-sin(yaw))) : p1_3d;
+  	const Vec3 p3_3d = norm > 1e-3 ? p1_3d-scale*arrowSize*(vel/norm - Vec3(cos(yaw),0,-sin(yaw))) : p1_3d;
+
+  	Vec<2> p0_2d, p1_2d, p2_2d, p3_2d;
+    cam_.BearingToPixel(p0_3d, p0_2d);
+    cam_.BearingToPixel(p1_3d, p1_2d);
+    cam_.BearingToPixel(p2_3d, p2_2d);
+    cam_.BearingToPixel(p3_3d, p3_2d);
+
+    cv::line(img,cv::Point2f(p0_2d(0),p0_2d(1)),cv::Point2f(p1_2d(0),p1_2d(1)),color, 1);
+    cv::line(img,cv::Point2f(p1_2d(0),p1_2d(1)),cv::Point2f(p2_2d(0),p2_2d(1)),color, 1);
+    cv::line(img,cv::Point2f(p1_2d(0),p1_2d(1)),cv::Point2f(p3_2d(0),p3_2d(1)),color, 1);
+  }
   virtual void PostProcess(){
     Timer timer;
     const auto& m = std::get<6>(residuals_).meas_;
@@ -336,10 +365,13 @@ class VioFilter: public VioFilterBase<N> {
       } else {
         l_.at(i).count_++;
       }
-      if(l_.at(i).count_ > FD_->Get<int>("prune_count") || state_.template Get<7>()[i] <= 0){
+      if(l_.at(i).count_ > FD_->Get<int>("prune_count")){
         TSIF_LOGW("Removing landmark " << i);
         l_.at(i).desc_ = cv::Mat();
         l_.at(i).id_ = -1;
+      }
+      if(state_.template Get<7>()[i] <= 1e-6){
+      	state_.template Get<7>()[i] = 1e-6;
       }
     }
     TSIF_LOG("Removing: " << 1000*timer.GetIncr());
@@ -359,10 +391,11 @@ class VioFilter: public VioFilterBase<N> {
       TSIF_LOG("Mask: " << 1000*timer.GetIncr());
 
       if(!m->isSim_){
-        cv::ORB orb(FD_->Get<int>("num_candidates_add"),FD_->Get<float>("scale_factor"),FD_->Get<float>("n_levels"));
-        orb.detect(m->img_,keyPoints,mask_);
+    	cv::Ptr<cv::ORB> orb = cv::ORB::create(FD_->Get<int>("num_candidates_add"),FD_->Get<float>("scale_factor"),FD_->Get<int>("n_levels"));
+//        cv::ORB orb(FD_->Get<int>("num_candidates_add"),FD_->Get<float>("scale_factor"),FD_->Get<int>("n_levels"));
+        orb->detect(m->img_,keyPoints,mask_);
         TSIF_LOG("Detection: " << 1000*timer.GetIncr());
-        orb.compute(m->img_,keyPoints,desc);
+        orb->compute(m->img_,keyPoints,desc);
         TSIF_LOG("Compute: " << 1000*timer.GetIncr());
       } else {
         keyPoints = m->keyPoints_;

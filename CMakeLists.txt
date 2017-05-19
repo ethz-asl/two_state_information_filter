@@ -18,6 +18,7 @@ add_executable(test_imu_gps src/test_imu_gps.cpp src/simulator.cpp src/camera.cp
 add_executable(mytest src/test.cpp)
 
 if(ENABLE_OPENCV)
+	set(OpenCV_DIR /opt/ros/kinetic/share/OpenCV-3.2.0-dev)
  	find_package(OpenCV REQUIRED)
 	add_executable(test_vio src/test_vio.cpp src/simulator.cpp src/camera.cpp)
 	target_link_libraries(test_vio ${OpenCV_LIBS})
