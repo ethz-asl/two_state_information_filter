@@ -14,8 +14,8 @@ class Filter{
   typedef typename MergeTrait<typename Residuals::Previous...,typename Residuals::Current...>::Type State;
   typedef std::tuple<Residuals...> ResidualTuple;
   typedef std::tuple<Timeline<typename Residuals::Measurement>...> TimelineTuple;
-  ResidualTuple residuals_;
-  TimelineTuple timelines_;
+  alignas(16) ResidualTuple residuals_;
+  alignas(16) TimelineTuple timelines_;
 
   Filter(): timelines_(Timeline<typename Residuals::Measurement>(fromSec(0.1),fromSec(0.0))...),
             I_(State::Dim(),State::Dim()){

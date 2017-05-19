@@ -9,6 +9,7 @@ class UnitVector{
  private:
   Quat q_;
  public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   UnitVector(){}
   UnitVector(const UnitVector& other): q_(other.GetQuat()){}
   UnitVector(const Quat& q): q_(q){}

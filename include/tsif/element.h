@@ -46,9 +46,10 @@ struct ElementTraits{
 template<typename T, int I>
 class Element{
  private:
-  T x_;
+	alignas(16) T x_;
   typedef ElementTraits<T> Traits;
  public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   typedef T Type;
   static const int kI = I;
   static const int kDim = Traits::kDim*(int)(I>=0);

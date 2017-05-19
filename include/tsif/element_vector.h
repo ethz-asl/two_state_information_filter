@@ -255,7 +255,7 @@ class ElementVector: public ElementVectorBase<ElementVector<Elements...>,Element
  private:
   typedef ElementVectorBase<ElementVector<Elements...>,Elements...> Base;
   typedef std::tuple<Elements...> Tuple;
-  Tuple elements_;
+  alignas(16) Tuple elements_;
 
  public:
   typedef ElementVectorRef<Elements...> Ref;
