@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.8)
-project(two_state_implicit_filter)
+project(two_state_information_filter)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -march=native")
 set(TSIF_VERBOSE 0 CACHE STRING "Verbose flag")
 add_definitions(-DTSIF_VERBOSE=${TSIF_VERBOSE})
@@ -24,3 +24,21 @@ if(ENABLE_OPENCV)
 	target_link_libraries(test_vio ${OpenCV_LIBS})
 endif()
 
+
+find_package(catkin REQUIRED COMPONENTS
+glog_catkin
+)
+
+catkin_package(
+	INCLUDE_DIRS include ${catkin_INCLUDE_DIRS}
+    LIBRARIES ${PROJECT_NAME}
+	CATKIN_DEPENDS
+	glog_catkin
+)
+
+add_library(${PROJECT_NAME}
+	src/camera.cpp
+	src/simulator.cpp
+)
+
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} pthread)

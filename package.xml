@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>two_state_information_filter</name>
+  <version>0.0.0</version>
+  <description>two-state information filter</description>
+  <url>github.com/ethz-asl/two_state_information_filter</url>
+  <author>Michael Bloesch</author>
+  <author>Michael Burri</author>
+  <author>Thomas Schneider</author>
+  <maintainer email="bloeschm@ethz.ch">Michael Bloesch</maintainer>
+  <license>BSD</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>glog_catkin</depend>
+</package>
