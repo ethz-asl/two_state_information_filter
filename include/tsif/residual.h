@@ -97,7 +97,7 @@ class Residual: public Model<Residual<Out,Pre,Cur,Meas>,Out,Pre,Cur>{
       assert(false);
     }
   }
-  virtual void AddNoise(typename Out::Ref out, MatRefX J_pre, MatRefX J_cur){
+  virtual void AddNoise(typename Out::Ref out, MatRefX J_pre, MatRefX J_cur, const typename Pre::CRef pre, const typename Cur::CRef cur){
     AddWeight(GetWeight(),out,J_pre,J_cur);
   }
   void AddWeight(double w, typename Out::Ref out, MatRefX J_pre, MatRefX J_cur){
@@ -123,6 +123,23 @@ class Residual: public Model<Residual<Out,Pre,Cur,Meas>,Out,Pre,Cur>{
   }
   template<int OUT,int STA, typename std::enable_if<(STA<0 | OUT<0)>::type* = nullptr>
   void SetJacPre(MatRefX J, const typename Previous::CRef pre, MatCRefX Jsub){
+  }
+
+  template<int OUT,int STA, typename std::enable_if<(STA>=0 & OUT>=0)>::type* = nullptr>
+  void ScaleJacCur(MatRefX J, const typename Current::CRef cur, const double& factor){
+    J.block<Output::template GetElementDim<OUT>(),Current::template GetElementDim<STA>()>(
+        Output::Start(OUT),cur.Start(STA)) *= factor;
+  }
+  template<int OUT,int STA, typename std::enable_if<(STA<0 | OUT<0)>::type* = nullptr>
+  void ScaleJacCur(MatRefX J, const typename Current::CRef cur, const double& factor){
+  }
+  template<int OUT,int STA, typename std::enable_if<(STA>=0 & OUT>=0)>::type* = nullptr>
+  void ScaleJacPre(MatRefX J, const typename Previous::CRef pre, const double& factor){
+    J.block<Output::template GetElementDim<OUT>(),Previous::template GetElementDim<STA>()>(
+        Output::Start(OUT),pre.Start(STA)) *= factor;
+  }
+  template<int OUT,int STA, typename std::enable_if<(STA<0 | OUT<0)>::type* = nullptr>
+  void ScaleJacPre(MatRefX J, const typename Previous::CRef pre, const double& factor){
   }
 };
 
