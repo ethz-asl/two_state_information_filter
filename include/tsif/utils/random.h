@@ -1,6 +1,8 @@
 #ifndef TSIF_RANDOM_HPP_
 #define TSIF_RANDOM_HPP_
 
+#include <random>
+
 #include "tsif/utils/typedefs.h"
 
 namespace tsif{

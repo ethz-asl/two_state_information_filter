@@ -6,7 +6,7 @@
 
 namespace tsif{
 
-static constexpr double Sinc(const double x){
+inline double Sinc(const double x){
   return fabs(x) < 1e-8 ? 1 : sin(x)/x;
 }
 static Quat Exp(const Vec3& v){

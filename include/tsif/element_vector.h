@@ -1,6 +1,8 @@
 #ifndef TSIF_ELEMENT_VECTOR_H_
 #define TSIF_ELEMENT_VECTOR_H_
 
+#include <tuple>
+
 #include "tsif/utils/common.h"
 #include "tsif/element.h"
 
@@ -19,9 +21,9 @@ struct DimensionTrait<Element,Elements...>{
 
 template<bool... Bs>
 struct CheckAllTrue;
-template <bool B>
-struct CheckAllTrue<B>{
-  static const bool kVal = B;
+template <>
+struct CheckAllTrue<>{
+  static const bool kVal = true;
 };
 template <bool B,bool... Bs>
 struct CheckAllTrue<B,Bs...>{
@@ -50,20 +52,20 @@ class ElementVectorBase{
 
   template<int I>
   typename std::tuple_element<GetC<I>(),Tuple>::type::Type& Get(){
-    return static_cast<Derived&>(*this).Get<I>();
+    return static_cast<Derived&>(*this).template Get<I>();
   }
   template<int I>
   const typename std::tuple_element<GetC<I>(),Tuple>::type::Type& Get() const{
-    return static_cast<const Derived&>(*this).Get<I>();
+    return static_cast<const Derived&>(*this).template Get<I>();
   }
 
   template<int I>
   typename std::tuple_element<GetC<I>(),Tuple>::type& GetElement(){
-    return static_cast<Derived&>(*this).GetElement<I>();
+    return static_cast<Derived&>(*this).template GetElement<I>();
   }
   template<int I>
   const typename std::tuple_element<GetC<I>(),Tuple>::type& GetElement() const{
-    return static_cast<const Derived&>(*this).GetElement<I>();
+    return static_cast<const Derived&>(*this).template GetElement<I>();
   }
 
   template<typename Element, int C = 0, typename std::enable_if<(C < kN)>::type* = nullptr>
@@ -124,7 +126,7 @@ class ElementVectorBase{
     assert(vec.size() == Dim());
     typedef typename std::tuple_element<C,Tuple>::type E;
     if(E::kDim > 0){
-      GetElement<E::kI>().Boxplus(vec.template block<E::kDim,1>(Start(E::kI),0),out.GetElement<E::kI>());
+      GetElement<E::kI>().Boxplus(vec.template block<E::kDim,1>(Start(E::kI),0),out.template GetElement<E::kI>());
     }
     Boxplus<OtherDerived,C+1>(vec,out);
   }
@@ -136,7 +138,7 @@ class ElementVectorBase{
     assert(out.size() == Dim());
     typedef typename std::tuple_element<C,Tuple>::type E;
     if(E::kDim > 0){
-      GetElement<E::kI>().Boxminus(ref.GetElement<E::kI>(),out.template block<E::kDim,1>(Start(E::kI),0));
+      GetElement<E::kI>().Boxminus(ref.template GetElement<E::kI>(),out.template block<E::kDim,1>(Start(E::kI),0));
     }
     Boxminus<OtherDerived,C+1>(ref,out);
   }
@@ -185,7 +187,7 @@ class ElementVectorRef: public ElementVectorBase<ElementVectorRef<Elements...>,E
   static constexpr int kN = Base::kN;
   template<typename OtherDerived,typename... OtherElements>
   ElementVectorRef(ElementVectorBase<OtherDerived,OtherElements...>& elementVector):
-    elements_(elementVector.GetElement<Elements::kI>()...),
+    elements_(elementVector.template GetElement<Elements::kI>()...),
     startMap_{std::make_pair(Elements::kI,elementVector.Start(Elements::kI))...},
     Dim_(elementVector.Dim()){
   }
@@ -228,7 +230,7 @@ class ElementVectorConstRef: public ElementVectorBase<ElementVectorConstRef<Elem
   static constexpr int kN = Base::kN;
   template<typename OtherDerived,typename... OtherElements>
   ElementVectorConstRef(const ElementVectorBase<OtherDerived,OtherElements...>& elementVector):
-    elements_(elementVector.GetElement<Elements::kI>()...),
+    elements_(elementVector.template GetElement<Elements::kI>()...),
     startMap_{std::make_pair(Elements::kI,elementVector.Start(Elements::kI))...},
     Dim_(elementVector.Dim()){
   }
@@ -264,7 +266,7 @@ class ElementVector: public ElementVectorBase<ElementVector<Elements...>,Element
   ElementVector(){}
   template<typename OtherDerived,typename... OtherElements>
   ElementVector(const ElementVectorBase<OtherDerived,OtherElements...>& elementVector):
-    elements_(elementVector.GetElement<Elements::kI>()...){}
+    elements_(elementVector.template GetElement<Elements::kI>()...){}
   template<int C = 0, typename std::enable_if<(kN > C)>::type* = nullptr>
   ElementVector(const typename Elements::Type&... elements):
     elements_(elements...){}
