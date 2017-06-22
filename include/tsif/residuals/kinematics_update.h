@@ -10,7 +10,7 @@ class ContactPointMeasurement : public ElementVector<Element<Vec3,0>, Element<bo
  public:
   //constructors with and without arguments
   ContactPointMeasurement(): ElementVector<Element<Vec3,0>,Element<bool,1>>(Vec3(.0,.0,.0),false) {}
-  ContactPointMeasurements(const Vec3& B_Ns,const bool& Nlambda):ElementVector<Element<Vec3,0>, Element<bool,1>>(B_Ns,Nlambda){}
+  ContactPointMeasurement(const Vec3& B_Ns,const bool& Nlambda):ElementVector<Element<Vec3,0>, Element<bool,1>>(B_Ns,Nlambda){}
   //functions to get contact point
   const Vec3& GetContactPoint() const {return Get<0>();}
   Vec3& GetContactPoint() {return Get<0>();}
@@ -26,16 +26,16 @@ template<int Y,//contact point innovation
          int I_P>//right front contact point in odom
 using KinematicsUpdateBase = Residual<ElementVector<Element<Vec3,Y>>,//innovation
                                       ElementVector<>,//previous state is empty
-                                      ElementVector<Element<Vec3, I_R_IB> Element<Quat,PHI_IB>,Element<Vec3,I_P>>,//current state
+                                      ElementVector<Element<Vec3,I_R_IB>,Element<Quat,PHI_IB>,Element<Vec3,I_P>>,//current state
                                       ContactPointMeasurement>;//measurement
 
 //kinematics update residual comparing measured contact points calculated from joint state measurements to contact points in the filter state
 template<int I_R_IB,int PHI_IB,int I_P>
-class KinematicsUpdate : public KinematicsUpdateBase<0, Y_LF, Y_LH, Y_RH, I_R_IB, PHI_BI, I_P_RF, I_P_LF, I_P_LH, I_P_RH> {
+class KinematicsUpdate : public KinematicsUpdateBase<0,I_R_IB,PHI_IB,I_P> {
  public:
   //typedef and types from base for convenience
   //base type
-  typedef KinematicsUpdateBase<Y,I_R_IB,PHI_IB,I_P> Base;
+  typedef KinematicsUpdateBase<0,I_R_IB,PHI_IB,I_P> Base;
   //innovation vector type
   using typename Base::Output;
   //previous state vector type
@@ -54,7 +54,7 @@ class KinematicsUpdate : public KinematicsUpdateBase<0, Y_LF, Y_LH, Y_RH, I_R_IB
   //function evaluating the innovations
   int EvalRes(typename Output::Ref out, const typename Previous::CRef pre, const typename Current::CRef cur){
    //compare measured contact points to filter state
-		 out. template Get<0>() = meas_->getContactPoint()-cur.template Get<PHI_IB>().inverse.toRotationMatrix()*(cur.template Get<I_P>()-cur.template Get<I_R_IB>());
+		 out. template Get<0>() = meas_->GetContactPoint()-cur.template Get<PHI_IB>().inverse().toRotationMatrix()*(cur.template Get<I_P>()-cur.template Get<I_R_IB>());
    return 0;
   }
   //function evaluating the jacobian of the the innovation wrt the previous state
@@ -68,24 +68,25 @@ class KinematicsUpdate : public KinematicsUpdateBase<0, Y_LF, Y_LH, Y_RH, I_R_IB
    J.setZero();
    //rotation matrix from odom to base frame from orientation state
    const Mat3 C_BI=cur.template Get<PHI_IB>().inverse().toRotationMatrix();
+
    //set nonzero blocks of the jacobian
    //derivative of contact point innovation wrt position
    this->template SetJacCur<0,I_R_IB>(J,cur,C_BI);
    //derivative of contact point innovation wrt orientation
-   this->template SetJacCur<0,PHI_BI>(J,cur,SSM(C_BI*(cur.template Get<I_P>()-cur.template Get<I_R_IB>())));
+   this->template SetJacCur<0,PHI_IB>(J,cur,-SSM(C_BI*(cur.template Get<I_P>()-cur.template Get<I_R_IB>()))*C_BI);
    //derivative of contact point innovation wrt contact point
-   this->template SetJacCur<0,I_P_RF>(J,cur,-C_BI);
+   this->template SetJacCur<0,I_P>(J,cur,-C_BI);
    return 0;    
   }
   //function returning the weighting factor used in the TSIF optimization
   double GetWeight(){
     if (meas_->GetContactFlag()) return w_contact_/sqrt(dt_);
-    else return return w_swing_/sqrt(dt_);
+    else return w_swing_/sqrt(dt_);
   }
   //weights for contact points during contact and swing
-  double w_contact;
+  double w_contact_;
   double w_swing_;
 };
-_
+
 } // namespace tsif
 

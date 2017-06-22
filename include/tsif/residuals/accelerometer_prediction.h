@@ -34,7 +34,7 @@ class AccelerometerPrediction: public AccelerometerPredictionBase<OUT_VEL,STA_VE
   typedef typename Base::Output Output;
   typedef typename Base::Previous Previous;
   typedef typename Base::Current Current;
-  const Vec3 g_;
+  Vec3 g_;
   AccelerometerPrediction(): Base(true,true,true), g_(0,0,-9.81){}
   int EvalRes(typename Output::Ref out, const typename Previous::CRef pre, const typename Current::CRef cur){
     out.template Get<OUT_VEL>() = cur.template Get<STA_VEL>()
