@@ -38,14 +38,14 @@ class AccelerometerPrediction: public AccelerometerPredictionBase<OUT_VEL,STA_VE
   AccelerometerPrediction(): Base(true,true,true), g_(0,0,-9.81){}
   int EvalRes(typename Output::Ref out, const typename Previous::CRef pre, const typename Current::CRef cur){
     out.template Get<OUT_VEL>() = cur.template Get<STA_VEL>()
-        - (Mat3::Identity() - SSM(dt_*pre.template Get<STA_ROR>()))*pre.template Get<STA_VEL>()
+        - (Mat3::Identity() + SSM(dt_*pre.template Get<STA_ROR>()))*pre.template Get<STA_VEL>()
         - dt_*(meas_->GetAcc()-pre.template Get<STA_ACB>()+pre.template Get<STA_ATT>().inverse().toRotationMatrix()*g_);
     return 0;
   }
   int JacPre(MatRefX J, const typename Previous::CRef pre, const typename Current::CRef cur){
-    J.block<3,3>(Output::Start(OUT_VEL),pre.Start(STA_VEL)) = - (Mat3::Identity() - SSM(dt_*pre.template Get<STA_ROR>()));
-    J.block<3,3>(Output::Start(OUT_VEL),pre.Start(STA_ATT)) = -pre.template Get<STA_ATT>().inverse().toRotationMatrix()*SSM(g_*dt_);
-    J.block<3,3>(Output::Start(OUT_VEL),pre.Start(STA_ROR)) = - SSM(dt_*pre.template Get<STA_VEL>());
+    J.block<3,3>(Output::Start(OUT_VEL),pre.Start(STA_VEL)) = - (Mat3::Identity() + SSM(dt_*pre.template Get<STA_ROR>()));
+    J.block<3,3>(Output::Start(OUT_VEL),pre.Start(STA_ATT)) = - pre.template Get<STA_ATT>().inverse().toRotationMatrix()*SSM(g_*dt_);
+    J.block<3,3>(Output::Start(OUT_VEL),pre.Start(STA_ROR)) = SSM(dt_*pre.template Get<STA_VEL>());
     J.block<3,3>(Output::Start(OUT_VEL),pre.Start(STA_ACB)) = dt_*Mat3::Identity();
     return 0;
   }
