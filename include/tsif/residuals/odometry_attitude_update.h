@@ -27,7 +27,7 @@ using OdometryAttitudeUpdateBase = Residual<ElementVector<Element<Vec3,Y>>,
                                               ElementVector<>,
                                               ElementVector<Element<Quat,PHI_JB>,
                                                             Element<Quat,PHI_JI>>,
-                                              MeasAttMapCentric>;
+                                              MeasAttOdom>;
 
 template<int PHI_JB,int PHI_JI>
 class OdometryAttitudeUpdate: public OdometryAttitudeUpdateBase<0,PHI_JB,PHI_JI>{
