@@ -25,6 +25,8 @@ class TwoWeightRandomWalk: public TwoWeightRandomWalkBase<Elements...>{
   typedef TwoWeightRandomWalkBase<Elements...> Base;
   using Base::dt_;
   using Base::meas_;
+  double w_true_;
+  double w_false_;
   typedef typename Base::Output Output;
   typedef typename Base::Previous Previous;
   typedef typename Base::Current Current;
@@ -78,8 +80,6 @@ class TwoWeightRandomWalk: public TwoWeightRandomWalkBase<Elements...>{
     if (meas_->get()) return w_true_/sqrt(dt_);
     else return w_false_/sqrt(dt_);
   }
-  double w_true_;
-  double w_false_;
 };
 
 } // namespace tsif

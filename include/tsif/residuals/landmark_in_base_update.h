@@ -5,7 +5,7 @@
 
 namespace tsif {
 
-//measurement class to hold base to landmark vector in base frame
+//measurement class to hold base landmark vector in base frame
 class LandmarkInBaseMeasurement : public ElementVector<Element<Vec3,0>>{
  public:
   //constructors with and without arguments
@@ -14,7 +14,6 @@ class LandmarkInBaseMeasurement : public ElementVector<Element<Vec3,0>>{
   //functions to measurement
   const Vec3& GetMeasurement() const {return Get<0>();}
   Vec3& GetMeasurement() {return Get<0>();}
-
 };
 
 //shortcut to make the templating more convenient
