@@ -52,7 +52,7 @@ class LandmarkInBaseFindif : public LandmarkInBaseFindifBase<0,B_V_IB,B_OMEGA_IB
   //function evaluating the innovation
   int EvalRes(typename Output::Ref out, const typename Previous::CRef pre, const typename Current::CRef cur){
    //compare measured contact points to filter state
-		 out. template Get<0>()=cur.template Get<B_P>()
+	 out. template Get<0>()=cur.template Get<B_P>()
                           -(Mat3::Identity()+SSM(dt_*pre.template Get<B_OMEGA_IB>()))*pre.template Get<B_P>()
                           +dt_*pre.template Get<B_V_IB>();
    return 0;
