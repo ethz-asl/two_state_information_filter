@@ -53,7 +53,7 @@ class LandmarkInBaseFindif : public LandmarkInBaseFindifBase<0,B_V_IB,B_OMEGA_IB
   int EvalRes(typename Output::Ref out, const typename Previous::CRef pre, const typename Current::CRef cur){
    //compare measured contact points to filter state
 	 out. template Get<0>()=cur.template Get<B_P>()
-                          -(Mat3::Identity()+SSM(dt_*pre.template Get<B_OMEGA_IB>()))*pre.template Get<B_P>()
+                          -(Mat3::Identity()-SSM(dt_*pre.template Get<B_OMEGA_IB>()))*pre.template Get<B_P>()
                           +dt_*pre.template Get<B_V_IB>();
    return 0;
   }
@@ -65,9 +65,9 @@ class LandmarkInBaseFindif : public LandmarkInBaseFindifBase<0,B_V_IB,B_OMEGA_IB
    //derivative of innovation wrt linear velocity
    this->template SetJacPre<0,B_V_IB>(J,pre,dt_*Mat3::Identity());
    //derivative of innovation wrt angular velocity
-   this->template SetJacPre<0,B_OMEGA_IB>(J,pre,SSM(dt_*pre.template Get<B_P>()));
+   this->template SetJacPre<0,B_OMEGA_IB>(J,pre,-SSM(dt_*pre.template Get<B_P>()));
    //derivative of innovation wrt landmark
-   this->template SetJacPre<0,B_P>(J,pre,-SSM(dt_*pre.template Get<B_OMEGA_IB>())-Mat3::Identity());
+   this->template SetJacPre<0,B_P>(J,pre,SSM(dt_*pre.template Get<B_OMEGA_IB>())-Mat3::Identity());
    return 0;    
   }
   //function evaluating the jacobian of the the innovation wrt the current state
