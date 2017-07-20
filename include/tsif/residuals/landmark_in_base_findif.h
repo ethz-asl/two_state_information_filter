@@ -2,6 +2,7 @@
 
 //base class
 #include "tsif/residual.h"
+#include "tsif/utils/common.h"
 
 namespace tsif {
 
