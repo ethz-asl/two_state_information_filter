@@ -17,15 +17,15 @@ class MeasContactForces: public ElementVector<Element<Vec3,0>>{
 };
 
 template<int Y, int PHI_IB, int B_V_IB, int B_OMEGA_IB, int M_R>
-using ForceBasedVelocityPredictionBase = Residual<ElementVector<Element<Vec3,Y>>,
+using ForceBasedLinearVelocityPredictionBase = Residual<ElementVector<Element<Vec3,Y>>,
                                                   ElementVector<Element<Quat,PHI_IB>,Element<Vec3,B_V_IB>,Element<Vec3,B_OMEGA_IB>,Element<double,M_R>>,
                                                   ElementVector<Element<Vec3,B_V_IB>>,
                                                   MeasContactForces>;
 
 template<int PHI_IB, int B_V_IB, int B_OMEGA_IB, int M_R>
-class ForceBasedVelocityPrediction: public ForceBasedVelocityPredictionBase<0, PHI_IB, B_V_IB, B_OMEGA_IB, M_R>{
+class ForceBasedLinearVelocityPrediction: public ForceBasedLinearVelocityPredictionBase<0, PHI_IB, B_V_IB, B_OMEGA_IB, M_R>{
  public:
-  typedef ForceBasedVelocityPredictionBase<0, PHI_IB, B_V_IB, B_OMEGA_IB, M_R> Base;
+  typedef ForceBasedLinearVelocityPredictionBase<0, PHI_IB, B_V_IB, B_OMEGA_IB, M_R> Base;
   using Base::dt_;
   using Base::w_;
   using Base::meas_;
@@ -33,7 +33,7 @@ class ForceBasedVelocityPrediction: public ForceBasedVelocityPredictionBase<0, P
   typedef typename Base::Previous Previous;
   typedef typename Base::Current Current;
   Vec3 g_;
-  ForceBasedVelocityPrediction(): Base(true,true,false), g_(0,0,-9.81){}
+  ForceBasedLinearVelocityPrediction(): Base(true,true,false), g_(0,0,-9.81){}
   int EvalRes(typename Output::Ref out, const typename Previous::CRef pre, const typename Current::CRef cur){
     out.template Get<0>() = cur.template Get<B_V_IB>()
         - (Mat3::Identity() - SSM(dt_*pre.template Get<B_OMEGA_IB>()))*pre.template Get<B_V_IB>()
