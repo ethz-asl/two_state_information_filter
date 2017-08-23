@@ -19,7 +19,7 @@ static Vec3 Log(const Quat& q){
   const double re = q.w();
   const Vec3 im(q.x(),q.y(),q.z());
   const double sha = im.norm();
-  return sha < 1e-8 ? ((std::signbit(re)!=0)*-2+1)*2*im : 2*atan2(sha,re)/sha*im;
+  return sha < 1e-8 ? ((std::signbit(re)!=0)*-2+1)*2*im : 2*atan(sha/re)/sha*im;
 }
 static Quat Boxplus(const Quat& q, const Vec3& v){
   return Exp(v)*q;
