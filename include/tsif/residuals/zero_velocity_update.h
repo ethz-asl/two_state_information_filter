@@ -33,18 +33,30 @@ class ZeroVelocityUpdate: public ZeroVelocityUpdateBase<0,1,B_V_IB, B_OMEGA_IB>{
   typedef typename Base::Output Output;
   typedef typename Base::Previous Previous;
   typedef typename Base::Current Current;
-  ZeroVelocityUpdate(): Base(true,true,false) {}
+  ZeroVelocityUpdate(): Base(false,false,false) {}
   int EvalRes(typename Output::Ref out, const typename Previous::CRef pre, const typename Current::CRef cur){
-    out.template Get<0>() = cur.template Get<B_V_IB>();
-    out.template Get<1>() = cur.template Get<B_OMEGA_IB>();
+    if (meas_->GetTrigger()){
+      out.template Get<0>() = cur.template Get<B_V_IB>();
+      out.template Get<1>() = cur.template Get<B_OMEGA_IB>();
+    }
+    else {
+      out.template Get<0>() = Vec3::Zero();
+      out.template Get<1>() = Vec3::Zero();
+    }
     return 0;
   }
   int JacPre(MatRefX J, const typename Previous::CRef pre, const typename Current::CRef cur){
     return 0;
   }
   int JacCur(MatRefX J, const typename Previous::CRef pre, const typename Current::CRef cur){
-    this->template SetJacCur<0,B_V_IB>(J,cur,Mat3::Identity());
-    this->template SetJacCur<1,B_OMEGA_IB>(J,cur,Mat3::Identity());
+    if (meas_->GetTrigger()){
+      this->template SetJacCur<0,B_V_IB>(J,cur,Mat3::Identity());
+      this->template SetJacCur<1,B_OMEGA_IB>(J,cur,Mat3::Identity());
+    }
+    else {
+      this->template SetJacCur<0,B_V_IB>(J,cur,Mat3::Zero());
+      this->template SetJacCur<1,B_OMEGA_IB>(J,cur,Mat3::Zero());
+    }
     return 0;
   }
 };
