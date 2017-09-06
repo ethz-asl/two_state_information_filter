@@ -33,7 +33,7 @@ class ZeroVelocityUpdate: public ZeroVelocityUpdateBase<0,1,B_V_IB, B_OMEGA_IB>{
   typedef typename Base::Output Output;
   typedef typename Base::Previous Previous;
   typedef typename Base::Current Current;
-  ZeroVelocityUpdate(): Base(false,false,false) {}
+  ZeroVelocityUpdate(): Base(true,true,true) {}
   int EvalRes(typename Output::Ref out, const typename Previous::CRef pre, const typename Current::CRef cur){
     if (meas_->GetTrigger()){
       out.template Get<0>() = cur.template Get<B_V_IB>();

@@ -40,10 +40,15 @@ class LandmarkInBaseUpdate : public LandmarkInBaseUpdateBase<0,B_P> {
   using typename Base::Current;
   //measurement pointer from base
   using Base::meas_;
+  //weight_
+  using Base::w_;
+  //parameter for the huber loss function
+  double huber_threshold_;
   //constructor setting characteristics of the residual and default weights
   LandmarkInBaseUpdate(): Base (false,//splittable
                                 false,//mergeable
-                                false){};//mandatory
+                                false),//mandatory
+                          huber_threshold_(1000.){};
 
   //function evaluating the innovation
   int EvalRes(typename Output::Ref out, const typename Previous::CRef pre, const typename Current::CRef cur){
@@ -63,6 +68,17 @@ class LandmarkInBaseUpdate : public LandmarkInBaseUpdateBase<0,B_P> {
    //rotation matrix from odom to base frame from orientation state   
    this->template SetJacCur<0,B_P>(J,cur,-Mat3::Identity());
    return 0;    
+  }
+  //function to scale the innovation and jacobians with the appropriate weighting factor
+  virtual void AddNoise(typename Output::Ref out, MatRefX J_pre, MatRefX J_cur, const typename Previous::CRef pre, const typename Current::CRef cur){
+    //compute weight using huber loss function
+    double weight = w_;
+    const double norm = out.template Get<0>().norm();
+    if(norm > huber_threshold_) weight *= sqrt(2 * huber_threshold_ * (norm - 0.5 * huber_threshold_)/(norm*norm));
+    //scale the innovation and jacobians
+    out.Scale(weight);
+    J_pre *= weight;
+    J_cur *= weight;
   }
 };
 
