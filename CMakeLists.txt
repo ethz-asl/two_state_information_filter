@@ -26,14 +26,12 @@ endif()
 
 
 find_package(catkin REQUIRED COMPONENTS
-glog_catkin
 )
 
 catkin_package(
 	INCLUDE_DIRS include ${catkin_INCLUDE_DIRS}
     LIBRARIES ${PROJECT_NAME}
 	CATKIN_DEPENDS
-	glog_catkin
 )
 
 add_library(${PROJECT_NAME}
