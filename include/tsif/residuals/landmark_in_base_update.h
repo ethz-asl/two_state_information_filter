@@ -40,7 +40,7 @@ class LandmarkInBaseUpdate : public LandmarkInBaseUpdateBase<0,B_P> {
   using typename Base::Current;
   //measurement pointer from base
   using Base::meas_;
-  //weight_
+  //weight
   using Base::w_;
   //parameter for the huber loss function
   double huber_threshold_;
@@ -81,6 +81,5 @@ class LandmarkInBaseUpdate : public LandmarkInBaseUpdateBase<0,B_P> {
     J_cur *= weight;
   }
 };
-
 } // namespace tsif
 

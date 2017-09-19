@@ -44,11 +44,15 @@ class LandmarkInOdomUpdate : public LandmarkInOdomUpdateBase<0,I_R_IB,PHI_IB,I_P
   using Base::dt_;
   //measurement pointer from base
   using Base::meas_;
-
+  //weight
+  using Base::w_;
+  //parameter for the huber loss function
+  double huber_threshold_;
   //constructor setting characteristics of the residual and default weights
   LandmarkInOdomUpdate(): Base (false,//splittable
                                 false,//mergeable
-                                false){};//mandatory
+                                false),//mandatory
+                          huber_threshold_(1000.){};
   //function evaluating the innovations
   int EvalRes(typename Output::Ref out, const typename Previous::CRef pre, const typename Current::CRef cur){
    //compare measured contact points to filter state
@@ -74,6 +78,17 @@ class LandmarkInOdomUpdate : public LandmarkInOdomUpdateBase<0,I_R_IB,PHI_IB,I_P
    //derivative of landmark innovation wrt landmark
    this->template SetJacCur<0,I_P>(J,cur,-C_BI);
    return 0;    
+  }
+  //function to scale the innovation and jacobians with the appropriate weighting factor
+  virtual void AddNoise(typename Output::Ref out, MatRefX J_pre, MatRefX J_cur, const typename Previous::CRef pre, const typename Current::CRef cur){
+    //compute weight using huber loss function
+    double weight = w_;
+    const double norm = out.template Get<0>().norm();
+    if(norm > huber_threshold_) weight *= sqrt(2 * huber_threshold_ * (norm - 0.5 * huber_threshold_)/(norm*norm));
+    //scale the innovation and jacobians
+    out.Scale(weight);
+    J_pre *= weight;
+    J_cur *= weight;
   }
 };
 } // namespace tsif
