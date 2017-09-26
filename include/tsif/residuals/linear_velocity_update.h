@@ -39,14 +39,13 @@ class LinearVelocityUpdate: public LinearVelocityUpdateBase<0,B_V_IB>{
     return 0;
   }
   int JacPre(MatRefX J, const typename Previous::CRef pre, const typename Current::CRef cur){
+    J.setZero();
     return 0;
   }
   int JacCur(MatRefX J, const typename Previous::CRef pre, const typename Current::CRef cur){
-    J.block<3,3>(Output::Start(B_V_IB),cur.Start(B_V_IB)) = Mat3::Identity();
+    J.setZero();
+    this->template SetJacCur<0,B_V_IB>(J,cur,Mat3::Identity());
     return 0;
-  }
-  double GetWeight(){
-    return w_;
   }
 };
 
