@@ -40,8 +40,10 @@ class MapCentricAttitudeUpdate: public MapCentricAttitudeUpdateBase<0,PHI_JB,PHI
   typedef typename Base::Current Current;
   //measurement pointer from base class
   using Base::meas_;
+  using Base::w_;
+  double huber_threshold_;
   //constructor
-  MapCentricAttitudeUpdate(): Base(false,false,false){}
+  MapCentricAttitudeUpdate(): Base(false,false,false), huber_threshold_(1000.){}
   //function to evaluate the innovation
   int EvalRes(typename Output::Ref out, const typename Previous::CRef pre, const typename Current::CRef cur){
     out.template Get<0>() = Log(cur.template Get<PHI_JB>()*cur.template Get<PHI_BV>()*meas_->GetAtt().inverse());
@@ -60,6 +62,16 @@ class MapCentricAttitudeUpdate: public MapCentricAttitudeUpdateBase<0,PHI_JB,PHI
     this->template SetJacCur<0,PHI_JB>(J,cur,G_inv);
     this->template SetJacCur<0,PHI_BV>(J,cur,G_inv*C_JB);
     return 0;
+  }
+  virtual void AddNoise(typename Output::Ref out, MatRefX J_pre, MatRefX J_cur, const typename Previous::CRef pre, const typename Current::CRef cur){
+    //compute weight using huber loss function
+    double weight = w_;
+    const double norm = out.template Get<0>().norm();
+    if(norm > huber_threshold_) weight *= sqrt(2 * huber_threshold_ * (norm - 0.5 * huber_threshold_)/(norm*norm));
+    //scale the innovation and jacobians
+    out.Scale(weight);
+    J_pre *= weight;
+    J_cur *= weight;
   }
 };
 
