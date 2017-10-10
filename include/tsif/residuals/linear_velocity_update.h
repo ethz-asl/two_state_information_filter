@@ -33,7 +33,7 @@ class LinearVelocityUpdate: public LinearVelocityUpdateBase<0,B_V_IB>{
   typedef typename Base::Output Output;
   typedef typename Base::Previous Previous;
   typedef typename Base::Current Current;
-  LinearVelocityUpdate(): Base(false,false,true){}
+  LinearVelocityUpdate(): Base(true,true,true){}
   int EvalRes(typename Output::Ref out, const typename Previous::CRef pre, const typename Current::CRef cur){
     out.template Get<0>() = cur.template Get<B_V_IB>() - meas_->GetMeas();
     return 0;
