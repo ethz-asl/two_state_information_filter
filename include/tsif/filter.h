@@ -10,6 +10,7 @@ namespace tsif{
 template<typename... Residuals>
 class Filter{
  public:
+  std::string filter_name_;
   static constexpr int kN = sizeof...(Residuals);
   typedef typename MergeTrait<typename Residuals::Previous...,typename Residuals::Current...>::Type State;
   typedef std::tuple<Residuals...> ResidualTuple;
@@ -18,7 +19,7 @@ class Filter{
   alignas(16) TimelineTuple timelines_;
 
   Filter(): timelines_(Timeline<typename Residuals::Measurement>(fromSec(0.1),fromSec(0.0))...),
-            I_(State::Dim(),State::Dim()){
+            I_(State::Dim(),State::Dim()), filter_name_("tsif"){
     is_initialized_ = false;
     include_max_ = false;
     max_iter_ = 1;
@@ -160,6 +161,7 @@ class Filter{
       PrintTimelines(time_, 20, 0.001);
 
       // Carry out updates
+      if (times.size()>1) std::cout << "TSIF \"" << filter_name_ << "\" about to make multiple update steps (" << times.size() << ")" << std::endl;
       for (const auto& t : times){
         MakeUpdateStep(t);
       }

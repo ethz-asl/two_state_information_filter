@@ -84,6 +84,7 @@ class LandmarkInOdomUpdate : public LandmarkInOdomUpdateBase<0,I_R_IB,PHI_IB,I_P
     //compute weight using huber loss function
     double weight = w_;
     const double norm = out.template Get<0>().norm();
+    //std::cout << "||y_lmk||_2 = " << norm << std::endl;
     if(norm > huber_threshold_) weight *= sqrt(2 * huber_threshold_ * (norm - 0.5 * huber_threshold_)/(norm*norm));
     //scale the innovation and jacobians
     out.Scale(weight);
