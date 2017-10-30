@@ -161,7 +161,7 @@ class Filter{
       PrintTimelines(time_, 20, 0.001);
 
       // Carry out updates
-      if (times.size()>1) std::cout << "TSIF \"" << filter_name_ << "\" about to make multiple update steps (" << times.size() << ")" << std::endl;
+      //if (times.size()>1) std::cout << "TSIF \"" << filter_name_ << "\" about to make multiple update steps (" << times.size() << ")" << std::endl;
       for (const auto& t : times){
         MakeUpdateStep(t);
       }
