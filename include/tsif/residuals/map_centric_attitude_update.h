@@ -67,7 +67,7 @@ class MapCentricAttitudeUpdate: public MapCentricAttitudeUpdateBase<0,PHI_JB,PHI
     //compute weight using huber loss function
     double weight = w_;
     const double norm = out.template Get<0>().norm();
-    if(norm > huber_threshold_) weight *= sqrt(huber_threshold_ * (norm - 0.5 * huber_threshold_))/norm;
+    if(norm > huber_threshold_) weight *= sqrt(2*huber_threshold_ * (norm - 0.5 * huber_threshold_))/norm;
     //scale the innovation and jacobians
     out.Scale(weight);
     J_pre *= weight;
