@@ -17,6 +17,7 @@ add_executable(test_imu_gps src/test_imu_gps.cpp src/simulator.cpp src/camera.cp
 
 add_executable(mytest src/test.cpp)
 
+
 if(ENABLE_OPENCV)
 	set(OpenCV_DIR /opt/ros/kinetic/share/OpenCV-3.2.0-dev)
  	find_package(OpenCV REQUIRED)
@@ -40,3 +41,26 @@ add_library(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} pthread)
+
+# Install header
+install(DIRECTORY include/tsif/
+  DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION}/tsif/
+)
+
+# Install executables and library
+install(TARGETS 
+          ${PROJECT_NAME}
+          test_state 
+          test_quaternion 
+          test_unit_vector 
+          test_timeline 
+          test_imu_gps mytest
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+# Install config 
+install(DIRECTORY cfg
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
