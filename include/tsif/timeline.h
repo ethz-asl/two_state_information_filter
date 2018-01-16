@@ -143,8 +143,8 @@ class Timeline{
     };
     return out.str();
   }
-  const Duration max_wait_time_;
-  const Duration min_wait_time_;
+  Duration max_wait_time_;
+  Duration min_wait_time_;
 };
 
 template<>
@@ -186,8 +186,8 @@ class Timeline<MeasEmpty>{
     for(int i=0;i<c;i++) out << "-";
     return out.str();
   }
-  const Duration max_wait_time_;
-  const Duration min_wait_time_;
+  Duration max_wait_time_;
+  Duration min_wait_time_;
 };
 
 } // namespace tsif
