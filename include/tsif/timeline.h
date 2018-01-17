@@ -144,10 +144,10 @@ class Timeline{
     return out.str();
   }
 
-  void SetMaxWaitTime(double max_wait_time){
+  void SetMaxWaitTime(const double& max_wait_time){
     max_wait_time_ = fromSec(max_wait_time);
   }
-  void SetMinWaitTime(double min_wait_time){
+  void SetMinWaitTime(const double& min_wait_time){
     min_wait_time_ = fromSec(min_wait_time);
   }
 
@@ -196,10 +196,10 @@ class Timeline<MeasEmpty>{
     return out.str();
   }
 
-  void SetMaxWaitTime(double max_wait_time){
+  void SetMaxWaitTime(const double& max_wait_time){
     max_wait_time_ = fromSec(max_wait_time);
   }
-  void SetMinWaitTime(double min_wait_time){
+  void SetMinWaitTime(const double& min_wait_time){
     min_wait_time_ = fromSec(min_wait_time);
   }
 
