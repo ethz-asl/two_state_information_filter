@@ -143,6 +143,15 @@ class Timeline{
     };
     return out.str();
   }
+
+  void SetMaxWaitTime(double max_wait_time){
+    max_wait_time_ = fromSec(max_wait_time);
+  }
+  void SetMinWaitTime(double min_wait_time){
+    min_wait_time_ = fromSec(min_wait_time);
+  }
+
+ protected:
   Duration max_wait_time_;
   Duration min_wait_time_;
 };
@@ -186,6 +195,15 @@ class Timeline<MeasEmpty>{
     for(int i=0;i<c;i++) out << "-";
     return out.str();
   }
+
+  void SetMaxWaitTime(double max_wait_time){
+    max_wait_time_ = fromSec(max_wait_time);
+  }
+  void SetMinWaitTime(double min_wait_time){
+    min_wait_time_ = fromSec(min_wait_time);
+  }
+
+ protected:
   Duration max_wait_time_;
   Duration min_wait_time_;
 };
