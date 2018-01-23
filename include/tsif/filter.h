@@ -117,6 +117,14 @@ class Filter{
   template<int C = 0, typename std::enable_if<(C >= kN)>::type* = nullptr>
   void Clean(TimePoint time){}
 
+  template<int C = 0, typename std::enable_if<(C < kN)>::type* = nullptr>
+  void Clear(){
+    std::get<C>(timelines_).Clear();
+    Clear<C+1>();
+  }
+  template<int C = 0, typename std::enable_if<(C >= kN)>::type* = nullptr>
+  void Clear(){}
+
   virtual void Init(TimePoint t){
     if(GetMinMaxTime() != TimePoint::min()){
       TSIF_LOG("Initializing state at t = " << Print(t));
