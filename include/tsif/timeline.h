@@ -35,6 +35,9 @@ class Timeline{
       RemoveFirst();
     }
   }
+  void Clear(){
+    mm_.clear();
+  }
   int CountSmallerOrEqual(TimePoint t){
     int count = 0;
     auto it = mm_.upper_bound(t);
@@ -172,6 +175,8 @@ class Timeline<MeasEmpty>{
     return std::make_shared<MeasEmpty>();
   }
   void Clean(TimePoint t){
+  }
+  void Clear(){
   }
   TimePoint GetLastTime() const{
     return TimePoint::max();
