@@ -4,10 +4,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -march=native")
 set(TSIF_VERBOSE 0 CACHE STRING "Verbose flag")
 add_definitions(-DTSIF_VERBOSE=${TSIF_VERBOSE})
 
-include_directories(include)
-
+find_package(catkin REQUIRED)
 find_package(Eigen3 REQUIRED)
-include_directories(${EIGEN3_INCLUDE_DIR})
+
+include_directories(
+  include
+  ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIR}
+)
 
 add_executable(test_state src/test_state.cpp)
 add_executable(test_quaternion src/test_quaternion.cpp)
@@ -19,25 +23,21 @@ add_executable(mytest src/test.cpp)
 
 
 if(ENABLE_OPENCV)
-	set(OpenCV_DIR /opt/ros/kinetic/share/OpenCV-3.2.0-dev)
- 	find_package(OpenCV REQUIRED)
-	add_executable(test_vio src/test_vio.cpp src/simulator.cpp src/camera.cpp)
-	target_link_libraries(test_vio ${OpenCV_LIBS})
+  set(OpenCV_DIR /opt/ros/kinetic/share/OpenCV-3.2.0-dev)
+  find_package(OpenCV REQUIRED)
+  add_executable(test_vio src/test_vio.cpp src/simulator.cpp src/camera.cpp)
+  target_link_libraries(test_vio ${OpenCV_LIBS})
 endif()
 
-
-find_package(catkin REQUIRED COMPONENTS
-)
-
 catkin_package(
-	INCLUDE_DIRS include ${catkin_INCLUDE_DIRS}
-    LIBRARIES ${PROJECT_NAME}
-	CATKIN_DEPENDS
+  INCLUDE_DIRS include ${EIGEN3_INCLUDE_DIR}
+  LIBRARIES ${PROJECT_NAME}
+  CATKIN_DEPENDS
 )
 
 add_library(${PROJECT_NAME}
-	src/camera.cpp
-	src/simulator.cpp
+  src/camera.cpp
+  src/simulator.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} pthread)
