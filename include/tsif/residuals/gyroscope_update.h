@@ -34,7 +34,7 @@ class GyroscopeUpdate: public GyroscopeUpdateBase<OUT_ROR,STA_ROR,STA_GYB>{
   typedef typename Base::Output Output;
   typedef typename Base::Previous Previous;
   typedef typename Base::Current Current;
-  GyroscopeUpdate(): Base(true,true,true){}
+  GyroscopeUpdate(bool isSplitable = true,bool isMergeable = true,bool isMandatory = true): Base(isSplitable,isMergeable,isMandatory){}
   int EvalRes(typename Output::Ref out, const typename Previous::CRef pre, const typename Current::CRef cur){
     out.template Get<OUT_ROR>() = cur.template Get<STA_ROR>() + cur.template Get<STA_GYB>() - meas_->GetGyr();
     return 0;
