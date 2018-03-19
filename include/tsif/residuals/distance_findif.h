@@ -39,6 +39,7 @@ class DistanceFindif: public DistanceFindifBase<OUT_DIS,STA_BEA,STA_DIS,STA_VEL,
     return 0;
   }
   int JacPre(MatRefX J, const typename Previous::CRef pre, const typename Current::CRef cur){
+    J.setZero();
     const Mat3 C_VI = pre.template Get<STA_VEA>().toRotationMatrix();
     const Vec3 vel = C_VI*(pre.template Get<STA_VEL>() + pre.template Get<STA_ROR>().cross(pre.template Get<STA_VEP>()));
     for(int i=0;i<N;i++){
@@ -50,12 +51,13 @@ class DistanceFindif: public DistanceFindifBase<OUT_DIS,STA_BEA,STA_DIS,STA_VEL,
       J.block<1,3>(Output::Start(OUT_DIS)+1*i,pre.Start(STA_ROR)) = -J_vel*C_VI*SSM(pre.template Get<STA_VEP>());
       J.block<1,1>(Output::Start(OUT_DIS)+1*i,pre.Start(STA_DIS)+1*i) = Mat<1>::Identity()+dt_*2*beaVec.transpose()*vel*invDis;
       J.block<1,2>(Output::Start(OUT_DIS)+1*i,pre.Start(STA_BEA)+2*i) = dt_*vel.transpose()*invDis*invDis*bea.GetM();
-      J.block<1,3>(Output::Start(OUT_DIS)+1*i,pre.Start(STA_VEP)) = J_vel*C_VI*SSM(pre.template Get<STA_ROR>());
-      J.block<1,3>(Output::Start(OUT_DIS)+1*i,pre.Start(STA_VEA)) = - J_vel*SSM(vel);
+      if (STA_VEP>=0) J.block<1,3>(Output::Start(OUT_DIS)+1*i,pre.Start(STA_VEP)) = J_vel*C_VI*SSM(pre.template Get<STA_ROR>());
+      if (STA_VEA>=0) J.block<1,3>(Output::Start(OUT_DIS)+1*i,pre.Start(STA_VEA)) = - J_vel*SSM(vel);
     }
     return 0;
   }
   int JacCur(MatRefX J, const typename Previous::CRef pre, const typename Current::CRef cur){
+    J.setZero();
     for(int i=0;i<N;i++){
       J.block<1,1>(Output::Start(OUT_DIS)+1*i,cur.Start(STA_DIS)+1*i) = -Mat<1>::Identity();
     }

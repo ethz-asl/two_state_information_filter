@@ -48,6 +48,7 @@ class BearingFindif: public BearingFindifBase<OUT_BEA,STA_BEA,STA_DIS,STA_VEL,ST
     return 0;
   }
   int JacCur(MatRefX J, const typename Previous::CRef pre, const typename Current::CRef cur){
+    J.setZero();
     UnitVector n_predicted;
     const Mat3 C_VI = pre.template Get<STA_VEA>().toRotationMatrix();
     const Vec3 ror = C_VI*pre.template Get<STA_ROR>();
@@ -66,6 +67,7 @@ class BearingFindif: public BearingFindifBase<OUT_BEA,STA_BEA,STA_DIS,STA_VEL,ST
     return 0;
   }
   void JacPreCustom(MatRefX J, const typename Previous::CRef pre, const typename Current::CRef cur, bool predictionOnly){
+    J.setZero();
     UnitVector n_predicted;
     const Mat3 C_VI = pre.template Get<STA_VEA>().toRotationMatrix();
     const Vec3 ror = C_VI*pre.template Get<STA_ROR>();
@@ -93,8 +95,8 @@ class BearingFindif: public BearingFindifBase<OUT_BEA,STA_BEA,STA_DIS,STA_VEL,ST
       J.block<2,1>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_DIS)+i) = -dt_*Jsub_1*Jsub_2b*beaN.transpose()*beaVec.cross(vel);
       J.block<2,2>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_BEA)+2*i) = -dt_*Jsub_1*Jsub_2b*(-invDis*beaN.transpose()*SSM(vel)*beaM
           +beaN.transpose()*SSM(ror + invDis * beaVec.cross(vel))*beaN) + Jsub_1*Jsub_2a;
-      J.block<2,3>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_VEP)) = J_vel*C_VI*SSM(pre.template Get<STA_ROR>());
-      J.block<2,3>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_VEA)) = - J_ror*SSM(ror) - J_vel*SSM(vel);
+      if (STA_VEP>=0) J.block<2,3>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_VEP)) = J_vel*C_VI*SSM(pre.template Get<STA_ROR>());
+      if (STA_VEA>=0) J.block<2,3>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_VEA)) = - J_ror*SSM(ror) - J_vel*SSM(vel);
     }
   }
   double GetWeight(){
