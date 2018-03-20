@@ -26,7 +26,7 @@ class BearingFindif: public BearingFindifBase<OUT_BEA,STA_BEA,STA_DIS,STA_VEL,ST
   typedef typename Base::Output Output;
   typedef typename Base::Previous Previous;
   typedef typename Base::Current Current;
-  BearingFindif(): Base(true,true,true), vep_not_param_(STA_VEP>=0), vea_not_param_(STA_VEA>=0){}
+  BearingFindif(): Base(true,true,true), vep_not_fixed_(STA_VEP>=0), vea_not_fixed_(STA_VEA>=0){}
   int EvalRes(typename Output::Ref out, const typename Previous::CRef pre, const typename Current::CRef cur){
     UnitVector n_predicted;
     const Mat3 C_VI = pre.template Get<STA_VEA>().toRotationMatrix();
@@ -95,16 +95,16 @@ class BearingFindif: public BearingFindifBase<OUT_BEA,STA_BEA,STA_DIS,STA_VEL,ST
       J.block<2,1>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_DIS)+i) = -dt_*Jsub_1*Jsub_2b*beaN.transpose()*beaVec.cross(vel);
       J.block<2,2>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_BEA)+2*i) = -dt_*Jsub_1*Jsub_2b*(-invDis*beaN.transpose()*SSM(vel)*beaM
           +beaN.transpose()*SSM(ror + invDis * beaVec.cross(vel))*beaN) + Jsub_1*Jsub_2a;
-      if (vep_not_param_) J.block<2,3>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_VEP)) = J_vel*C_VI*SSM(pre.template Get<STA_ROR>());
-      if (vea_not_param_) J.block<2,3>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_VEA)) = - J_ror*SSM(ror) - J_vel*SSM(vel);
+      if (vep_not_fixed_) J.block<2,3>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_VEP)) = J_vel*C_VI*SSM(pre.template Get<STA_ROR>());
+      if (vea_not_fixed_) J.block<2,3>(Output::Start(OUT_BEA)+2*i,pre.Start(STA_VEA)) = - J_ror*SSM(ror) - J_vel*SSM(vel);
     }
   }
   double GetWeight(){
     return w_/sqrt(dt_);
   }
  protected:
-  const bool vep_not_param_;
-  const bool vea_not_param_;
+  const bool vep_not_fixed_;
+  const bool vea_not_fixed_;
 };
 
 } // namespace tsif
