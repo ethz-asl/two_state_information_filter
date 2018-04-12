@@ -265,7 +265,8 @@ class Filter{
       std::get<C>(residuals_).JacPre(JacPre_.block<Output::Dim(),State::Dim()>(start,0),state_,curLinState_);
       std::get<C>(residuals_).JacCur(JacCur_.block<Output::Dim(),State::Dim()>(start,0),state_,curLinState_);
       std::get<C>(residuals_).AddNoise(ySub, JacPre_.block<Output::Dim(),State::Dim()>(start,0),
-                                       JacCur_.block<Output::Dim(),State::Dim()>(start,0));
+                                       JacCur_.block<Output::Dim(),State::Dim()>(start,0),
+                                       state_,curLinState_);
       ySub.GetVec(y_.block<Output::Dim(),1>(start, 0));
     }
     ConstructProblem<C+1>(start+Output::Dim()*std::get<C>(residuals_).isActive_);
