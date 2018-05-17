@@ -50,7 +50,7 @@ class ImageUpdate: public ImageUpdateBase<OUT_RES,STA_BEA,N,MEAS>{ // TODO: rena
     }
     return 0;
   }
-  virtual void AddNoise(typename Output::Ref out, MatRefX J_pre, MatRefX J_cur){
+  virtual void AddNoise(typename Output::Ref out, MatRefX J_pre, MatRefX J_cur, const typename Previous::CRef pre, const typename Current::CRef cur){
     for(int i=0;i<N;i++){
       double w = GetWeight();
       const double norm = out.template Get<OUT_RES>()[i].norm();

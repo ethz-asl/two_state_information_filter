@@ -97,7 +97,7 @@ class Residual: public Model<Residual<Out,Pre,Cur,Meas>,Out,Pre,Cur>{
       assert(false);
     }
   }
-  virtual void AddNoise(typename Out::Ref out, MatRefX J_pre, MatRefX J_cur){
+  virtual void AddNoise(typename Out::Ref out, MatRefX J_pre, MatRefX J_cur, const typename Previous::CRef pre, const typename Current::CRef cur){
     AddWeight(GetWeight(),out,J_pre,J_cur);
   }
   void AddWeight(double w, typename Out::Ref out, MatRefX J_pre, MatRefX J_cur){
