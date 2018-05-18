@@ -39,6 +39,14 @@ class MeasImg: public ElementVector<>{
   void SetBea(int i, const UnitVector& n) const{
     n_.at(i) = n;
   }
+  void DrawImg(cv::Mat& img) const{
+    if(!isSim_){
+      cv::cvtColor(img_,img,CV_GRAY2BGR);
+    } else {
+      img = cv::Mat::zeros(480, 752, CV_8U);
+      cv::drawKeypoints(img,keyPoints_,img,cv::Scalar(255,50,50));
+    }
+  }
   cv::Mat img_;
   alignas(16) mutable std::array<UnitVector,N> n_;
   mutable std::vector<cv::KeyPoint> keyPoints_;
@@ -189,12 +197,7 @@ class VioFilter: public VioFilterBase<N> {
 
     Timer timer;
     if(doDraw_){
-      if(!m->isSim_){
-        cv::cvtColor(m->img_,drawImg_,CV_GRAY2BGR);
-      } else {
-        drawImg_ = cv::Mat::zeros(480, 752, CV_8U);
-        cv::drawKeypoints(drawImg_,m->keyPoints_,drawImg_,cv::Scalar(255,50,50));
-      }
+      m->DrawImg(drawImg_);
     }
     TSIF_LOG("Img: " << 1000*timer.GetIncr());
 
@@ -209,8 +212,6 @@ class VioFilter: public VioFilterBase<N> {
     // Detect and compute
     if(!m->isSim_){
       mask_ = cv::Mat::zeros(m->img_.size(), CV_8U);
-      std::vector<cv::KeyPoint> keyPoints;
-      cv::Mat desc;
       for(int i=0;i<N;i++){
         if(!l_.at(i).desc_.empty()){
           // Extract pixel coordinates and corresponding uncertainty
@@ -219,57 +220,107 @@ class VioFilter: public VioFilterBase<N> {
         }
       }
       TSIF_LOG("Mask: " << 1000*timer.GetIncr());
-      cv::Ptr<cv::ORB> orb = cv::ORB::create(FD_->Get<int>("num_candidates_matching")*NumLandmarks(),FD_->Get<float>("scale_factor"),FD_->Get<int>("n_levels"));
-//      cv::ORB orb(FD_->Get<int>("num_candidates_matching")*NumLandmarks(),FD_->Get<float>("scale_factor"),FD_->Get<int>("n_levels"));
-      orb->detect(m->img_,keyPoints,mask_);
-      TSIF_LOG("Detection: " << 1000*timer.GetIncr());
-      orb->compute(m->img_,keyPoints,desc);
-      TSIF_LOG("Compute: " << 1000*timer.GetIncr());
-      if(doDraw_ && drawTracking_){
-        cv::drawKeypoints(drawImg_,keyPoints,drawImg_,cv::Scalar(255,0,0));
-      }
+      if(!FD_->Get<int>("use_KLT")){
+        std::vector<cv::KeyPoint> keyPoints;
+        cv::Mat desc;
+        cv::Ptr<cv::ORB> orb = cv::ORB::create(FD_->Get<int>("num_candidates_matching")*NumLandmarks(),FD_->Get<float>("scale_factor"),FD_->Get<int>("n_levels"));
+  //      cv::ORB orb(FD_->Get<int>("num_candidates_matching")*NumLandmarks(),FD_->Get<float>("scale_factor"),FD_->Get<int>("n_levels"));
+        orb->detect(m->img_,keyPoints,mask_);
+        TSIF_LOG("Detection: " << 1000*timer.GetIncr());
+        orb->compute(m->img_,keyPoints,desc);
+        TSIF_LOG("Compute: " << 1000*timer.GetIncr());
+        if(doDraw_ && drawTracking_){
+          cv::drawKeypoints(drawImg_,keyPoints,drawImg_,cv::Scalar(255,0,0));
+        }
 
-      for(int i=0;i<N;i++){
-        if(!l_.at(i).desc_.empty()){
-          // Match landmarks
-          cv::BFMatcher matcher(cv::NORM_HAMMING);
-          l_.at(i).matches_.clear();
-          int best_match = -1;
-          int count = 0;
-          if(!desc.empty()){
-						matcher.radiusMatch(l_.at(i).desc_,desc,l_.at(i).matches_,FD_->Get<float>("match_desc_distance"));
-						double best_score = 0;
-						for(int j=0;j<l_.at(i).matches_[0].size();j++){
-							const Vec<2> pt_meas(keyPoints[l_.at(i).matches_[0][j].trainIdx].pt.x,keyPoints[l_.at(i).matches_[0][j].trainIdx].pt.y);
-							const double geomScore = std::sqrt(((l_.at(i).prePoint_-pt_meas).transpose()*l_.at(i).preCov_.inverse()*(l_.at(i).prePoint_-pt_meas))(0))/FD_->Get<float>("match_geom_distance");
-							const double descScore = l_.at(i).matches_[0][j].distance/FD_->Get<float>("match_desc_distance");
-							if(geomScore + descScore < 1){
-								count ++;
-								if(best_match == -1 || geomScore + descScore < best_score){
-									best_match = j;
-									best_score = geomScore + descScore;
-								}
-							}
-						}
-          }
-          if(best_match != -1 && (!singleMatchOnly_ || count == 1)){
-            TSIF_LOGW("Found measurement for landmark " << i);
-            Vec<2> pt_meas(keyPoints[l_.at(i).matches_[0][best_match].trainIdx].pt.x,keyPoints[l_.at(i).matches_[0][best_match].trainIdx].pt.y);
-            Vec3 vec;
-            cam_.PixelToBearing(pt_meas,vec);
-            m->SetBea(i,UnitVector(vec));
-            std::get<6>(residuals_).active_[i] = true;
-            if(doDraw_ && drawTracking_){
-              cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_*FD_->Get<float>("match_geom_distance"),l_.at(i).sigma1_*FD_->Get<float>("match_geom_distance")), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,255,0));
-              cv::line(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Point2f(pt_meas(0),pt_meas(1)), cv::Scalar(0,255,0));
+        for(int i=0;i<N;i++){
+          if(!l_.at(i).desc_.empty()){
+            // Match landmarks
+            cv::BFMatcher matcher(cv::NORM_HAMMING);
+            l_.at(i).matches_.clear();
+            int best_match = -1;
+            int count = 0;
+            if(!desc.empty()){
+  						matcher.radiusMatch(l_.at(i).desc_,desc,l_.at(i).matches_,FD_->Get<float>("match_desc_distance"));
+  						double best_score = 0;
+  						for(int j=0;j<l_.at(i).matches_[0].size();j++){
+  							const Vec<2> pt_meas(keyPoints[l_.at(i).matches_[0][j].trainIdx].pt.x,keyPoints[l_.at(i).matches_[0][j].trainIdx].pt.y);
+  							const double geomScore = std::sqrt(((l_.at(i).prePoint_-pt_meas).transpose()*l_.at(i).preCov_.inverse()*(l_.at(i).prePoint_-pt_meas))(0))/FD_->Get<float>("match_geom_distance");
+  							const double descScore = l_.at(i).matches_[0][j].distance/FD_->Get<float>("match_desc_distance");
+  							if(geomScore + descScore < 1){
+  								count ++;
+  								if(best_match == -1 || geomScore + descScore < best_score){
+  									best_match = j;
+  									best_score = geomScore + descScore;
+  								}
+  							}
+  						}
             }
-          } else {
-            if(doDraw_ && drawTracking_){
-              if(count == 0){
-                cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_*FD_->Get<float>("match_geom_distance"),l_.at(i).sigma1_*FD_->Get<float>("match_geom_distance")), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,0,255));
-              } else {
-                cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_*FD_->Get<float>("match_geom_distance"),l_.at(i).sigma1_*FD_->Get<float>("match_geom_distance")), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(255,0,255));
+            if(best_match != -1 && (!singleMatchOnly_ || count == 1)){
+              TSIF_LOGW("Found measurement for landmark " << i);
+              Vec<2> pt_meas(keyPoints[l_.at(i).matches_[0][best_match].trainIdx].pt.x,keyPoints[l_.at(i).matches_[0][best_match].trainIdx].pt.y);
+              Vec3 vec;
+              cam_.PixelToBearing(pt_meas,vec);
+              m->SetBea(i,UnitVector(vec));
+              std::get<6>(residuals_).active_[i] = true;
+              if(doDraw_ && drawTracking_){
+                cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_*FD_->Get<float>("match_geom_distance"),l_.at(i).sigma1_*FD_->Get<float>("match_geom_distance")), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,255,0));
+                cv::line(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Point2f(pt_meas(0),pt_meas(1)), cv::Scalar(0,255,0));
               }
+            } else {
+              if(doDraw_ && drawTracking_){
+                if(count == 0){
+                  cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_*FD_->Get<float>("match_geom_distance"),l_.at(i).sigma1_*FD_->Get<float>("match_geom_distance")), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(0,0,255));
+                } else {
+                  cv::ellipse(drawImg_, cv::Point2f(l_.at(i).prePoint_(0),l_.at(i).prePoint_(1)), cv::Size(l_.at(i).sigma0_*FD_->Get<float>("match_geom_distance"),l_.at(i).sigma1_*FD_->Get<float>("match_geom_distance")), l_.at(i).sigmaAngle_/M_PI*180, 0, 360, cv::Scalar(255,0,255));
+                }
+              }
+            }
+          }
+        }
+      }
+      if(!prev_.empty()){
+        std::vector<cv::Point2f> prevPts;
+        std::vector<cv::Point2f> nextPts;
+        std::vector<cv::Point2f> nextTrackedPts;
+        std::vector<int> id;
+        for(int i=0;i<N;i++){
+          if(!l_.at(i).desc_.empty()){
+            id.push_back(i);
+            Vec<2> vec2;
+            cam_.BearingToPixel(state_.template Get<6>()[i].GetVec(),vec2);
+            prevPts.push_back(cv::Point2f(vec2(0), vec2(1)));
+            cam_.BearingToPixel(curLinState_.template Get<6>()[i].GetVec(),vec2);
+            nextPts.push_back(cv::Point2f(vec2(0), vec2(1)));
+            nextTrackedPts.push_back(cv::Point2f(vec2(0), vec2(1)));
+          }
+        }
+        if(prevPts.size() > 0){
+          std::vector<unsigned char> status(prevPts.size(), 0);
+          std::vector<float> err(prevPts.size(), 0);
+          cv::calcOpticalFlowPyrLK(prev_, m->img_, prevPts, nextTrackedPts, status, err,
+            cv::Size(21,21), 3, cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 0.01), cv::OPTFLOW_USE_INITIAL_FLOW, 1e-4);
+          for(int i=0;i<prevPts.size();i++){
+            if(status.at(i)){
+              const Vec<2> diff(nextTrackedPts.at(i).x - nextPts.at(i).x, nextTrackedPts.at(i).y - nextPts.at(i).y);
+              const double geomScore = std::sqrt((diff.transpose()*l_.at(i).preCov_.inverse()*diff)(0))/FD_->Get<float>("match_geom_distance");
+              if (geomScore < 1.0 && err.at(i) < FD_->Get<float>("match_err_distance")){
+                TSIF_LOGW("Found measurement for landmark " << i);
+                Vec<2> pt_meas(nextTrackedPts.at(i).x,nextTrackedPts.at(i).y);
+                Vec3 vec;
+                cam_.PixelToBearing(pt_meas,vec);
+                m->SetBea(id.at(i),UnitVector(vec));
+                std::get<6>(residuals_).active_[id.at(i)] = true;
+                if(doDraw_ && drawTracking_){
+                  cv::circle(drawImg_,prevPts.at(i),5,cv::Scalar(0,255,0),-1,8,0);
+                  cv::circle(drawImg_,nextTrackedPts.at(i),5,cv::Scalar(150,255,150),-1,8,0);
+                }
+              } else {
+                cv::circle(drawImg_,prevPts.at(i),5,cv::Scalar(0,0,255),-1,8,0);
+                cv::circle(drawImg_,nextTrackedPts.at(i),5,cv::Scalar(150,150,255),-1,8,0);
+              }
+            } else {
+              cv::circle(drawImg_,prevPts.at(i),5,cv::Scalar(0,0,255),-1,8,0);
             }
           }
         }
@@ -393,6 +444,7 @@ class VioFilter: public VioFilterBase<N> {
       if(!m->isSim_){
     	cv::Ptr<cv::ORB> orb = cv::ORB::create(FD_->Get<int>("num_candidates_add"),FD_->Get<float>("scale_factor"),FD_->Get<int>("n_levels"));
 //        cv::ORB orb(FD_->Get<int>("num_candidates_add"),FD_->Get<float>("scale_factor"),FD_->Get<int>("n_levels"));
+// void goodFeaturesToTrack(InputArray image, OutputArray corners, int maxCorners, double qualityLevel, double minDistance, InputArray mask=noArray(), int blockSize=3, bool useHarrisDetector=false, double k=0.04 )
         orb->detect(m->img_,keyPoints,mask_);
         TSIF_LOG("Detection: " << 1000*timer.GetIncr());
         orb->compute(m->img_,keyPoints,desc);
@@ -468,6 +520,7 @@ class VioFilter: public VioFilterBase<N> {
       }
     }
 
+    prev_ = m->img_.clone();
     if(doDraw_){
       cv::namedWindow("VIO", cv::WINDOW_AUTOSIZE);
       cv::imshow("VIO", drawImg_);
@@ -497,6 +550,7 @@ class VioFilter: public VioFilterBase<N> {
  private:
   Camera cam_;
   cv::Mat drawImg_;
+  cv::Mat prev_;
   std::array<LandmarkData,N> l_;
   bool drawAdding_;
   bool drawTracking_;

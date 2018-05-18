@@ -2,8 +2,8 @@
 #include "tsif/filters/vio.h"
 
 int main(int argc, char** argv){
-  std::string optionFile = "/home/michael/workspace/generalized_information_filter/cfg/vio.cfg";
-  std::string taskFile = "/home/michael/workspace/generalized_information_filter/cfg/vio_task.cfg";
+  std::string optionFile = "/home/michael/workspace/two_state_information_filter/cfg/vio.cfg";
+  std::string taskFile = "/home/michael/workspace/two_state_information_filter/cfg/vio_task.cfg";
   bool useSim = tsif::OptionLoader::Instance().Get<int>(optionFile,"use_sim");
   const int L = 25;
   tsif::VioFilter<L> filter(optionFile);

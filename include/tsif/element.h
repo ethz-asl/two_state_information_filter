@@ -129,6 +129,14 @@ class Element{
   Vec<kDim> GetVec() const{
     return Vec<kDim>::Zero();
   }
+  template<bool B = I>=0,typename std::enable_if<B>::type* = nullptr>
+  void GetVec(VecRef<kDim> vec) const{
+    vec = Traits::GetVec(x_);
+  }
+  template<bool B = I>=0,typename std::enable_if<!B>::type* = nullptr>
+  void GetVec(VecRef<kDim> vec) const{
+    vec = Vec<kDim>::Zero();
+  }
   void Scale(double w){
     Traits::Scale(w,x_);
   }

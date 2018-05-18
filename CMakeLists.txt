@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.8)
 project(two_state_implicit_filter)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -march=native")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -march=native -Wno-ignored-attributes")
 set(TSIF_VERBOSE 0 CACHE STRING "Verbose flag")
 add_definitions(-DTSIF_VERBOSE=${TSIF_VERBOSE})
 
@@ -19,8 +19,7 @@ add_executable(mytest src/test.cpp)
 
 if(ENABLE_OPENCV)
 	set(OpenCV_DIR /opt/ros/kinetic/share/OpenCV-3.2.0-dev)
- 	find_package(OpenCV REQUIRED)
+	find_package(OpenCV REQUIRED)
 	add_executable(test_vio src/test_vio.cpp src/simulator.cpp src/camera.cpp)
 	target_link_libraries(test_vio ${OpenCV_LIBS})
 endif()
-
