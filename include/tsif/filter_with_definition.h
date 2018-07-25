@@ -8,9 +8,12 @@ class FilterWithDefinition : public Definition::FilterBase {
  public:
 
   using FD = Definition;
+  
+  //check for a complete implementation
   using StateEnum = typename FD::StateEnum;
   using ParamEnum = typename FD::ParamEnum;
   using ResidualEnum = typename FD::ResidualEnum;
+  using FilterBase = typename FD::FilterBase;
 
   explicit FilterWithDefinition(){}
   virtual ~FilterWithDefinition(){}
