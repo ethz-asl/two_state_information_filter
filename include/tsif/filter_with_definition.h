@@ -1,22 +1,54 @@
 #ifndef TSIF_FILTER_WITH_DEFINITION_H_
 #define TSIF_FILTER_WITH_DEFINITION_H_
 
+#include <tsif/filter.h>
+
 namespace tsif{
 
-template<typename Definition>
-class FilterWithDefinition : public Definition::FilterBase {
+//check if some type derives from a tsif
+template <typename Derived>
+struct is_tsif
+{
+    using D = typename std::remove_cv<Derived>::type;
+    template <typename... Residuals>
+    static std::true_type test(Filter<Residuals...>*);
+    static std::false_type test(void*);
+    using type = decltype(test(std::declval<D*>()));
+};
+template <typename Derived>
+using is_tsif_t = typename is_tsif<Derived>::type;
+
+template <typename ConcreteDefinition>
+struct FilterDefinition {
+
+  FilterDefinition() = delete;
+
+  static_assert(!std::is_void<typename ConcreteDefinition::ParamEnum>::value,
+                "[FilterDefinition] Filter definition must define ParamEnum.");
+  using ParamEnum = typename ConcreteDefinition::ParamEnum;
+
+  static_assert(!std::is_void<typename ConcreteDefinition::StateEnum>::value,
+                "[FilterDefinition] Filter definition must define StateEnum.");
+  using StateEnum = typename ConcreteDefinition::StateEnum;
+
+  static_assert(!std::is_void<typename ConcreteDefinition::ResidualEnum>::value,
+                "[FilterDefinition] Filter definition must define ResidualEnum.");
+  using ResidualEnum = typename ConcreteDefinition::ResidualEnum;
+
+  static_assert(tsif::is_tsif_t<typename ConcreteDefinition::FilterBase>::value,
+                "[FilterDefinition] Filter definition must define FilterBase derived from a tsif::Filter");
+  using FilterBase = typename ConcreteDefinition::FilterBase;
+
+};
+
+template<typename ConcreteDefinition>
+class FilterWithDefinition : public ConcreteDefinition::FilterBase {
  public:
 
-  using FD = Definition;
-  
-  //check for a complete implementation
-  using StateEnum = typename FD::StateEnum;
-  using ParamEnum = typename FD::ParamEnum;
-  using ResidualEnum = typename FD::ResidualEnum;
-  using FilterBase = typename FD::FilterBase;
+  using FD = FilterDefinition<ConcreteDefinition>;
 
-  explicit FilterWithDefinition(){}
-  virtual ~FilterWithDefinition(){}
+  FilterWithDefinition() = default;
+  ~FilterWithDefinition() = default;
 
 };
 
