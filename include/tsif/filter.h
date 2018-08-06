@@ -352,7 +352,6 @@ class Filter{
   }
 
   MatX GetCovariance() const {
-    // return inverse of the information matrix
     const int state_dim = State::Dim();
     MatX identity(state_dim, state_dim);
     identity.setIdentity();
@@ -374,6 +373,14 @@ class Filter{
   template <int C = 0, typename std::enable_if<(C >= kN)>::type* = nullptr>
   void SetMaxWaitTimes(double max_wait_time) {}
   
+  template <int C = 0, typename std::enable_if<(C < kN)>::type* = nullptr>
+  void SetMinWaitTimes(double min_wait_time) {
+    std::get<C>(timelines_).SetMinWaitTime(min_wait_time);
+    SetMinWaitTimes<C + 1>(min_wait_time);
+  }
+  template <int C = 0, typename std::enable_if<(C >= kN)>::type* = nullptr>
+  void SetMinWaitTimes(double min_wait_time) {}
+
  protected:
   bool is_initialized_;
   bool include_max_;
