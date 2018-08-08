@@ -48,7 +48,7 @@ class FilterWithDefinition : public ConcreteDefinition::FilterBase {
   using FD = FilterDefinition<ConcreteDefinition>;
 
   FilterWithDefinition() = default;
-  ~FilterWithDefinition() = default;
+  ~FilterWithDefinition() override = default;
 
 };
 
