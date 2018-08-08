@@ -9,11 +9,11 @@ namespace tsif{
 template <typename Derived>
 struct is_tsif
 {
-    using D = typename std::remove_cv<Derived>::type;
-    template <typename... Residuals>
-    static std::true_type test(Filter<Residuals...>*);
-    static std::false_type test(void*);
-    using type = decltype(test(std::declval<D*>()));
+  using D = typename std::remove_cv<Derived>::type;
+  template <typename... Residuals>
+  static std::true_type test(Filter<Residuals...>*);
+  static std::false_type test(void*);
+  using type = decltype(test(std::declval<D*>()));
 };
 template <typename Derived>
 using is_tsif_t = typename is_tsif<Derived>::type;
@@ -51,38 +51,6 @@ class FilterWithDefinition : public ConcreteDefinition::FilterBase {
   ~FilterWithDefinition() override = default;
 
 };
-
-/*
-#include <tsif/filter.h>
-#include <tsif/residual_1.h>
-#include <tsif/residual_1.h>
-// etc.
-
-Class FilterDefinitionExample {
-  //filter state enum
-  enum StateEnum : unsigned int {
-    STATE_1 = 0,
-    [...],
-    NUM_STATES
-  };
-  //parameter (i.e. unoptimized state) enum
-  //parameters need to have negative indices
-  enum ParamEnum : int {
-    PARAM_N = -N,
-    [...],
-    PARAM_1
-  };
-  //residual enum
-  //this needs to match the order of the residual pack given to the tsif::Filter as template argument
-  enum ResidualEnum : unsigned int {
-    RESIDUAL_1 = 0,
-    [...]
-  };
-  //base type for the filter
-  //this needs to match the order of the residual enum defined above
-  using FilterBase = Filter<[...]>;
-};
-*/
 
 } // namespace tsif
 
