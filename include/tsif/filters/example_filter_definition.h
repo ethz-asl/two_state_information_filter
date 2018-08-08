@@ -26,9 +26,9 @@ struct ExampleFilterDefinition {
     NUM_STATES
   };
 
-  // Enum of negative ints to define the M parameter variables
+  // Enum of negative ints to define the M+1 parameter variables
   enum ParamEnum : int {
-    PARAM_M = -11, // PARAM_M = -(M+1), e.g. M = 10
+    PARAM_M = -10, // PARAM_M = -(M+1), e.g. M+1 = 10
     PARAM_Mminus1,
     // [...]
     PARAM_0
