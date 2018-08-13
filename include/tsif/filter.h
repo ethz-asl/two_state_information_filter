@@ -351,6 +351,36 @@ class Filter{
     return out.str();
   }
 
+  MatX GetCovariance() const {
+    const int state_dim = State::Dim();
+    MatX identity(state_dim, state_dim);
+    identity.setIdentity();
+    const MatX cov = I_.llt().solve(identity);
+    return cov;
+  }
+
+  MatX GetInformation() const { return I_; }
+
+  void Uninitialize() { is_initialized_ = false; }
+
+  bool IsInitialized() const { return is_initialized_; }
+
+  template <int C = 0, typename std::enable_if<(C < kN)>::type* = nullptr>
+  void SetMaxWaitTimes(double max_wait_time) {
+    std::get<C>(timelines_).SetMaxWaitTime(max_wait_time);
+    SetMaxWaitTimes<C + 1>(max_wait_time);
+  }
+  template <int C = 0, typename std::enable_if<(C >= kN)>::type* = nullptr>
+  void SetMaxWaitTimes(double max_wait_time) {}
+  
+  template <int C = 0, typename std::enable_if<(C < kN)>::type* = nullptr>
+  void SetMinWaitTimes(double min_wait_time) {
+    std::get<C>(timelines_).SetMinWaitTime(min_wait_time);
+    SetMinWaitTimes<C + 1>(min_wait_time);
+  }
+  template <int C = 0, typename std::enable_if<(C >= kN)>::type* = nullptr>
+  void SetMinWaitTimes(double min_wait_time) {}
+
  protected:
   bool is_initialized_;
   bool include_max_;
