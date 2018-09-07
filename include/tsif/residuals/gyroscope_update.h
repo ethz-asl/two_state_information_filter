@@ -43,8 +43,8 @@ class GyroscopeUpdate: public GyroscopeUpdateBase<OUT_ROR,STA_ROR,STA_GYB>{
     return 0;
   }
   int JacCur(MatRefX J, const typename Previous::CRef pre, const typename Current::CRef cur){
-    J.block<3,3>(Output::Start(OUT_ROR),cur.Start(STA_ROR)) = Mat3::Identity();
-    J.block<3,3>(Output::Start(OUT_ROR),cur.Start(STA_GYB)) = Mat3::Identity();
+    this->template SetJacCur<OUT_ROR,STA_ROR>(J,cur,Mat3::Identity());
+    this->template SetJacCur<OUT_ROR,STA_GYB>(J,cur,Mat3::Identity());
     return 0;
   }
   double GetWeight(){
