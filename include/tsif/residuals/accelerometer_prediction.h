@@ -43,14 +43,14 @@ class AccelerometerPrediction: public AccelerometerPredictionBase<OUT_VEL,STA_VE
     return 0;
   }
   int JacPre(MatRefX J, const typename Previous::CRef pre, const typename Current::CRef cur){
-    J.block<3,3>(Output::Start(OUT_VEL),pre.Start(STA_VEL)) = - (Mat3::Identity() - SSM(dt_*pre.template Get<STA_ROR>()));
-    J.block<3,3>(Output::Start(OUT_VEL),pre.Start(STA_ATT)) = -pre.template Get<STA_ATT>().inverse().toRotationMatrix()*SSM(g_*dt_);
-    J.block<3,3>(Output::Start(OUT_VEL),pre.Start(STA_ROR)) = - SSM(dt_*pre.template Get<STA_VEL>());
-    J.block<3,3>(Output::Start(OUT_VEL),pre.Start(STA_ACB)) = dt_*Mat3::Identity();
+    this->template SetJacPre<OUT_VEL, STA_VEL>(J, pre, -(Mat3::Identity() - SSM(dt_*pre.template Get<STA_ROR>())));
+    this->template SetJacPre<OUT_VEL, STA_ATT>(J, pre, -pre.template Get<STA_ATT>().inverse().toRotationMatrix()*SSM(g_*dt_));
+    this->template SetJacPre<OUT_VEL, STA_ROR>(J, pre, -SSM(dt_*pre.template Get<STA_VEL>()));
+    this->template SetJacPre<OUT_VEL, STA_ACB>(J, pre, dt_*Mat3::Identity());
     return 0;
   }
   int JacCur(MatRefX J, const typename Previous::CRef pre, const typename Current::CRef cur){
-    J.block<3,3>(Output::Start(OUT_VEL),cur.Start(STA_VEL)) = Mat3::Identity();
+    this->template SetJacCur<OUT_VEL, STA_VEL>(J, cur, Mat3::Identity());
     return 0;
   }
   double GetWeight(){
