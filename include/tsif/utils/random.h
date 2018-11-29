@@ -3,6 +3,8 @@
 
 #include "tsif/utils/typedefs.h"
 
+#include <random>
+
 namespace tsif{
 
 /*! \brief Normal Random Number Generator
