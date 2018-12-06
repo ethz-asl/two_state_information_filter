@@ -4,13 +4,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -march=native")
 set(TSIF_VERBOSE 0 CACHE STRING "Verbose flag")
 add_definitions(-DTSIF_VERBOSE=${TSIF_VERBOSE})
 
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 find_package(catkin REQUIRED)
-find_package(Eigen3 REQUIRED)
+find_package(Eigen REQUIRED)
 
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
-  ${EIGEN3_INCLUDE_DIR}
+  ${EIGEN_INCLUDE_DIR}
 )
 
 add_executable(test_state src/test_state.cpp)
@@ -30,7 +31,7 @@ if(ENABLE_OPENCV)
 endif()
 
 catkin_package(
-  INCLUDE_DIRS include ${EIGEN3_INCLUDE_DIR}
+  INCLUDE_DIRS include ${EIGEN_INCLUDE_DIR}
   LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
 )

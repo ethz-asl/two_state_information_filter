@@ -1,5 +1,6 @@
 #ifndef TSIF_RANDOM_HPP_
 #define TSIF_RANDOM_HPP_
+#include <random>
 
 #include "tsif/utils/typedefs.h"
 
@@ -36,8 +37,8 @@ class NormalRandomNumberGenerator{
  protected:
   std::default_random_engine generator_;
   std::normal_distribution<double> distribution_;
-  NormalRandomNumberGenerator(): generator_(0), distribution_(0.0,1.0){
-  }
+
+  NormalRandomNumberGenerator(): generator_(0), distribution_(0.0,1.0) {}
 };
 
 } // namespace tsif
